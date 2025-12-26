@@ -41,3 +41,5 @@ const serviceSchema = new mongoose.Schema({
 );
 
 const serviceModel = mongoose.model.service || mongoose.model("Service", serviceSchema); 
+
+export default serviceModel

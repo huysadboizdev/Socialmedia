@@ -7,7 +7,7 @@ const missionSchema = new mongoose.Schema({
     enum: ["like", "follow", "comment", "share"],
     required: true
   },
-  reward: { type: Number, required: true }, // số xu nhận
+  reward: { type: Number, required: true }, // số tiền nhận
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
