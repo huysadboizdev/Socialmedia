@@ -51,22 +51,56 @@ export const registerUser = async (req, res) => {
 }
 
 // login
+// export const login = async (req, res) => {
+//   try {
+//     const { email, password } = req.body
+
+//     const user = await userModel.findOne({ email })
+//     if (!user) return res.json({ success: false, message: 'Email not found' })
+
+//     const match = await bcrypt.compare(password, user.password)
+//     if (!match) return res.json({ success: false, message: 'Wrong password' })
+
+//     const token = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN_SECRET)
+//     res.json({ success: true, token })
+//   } catch {
+//     res.status(500).json({ success: false })
+//   }
+// }
+// login with google
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body
 
     const user = await userModel.findOne({ email })
-    if (!user) return res.json({ success: false, message: 'Email not found' })
+    if (!user) {
+      return res.json({ success: false, message: 'Email not found' })
+    }
+
+    // Check if the user registered via Google OAuth
+    if (!user.password) {
+      return res.json({
+        success: false,
+        message: 'Account uses Google login'
+      })
+    }
 
     const match = await bcrypt.compare(password, user.password)
-    if (!match) return res.json({ success: false, message: 'Wrong password' })
+    if (!match) {
+      return res.json({ success: false, message: 'Wrong password' })
+    }
 
-    const token = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN_SECRET)
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.ACCESS_TOKEN_SECRET
+    )
+
     res.json({ success: true, token })
-  } catch {
+  } catch (err) {
     res.status(500).json({ success: false })
   }
 }
+
 
 // get info user
 export const getUser = async (req, res) => {
