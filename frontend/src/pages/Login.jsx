@@ -1,11 +1,10 @@
-import React from 'react'
+// src/pages/Login.tsx
+import { LoginForm } from "@/components/login-form";
 
-const Login = () => {
+export default function LoginPage() {
   return (
-    <div>
-      
+    <div className="min-h-screen flex items-center justify-center">
+      <LoginForm />
     </div>
-  )
+  );
 }
-
-export default Login
