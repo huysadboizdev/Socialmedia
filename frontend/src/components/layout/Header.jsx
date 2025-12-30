@@ -1,15 +1,24 @@
-export default function Header() {
+import { Input } from "@/components/ui/input"
+
+export default function Header({ onMenu }) {
   return (
-    <header className="h-16 bg-white border-b flex items-center px-6 justify-between">
-      <input
+    <header className="h-14 bg-white border-b flex items-center px-4 gap-3">
+      <button
+        onClick={onMenu}
+        className="xl:hidden text-xl"
+      >
+        ☰
+      </button>
+
+      <Input
         placeholder="Search..."
-        className="border px-3 py-1 rounded w-64"
+        className="max-w-xs"
       />
 
-      <div className="flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-3">
         <button>🌙</button>
         <button>🔔</button>
-        <div className="w-8 h-8 rounded-full bg-gray-300" />
+        <div className="w-8 h-8 rounded-full bg-slate-300" />
       </div>
     </header>
   )

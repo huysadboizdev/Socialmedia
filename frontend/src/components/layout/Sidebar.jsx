@@ -1,22 +1,27 @@
-import NavItem from "../ui/NavItem"
+import NavItem from "@/components/ui/NavItem"
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
   return (
-    <aside className="w-64 bg-white border-r">
-      <div className="p-4 font-bold text-lg">Sub6Sao</div>
+    <div className="h-full flex flex-col">
+      <div className="p-4 font-bold text-lg flex justify-between">
+        Sub6Sao
+        {onClose && (
+          <button onClick={onClose} className="xl:hidden">✕</button>
+        )}
+      </div>
 
-      <nav className="px-2 space-y-1">
-        <NavItem label="Trang chủ" />
+      <nav className="px-3 space-y-1 text-sm">
+        <NavItem label="Trang chủ" to="/home" />
         <NavItem label="Quản lý chung" />
         <NavItem label="Nhiệm vụ hằng ngày" />
         <NavItem label="Điểm danh" />
 
-        <div className="mt-4 text-xs text-gray-400 px-2">Services</div>
+        <div className="pt-3 text-xs text-slate-400">Services</div>
         <NavItem label="Facebook" />
         <NavItem label="TikTok" />
         <NavItem label="Instagram" />
         <NavItem label="YouTube" />
       </nav>
-    </aside>
+    </div>
   )
 }
