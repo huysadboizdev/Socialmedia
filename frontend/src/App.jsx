@@ -1,5 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { Toaster } from "sonner"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
 import Home from "./pages/Home"
@@ -7,6 +8,7 @@ import Home from "./pages/Home"
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors />
       <div className="flex min-h-svh items-center justify-center">
         <Routes>
           <Route path="/" element={<Navigate to="/login" />} />
@@ -20,3 +22,4 @@ function App() {
 }
 
 export default App
+
