@@ -82,10 +82,91 @@
     --color-sidebar-accent: var(--sidebar-accent);
 
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-
     --color-sidebar-border: var(--sidebar-border);
-
     --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Sharingan Loader Animation */
+.sharingan {
+  position: relative;
+  border-radius: 50%;
+  background: radial-gradient(circle, #b10000 60%, #600000 100%);
+  animation: spin 1.2s linear infinite;
+  flex-shrink: 0; /* Prevent shrinking in flex containers */
+}
+
+.sharingan::before {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 4px solid black;
+}
+
+.tomoe {
+  position: absolute;
+  width: 18%;
+  height: 18%;
+  background: black;
+  border-radius: 50%;
+}
+
+.tomoe::after {
+  content: "";
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  border-radius: 50%;
+  border: 4px solid black;
+  top: -20%;
+  left: -20%;
+  clip-path: polygon(0 0, 100% 0, 100% 40%, 0 40%);
+}
+
+.t1 {
+  top: 8%;
+  left: 41%;
+}
+
+.t2 {
+  bottom: 22%;
+  left: 14%;
+}
+
+.t3 {
+  bottom: 22%;
+  right: 14%;
+}
+
+.center {
+  position: absolute;
+  inset: 42%;
+  background: black;
+  border-radius: 50%;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
 }
 
 :root {
@@ -227,4 +308,20 @@
   body {
     @apply bg-background text-foreground;
     }
+}
+
+/* Fix main content width relative to sidebar */
+.custom-scrollbar {
+  scrollbar-gutter: stable;
+}
+
+main {
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  main {
+    width: 100vw;
+    max-width: calc(100vw - 18rem); /* trừ sidebar 72 (18rem) */
+  }
 }

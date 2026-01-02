@@ -1,7 +1,24 @@
 import NavItem from "@/components/ui/NavItem"
 import { useState } from "react"
+import { useLocation } from "react-router-dom"
+import trangchuPng from "@/assets/trangchu.png"
+import thongtinPng from "@/assets/thongtin.png"
+import naptienPng from "@/assets/naptien.png"
+import lichsuGif from "@/assets/lichsugd.gif"
+import quanliGif from "@/assets/quanli.gif"
+import nhiemvuGif from "@/assets/nhiemvu.gif"
+import diemanhGif from "@/assets/điemanh.gif"
+import tongnapGif from "@/assets/tongnap.gif"
+import capbacGif from "@/assets/capbac.gif"
+import fbGif from "@/assets/fb.gif"
+import tiktokGif from "@/assets/tiktok.gif"
+import igGif from "@/assets/ig.gif"
+import allGif from "@/assets/alll_list.gif"
+import supportGif from "@/assets/supportusser.gif"
+import dieukhoanGif from "@/assets/dieukhoan.gif"
 
 export default function Sidebar({ onClose }) {
+  const location = useLocation();
   const [activeItem, setActiveItem] = useState("Quản lý chung");
   const [isGeneralExpanded, setIsGeneralExpanded] = useState(false);
 
@@ -13,22 +30,29 @@ export default function Sidebar({ onClose }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-y-auto custom-scrollbar border-r border-slate-100">
-      <div className="p-3 mb-2 flex items-center gap-2 font-bold text-lg text-cyan-500">
-        <img src="/icon2.svg" alt="" className="w-7 h-7" onError={(e) => e.target.style.display='none'}/>
-        HUYTICHXANH
-        <span className="material-symbols-outlined text-[16px] text-blue-500">verified</span>
+    <div className="h-full flex flex-col bg-white border-r border-slate-100 overflow-hidden">
+      {/* Logo Header */}
+      <div className="px-6 py-5 flex items-center gap-3 flex-shrink-0 bg-white z-10">
+        <img src="/icon2.svg" alt="" className="w-8 h-8 object-contain" onError={(e) => e.target.style.display='none'}/>
+        <div className="flex flex-col">
+           <span className="font-bold text-lg text-slate-800 leading-none tracking-tight flex items-center gap-1">
+             HUYTICHXANH
+             <span className="material-symbols-outlined text-[16px] text-blue-500">verified</span>
+           </span>
+        </div>
         {onClose && (
-          <button onClick={onClose} className="ml-auto xl:hidden text-gray-500">✕</button>
+          <button onClick={onClose} className="ml-auto xl:hidden p-1 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
         )}
       </div>
 
-      <nav className="px-2 space-y-0.5 text-sm font-medium pb-4">
-        <div className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Home</div>
+      <nav className="flex-1 px-4 space-y-1 pb-6 overflow-y-auto custom-scrollbar">
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 font-bold mt-2">Home</div>
         
         <NavItem 
           label="Quản lý chung" 
-          icon="grid_view" 
+          icon={quanliGif} 
           active={activeItem === "Quản lý chung" || isGeneralExpanded} 
           hasSubmenu
           isOpen={isGeneralExpanded}
@@ -36,34 +60,29 @@ export default function Sidebar({ onClose }) {
         />
 
         {isGeneralExpanded && (
-           <div className="ml-5 pl-2 space-y-1 border-l border-dashed border-slate-200 my-1">
-             <NavItem label="Trang chủ" icon="home" active={activeItem === "Trang chủ"} onClick={() => handleItemClick("Trang chủ")} />
-             <NavItem label="Thông tin cá nhân" icon="person" active={activeItem === "Thông tin cá nhân"} onClick={() => handleItemClick("Thông tin cá nhân")} />
-             <NavItem label="Nạp tiền tài khoản" icon="account_balance_wallet" active={activeItem === "Nạp tiền tài khoản"} onClick={() => handleItemClick("Nạp tiền tài khoản")} />
-             <NavItem label="Lịch sử giao dịch" icon="history" active={activeItem === "Lịch sử giao dịch"} onClick={() => handleItemClick("Lịch sử giao dịch")} />
-             <NavItem label="Tất cả tiến trình" icon="list_alt" active={activeItem === "Tất cả tiến trình"} onClick={() => handleItemClick("Tất cả tiến trình")} />
-             <NavItem label="Dịch vụ & cấp bậc" icon="military_tech" active={activeItem === "Dịch vụ & cấp bậc"} onClick={() => handleItemClick("Dịch vụ & cấp bậc")} />
-             <NavItem label="Hỗ Trợ Khách Hàng" icon="support_agent" active={activeItem === "Hỗ Trợ Khách Hàng"} onClick={() => handleItemClick("Hỗ Trợ Khách Hàng")} />
-             <NavItem label="Điều khoản dịch vụ" icon="gavel" active={activeItem === "Điều khoản dịch vụ"} onClick={() => handleItemClick("Điều khoản dịch vụ")} />
+           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 my-1">
+             <NavItem label="Trang chủ" to="/home" icon={trangchuPng} active={location.pathname === "/home"} onClick={() => handleItemClick("Trang chủ")} isSubItem />
+             <NavItem label="Thông tin cá nhân" to="/profile" icon={thongtinPng} active={location.pathname === "/profile"} onClick={() => handleItemClick("Thông tin cá nhân")} isSubItem />
+             <NavItem label="Nạp tiền tài khoản" icon={naptienPng} active={activeItem === "Nạp tiền tài khoản"} onClick={() => handleItemClick("Nạp tiền tài khoản")} isSubItem />
+             <NavItem label="Lịch sử giao dịch" icon={lichsuGif} active={activeItem === "Lịch sử giao dịch"} onClick={() => handleItemClick("Lịch sử giao dịch")} isSubItem />
+             <NavItem label="Tất cả tiến trình" icon={allGif} active={activeItem === "Tất cả tiến trình"} onClick={() => handleItemClick("Tất cả tiến trình")} isSubItem />
+             <NavItem label="Dịch vụ & cấp bậc" icon={capbacGif} active={activeItem === "Dịch vụ & cấp bậc"} onClick={() => handleItemClick("Dịch vụ & cấp bậc")} isSubItem />
+             <NavItem label="Hỗ Trợ Khách Hàng" icon={supportGif} active={activeItem === "Hỗ Trợ Khách Hàng"} onClick={() => handleItemClick("Hỗ Trợ Khách Hàng")} isSubItem />
+             <NavItem label="Điều khoản dịch vụ" icon={dieukhoanGif} active={activeItem === "Điều khoản dịch vụ"} onClick={() => handleItemClick("Điều khoản dịch vụ")} isSubItem />
            </div>
         )}
 
-        <div className="pt-4 px-3 py-2 text-xs text-gray-500 font-normal">Kiếm Tiền Miễn Phí</div>
-        <NavItem label="Nhiệm vụ Hàng Ngày" icon="target" active={activeItem === "Nhiệm vụ Hàng Ngày"} onClick={() => handleItemClick("Nhiệm vụ Hàng Ngày")} />
-        <NavItem label="Điểm Danh Hàng Ngày" icon="calendar_today" active={activeItem === "Điểm Danh Hàng Ngày"} onClick={() => handleItemClick("Điểm Danh Hàng Ngày")} />
-        <NavItem label="Bảng Đua Top Nạp Tiền" icon="leaderboard" active={activeItem === "Bảng Đua Top Nạp Tiền"} onClick={() => handleItemClick("Bảng Đua Top Nạp Tiền")} />
-        <NavItem label="Giới thiệu nhận tiền" icon="person_add" active={activeItem === "Giới thiệu nhận tiền"} onClick={() => handleItemClick("Giới thiệu nhận tiền")} />
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 font-bold mt-4">Kiếm Tiền Miễn Phí</div>
+        <NavItem label="Nhiệm vụ Hàng Ngày" icon={nhiemvuGif} active={activeItem === "Nhiệm vụ Hàng Ngày"} onClick={() => handleItemClick("Nhiệm vụ Hàng Ngày")} />
+        <NavItem label="Điểm Danh Hàng Ngày" icon={diemanhGif} active={activeItem === "Điểm Danh Hàng Ngày"} onClick={() => handleItemClick("Điểm Danh Hàng Ngày")} />
+        <NavItem label="Bảng Đua Top Nạp Tiền" icon={tongnapGif} active={activeItem === "Bảng Đua Top Nạp Tiền"} onClick={() => handleItemClick("Bảng Đua Top Nạp Tiền")} />
+       
 
-        <div className="pt-4 px-3 py-2 text-xs text-gray-500 font-normal">Services</div>
-        <NavItem label="Dịch Vụ Miễn Phí" icon="stars" isService active={activeItem === "Dịch Vụ Miễn Phí"} onClick={() => handleItemClick("Dịch Vụ Miễn Phí")} />
-        <NavItem label="FaceBook" icon="facebook" isService active={activeItem === "FaceBook"} onClick={() => handleItemClick("FaceBook")} />
-        <NavItem label="Tik Tok" icon="music_note" isService active={activeItem === "Tik Tok"} onClick={() => handleItemClick("Tik Tok")} />
-        <NavItem label="Instagram" icon="photo_camera" isService active={activeItem === "Instagram"} onClick={() => handleItemClick("Instagram")} />
-        <NavItem label="Telegram" icon="send" isService active={activeItem === "Telegram"} onClick={() => handleItemClick("Telegram")} />
-        <NavItem label="YouTube" icon="play_circle" isService active={activeItem === "YouTube"} onClick={() => handleItemClick("YouTube")} />
-        <NavItem label="Shoppe" icon="shopping_bag" isService active={activeItem === "Shoppe"} onClick={() => handleItemClick("Shoppe")} />
-        <NavItem label="X - Twitter" icon="close" isService active={activeItem === "X - Twitter"} onClick={() => handleItemClick("X - Twitter")} />
-        <NavItem label="Threads" icon="alternate_email" isService active={activeItem === "Threads"} onClick={() => handleItemClick("Threads")} />
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 font-bold mt-4">Services</div>
+        <NavItem label="Dịch Vụ Tích Xanh" icon="stars" isService active={activeItem === "Dịch Vụ Tích Xanh"} onClick={() => handleItemClick("Dịch Vụ Tích Xanh")} />
+        <NavItem label="FaceBook" icon={fbGif} isService active={activeItem === "FaceBook"} onClick={() => handleItemClick("FaceBook")} />
+        <NavItem label="Tik Tok" icon={tiktokGif} isService active={activeItem === "Tik Tok"} onClick={() => handleItemClick("Tik Tok")} />
+        <NavItem label="Instagram" icon={igGif} isService active={activeItem === "Instagram"} onClick={() => handleItemClick("Instagram")} />
       </nav>
     </div>
   )
