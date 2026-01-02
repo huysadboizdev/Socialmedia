@@ -8,7 +8,15 @@ interface TokenDecode {
 // user authentication middleware
 const authUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { token } = req.headers
+        let token: string | undefined
+
+        const authHeader = req.headers.authorization
+        if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1]
+        } else if (typeof req.headers.token === 'string') {
+            token = req.headers.token
+        }
+
         if (!token) {
             return res.json({ success: false, message: "Not Authorized Login Again" })
         }
@@ -23,6 +31,7 @@ const authUser = async (req: Request, res: Response, next: NextFunction) => {
             return res.json({ success: false, message: "Invalid Token Payload" })
         }
 
+        req.body ??= {};
         (req.body as { userId: string }).userId = token_decode.id
 
         // Add a dummy await to satisfy lint if no async work is done, 

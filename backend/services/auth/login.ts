@@ -38,7 +38,10 @@ const login = async ({ email, password }: LoginParams) => {
     process.env.ACCESS_TOKEN_SECRET ?? 'secret'
   )
 
-  return { success: true, token }
+  // Exclude password from user object
+  const { password: _, ...userData } = user.toObject()
+
+  return { success: true, token, user: userData }
 }
 
 export default login

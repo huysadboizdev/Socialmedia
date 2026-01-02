@@ -1,6 +1,7 @@
 // src/components/register-form.jsx
 import axios from "axios"
 import { useState } from "react"
+import SharinganLoader from "./common/SharinganLoader"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -90,7 +91,12 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="w-[380px] bg-zinc-900 text-white border-zinc-800">
+    <Card className="w-[380px] bg-zinc-900 text-white border-zinc-800 relative">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50 rounded-xl">
+          <SharinganLoader size={80} />
+        </div>
+      )}
       <CardHeader className="space-y-1 text-center">
         <CardTitle className="text-xl">Create account</CardTitle>
         <p className="text-sm text-zinc-400">
@@ -209,8 +215,7 @@ export function RegisterForm() {
               disabled={isLoading}
               className="w-full bg-white text-black hover:bg-zinc-200"
             >
-              {isLoading && <Loader2 className="animate-spin" />}
-              Create account
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
 
             <div className="grid grid-cols-1 gap-3">

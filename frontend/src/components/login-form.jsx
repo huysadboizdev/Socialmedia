@@ -1,6 +1,8 @@
 // src/components/login-form.jsx
 import axios from "axios"
 import { useState } from "react"
+import SharinganLoader from "./common/SharinganLoader"
+import SuccessModal from "./common/SuccessModal"
 import { useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -32,6 +34,7 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const navigate = useNavigate()
 
   // Initialize react-hook-form with zod validation
@@ -54,11 +57,11 @@ export function LoginForm() {
 
       if (res.data.success) {
         localStorage.setItem("token", res.data.token)
-        toast.success("Đăng nhập thành công! 🎉")
-
-        setTimeout(() => {
-          navigate("/home")
-        }, 1000)
+        if (res.data.user) {
+            localStorage.setItem("user", JSON.stringify(res.data.user));
+        }
+        // Show success modal instead of immediate redirect
+        setShowSuccess(res.data.user?.username || "HuySadBoiz")
       } else {
         toast.error(res.data.message || "Login failed")
       }
@@ -70,8 +73,17 @@ export function LoginForm() {
     }
   }
 
+  if (showSuccess) {
+    return <SuccessModal username={typeof showSuccess === 'string' ? showSuccess : undefined} onConfirm={() => navigate("/home")} />
+  }
+
   return (
-    <Card className="w-[380px] bg-zinc-900 text-white border-zinc-800">
+    <Card className="w-[380px] bg-zinc-900 text-white border-zinc-800 relative">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50 rounded-xl">
+          <SharinganLoader size={80} />
+        </div>
+      )}
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl">Login to your account</CardTitle>
@@ -130,8 +142,7 @@ export function LoginForm() {
               disabled={isLoading}
               className="w-full bg-white text-black hover:bg-zinc-200"
             >
-              {isLoading && <Loader2 className="animate-spin" />}
-              Login
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
 
             <Button

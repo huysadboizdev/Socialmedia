@@ -1,14 +1,15 @@
 import Sidebar from "./Sidebar"
 import Header from "./Header"
 import { useState } from "react"
+import { Outlet } from "react-router-dom"
 
-export default function AppLayout({ children }) {
+export default function AppLayout() {
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="h-screen flex bg-slate-50 overflow-hidden">
       {/* Sidebar desktop */}
-      <aside className="hidden xl:block w-72 bg-white border-r">
+      <aside className="hidden xl:block w-72 bg-white border-r h-full flex-shrink-0">
         <Sidebar />
       </aside>
 
@@ -26,10 +27,10 @@ export default function AppLayout({ children }) {
       )}
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full">
         <Header onMenu={() => setOpen(true)} />
-        <main className="p-3 sm:p-4 md:p-6 w-full max-w-[1600px] mx-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto w-full custom-scrollbar bg-slate-50">
+          <Outlet />
         </main>
       </div>
     </div>
