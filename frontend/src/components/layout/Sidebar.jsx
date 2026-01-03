@@ -21,6 +21,9 @@ export default function Sidebar({ onClose }) {
   const location = useLocation();
   const [activeItem, setActiveItem] = useState("Quản lý chung");
   const [isGeneralExpanded, setIsGeneralExpanded] = useState(false);
+  const [isFacebookExpanded, setIsFacebookExpanded] = useState(false);
+  const [isTiktokExpanded, setIsTiktokExpanded] = useState(false);
+  const [isInstagramExpanded, setIsInstagramExpanded] = useState(false);
 
   const handleItemClick = (label) => {
     setActiveItem(label);
@@ -30,25 +33,25 @@ export default function Sidebar({ onClose }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white border-r border-slate-100 overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 overflow-hidden transition-colors duration-300">
       {/* Logo Header */}
-      <div className="px-6 py-5 flex items-center gap-3 flex-shrink-0 bg-white z-10">
+      <div className="px-6 py-5 flex items-center gap-3 flex-shrink-0 bg-white dark:bg-slate-900 z-10">
         <img src="/icon2.svg" alt="" className="w-8 h-8 object-contain" onError={(e) => e.target.style.display='none'}/>
         <div className="flex flex-col">
-           <span className="font-bold text-lg text-slate-800 leading-none tracking-tight flex items-center gap-1">
+           <span className="font-bold text-lg text-slate-800 dark:text-slate-100 leading-none tracking-tight flex items-center gap-1">
              HUYTICHXANH
              <span className="material-symbols-outlined text-[16px] text-blue-500">verified</span>
            </span>
         </div>
         {onClose && (
-          <button onClick={onClose} className="ml-auto xl:hidden p-1 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+          <button onClick={onClose} className="ml-auto xl:hidden p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
         )}
       </div>
 
       <nav className="flex-1 px-4 space-y-1 pb-6 overflow-y-auto custom-scrollbar">
-        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 font-bold mt-2">Home</div>
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-2">Home</div>
         
         <NavItem 
           label="Quản lý chung" 
@@ -60,7 +63,7 @@ export default function Sidebar({ onClose }) {
         />
 
         {isGeneralExpanded && (
-           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 my-1">
+           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
              <NavItem label="Trang chủ" to="/home" icon={trangchuPng} active={location.pathname === "/home"} onClick={() => handleItemClick("Trang chủ")} isSubItem />
              <NavItem label="Thông tin cá nhân" to="/profile" icon={thongtinPng} active={location.pathname === "/profile"} onClick={() => handleItemClick("Thông tin cá nhân")} isSubItem />
              <NavItem label="Nạp tiền tài khoản" icon={naptienPng} active={activeItem === "Nạp tiền tài khoản"} onClick={() => handleItemClick("Nạp tiền tài khoản")} isSubItem />
@@ -72,17 +75,63 @@ export default function Sidebar({ onClose }) {
            </div>
         )}
 
-        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 font-bold mt-4">Kiếm Tiền Miễn Phí</div>
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-4">Kiếm Tiền Miễn Phí</div>
         <NavItem label="Nhiệm vụ Hàng Ngày" icon={nhiemvuGif} active={activeItem === "Nhiệm vụ Hàng Ngày"} onClick={() => handleItemClick("Nhiệm vụ Hàng Ngày")} />
-        <NavItem label="Điểm Danh Hàng Ngày" icon={diemanhGif} active={activeItem === "Điểm Danh Hàng Ngày"} onClick={() => handleItemClick("Điểm Danh Hàng Ngày")} />
+        <NavItem label="Điểm Danh Hàng Ngày" to="/attendance" icon={diemanhGif} active={location.pathname === "/attendance"} onClick={() => handleItemClick("Điểm Danh Hàng Ngày")} />
         <NavItem label="Bảng Đua Top Nạp Tiền" icon={tongnapGif} active={activeItem === "Bảng Đua Top Nạp Tiền"} onClick={() => handleItemClick("Bảng Đua Top Nạp Tiền")} />
        
 
-        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 font-bold mt-4">Services</div>
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-4">Services</div>
         <NavItem label="Dịch Vụ Tích Xanh" icon="stars" isService active={activeItem === "Dịch Vụ Tích Xanh"} onClick={() => handleItemClick("Dịch Vụ Tích Xanh")} />
-        <NavItem label="FaceBook" icon={fbGif} isService active={activeItem === "FaceBook"} onClick={() => handleItemClick("FaceBook")} />
-        <NavItem label="Tik Tok" icon={tiktokGif} isService active={activeItem === "Tik Tok"} onClick={() => handleItemClick("Tik Tok")} />
-        <NavItem label="Instagram" icon={igGif} isService active={activeItem === "Instagram"} onClick={() => handleItemClick("Instagram")} />
+        
+        <NavItem 
+          label="FaceBook" 
+          icon={fbGif} 
+          active={activeItem === "FaceBook" || isFacebookExpanded} 
+          hasSubmenu
+          isOpen={isFacebookExpanded}
+          onClick={() => setIsFacebookExpanded(!isFacebookExpanded)} 
+        />
+
+        {isFacebookExpanded && (
+          <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
+            <NavItem label="Like Bài Viết" active={activeItem === "Like Bài Viết"} onClick={() => handleItemClick("Like Bài Viết")} isSubItem />
+            <NavItem label="Tăng Theo Dõi" active={activeItem === "Tăng Theo Dõi"} onClick={() => handleItemClick("Tăng Theo Dõi")} isSubItem />
+            <NavItem label="Share | Bài Viết" active={activeItem === "Share | Bài Viết"} onClick={() => handleItemClick("Share | Bài Viết")} isSubItem />
+          </div>
+        )}
+        <NavItem 
+          label="Tik Tok" 
+          icon={tiktokGif} 
+          active={activeItem === "Tik Tok" || isTiktokExpanded} 
+          hasSubmenu
+          isOpen={isTiktokExpanded}
+          onClick={() => setIsTiktokExpanded(!isTiktokExpanded)} 
+        />
+
+        {isTiktokExpanded && (
+          <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
+            <NavItem label="Tym video" active={activeItem === "Tym video"} onClick={() => handleItemClick("Tym video")} isSubItem />
+            <NavItem label="Tăng theo dõi" active={activeItem === "Tăng theo dõi"} onClick={() => handleItemClick("Tăng theo dõi")} isSubItem />
+            <NavItem label="Share video" active={activeItem === "Share video"} onClick={() => handleItemClick("Share video")} isSubItem />
+          </div>
+        )}
+        <NavItem 
+          label="Instagram" 
+          icon={igGif} 
+          active={activeItem === "Instagram" || isInstagramExpanded} 
+          hasSubmenu
+          isOpen={isInstagramExpanded}
+          onClick={() => setIsInstagramExpanded(!isInstagramExpanded)} 
+        />
+
+        {isInstagramExpanded && (
+          <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
+            <NavItem label="Like Bài Viết" active={activeItem === "Like Bài Viết"} onClick={() => handleItemClick("Like Bài Viết")} isSubItem />
+            <NavItem label="Tăng Theo Dõi" active={activeItem === "Tăng Theo Dõi"} onClick={() => handleItemClick("Tăng Theo Dõi")} isSubItem />
+            <NavItem label="Share | Bài Viết" active={activeItem === "Share | Bài Viết"} onClick={() => handleItemClick("Share | Bài Viết")} isSubItem />
+          </div>
+        )}
       </nav>
     </div>
   )
