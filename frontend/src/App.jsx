@@ -8,12 +8,16 @@ const Login = lazy(() => import("./pages/Login"))
 const Register = lazy(() => import("./pages/Register"))
 const Home = lazy(() => import("./pages/Home"))
 const Profile = lazy(() => import("./pages/Profile"))
+const Attendance = lazy(() => import("./pages/Attendance"))
 
 import AppLayout from "./components/layout/AppLayout"
+
+import NavigationLoader from "./components/common/NavigationLoader"
 
 function App() {
   return (
     <BrowserRouter>
+      <NavigationLoader />
       <Toaster position="top-right" richColors />
       <Suspense
         fallback={
@@ -38,6 +42,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/home" element={<Home />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/attendance" element={<Attendance />} />
           </Route>
         </Routes>
       </Suspense>

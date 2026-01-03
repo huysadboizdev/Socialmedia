@@ -7,14 +7,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import LogoutModal from "../common/LogoutModal"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 
 export default function Header({ onMenu }) {
   const [showLogout, setShowLogout] = useState(false)
   const navigate = useNavigate()
   const [username, setUsername] = useState("")
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem("theme") === "dark" || 
+           (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches)
+  })
+
+  // Initialize theme on mount
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
+  }, [isDark])
+
+  const toggleTheme = () => {
+    const newDark = !isDark
+    setIsDark(newDark)
+    localStorage.setItem("theme", newDark ? "dark" : "light")
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -22,6 +41,16 @@ export default function Header({ onMenu }) {
     setShowLogout(false)
     navigate("/login")
   }
+
+  const location = useLocation()
+
+  const routeMap = {
+    "/home": "Trang Chủ",
+    "/profile": "Thông Tin Cá Nhân",
+    "/attendance": "Điểm Danh Hằng Ngày",
+  }
+
+  const currentPage = routeMap[location.pathname] || ""
 
   const handleShowLogout = () => {
       try {
@@ -38,22 +67,45 @@ export default function Header({ onMenu }) {
 
   return (
     <>
-      <header className="h-14 bg-white border-b flex items-center px-4 gap-3 z-20 relative">
+      <header className="h-14 bg-white dark:bg-slate-900 border-b dark:border-slate-800 flex items-center px-4 gap-3 z-20 relative transition-colors duration-300">
         <button
           onClick={onMenu}
-          className="xl:hidden text-xl"
+          className="xl:hidden text-xl dark:text-slate-400"
         >
           ☰
         </button>
 
+        {/* Dynamic Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-100/50 dark:border-slate-700/50 ml-2 transition-colors">
+          <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-slate-500">home</span>
+          {currentPage && (
+            <>
+              <span className="text-slate-300 dark:text-slate-600 font-normal">{">"}</span>
+              <span className="text-slate-700 dark:text-slate-200 tracking-tight">{currentPage}</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex-1" />
+
         <Input
           placeholder="Search..."
-          className="max-w-xs"
+          className="max-w-[200px] h-9 text-xs focus-visible:ring-violet-500/20 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:placeholder:text-slate-500"
         />
 
         <div className="ml-auto flex items-center gap-3">
-          <button>🌙</button>
-          <button>🔔</button>
+          <button 
+            onClick={toggleTheme}
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all active:scale-90"
+            title={isDark ? "Mặt trời" : "Mặt trăng"}
+          >
+            <span className="text-xl">
+              {isDark ? "☀️" : "🌙"}
+            </span>
+          </button>
+          <button className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
+            <span className="text-xl">🔔</span>
+          </button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -64,7 +116,10 @@ export default function Header({ onMenu }) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem 
+                className="cursor-pointer"
+                onClick={() => navigate("/profile")}
+              >
                 <span className="material-symbols-outlined mr-2 text-lg">person</span>
                 Hồ sơ
               </DropdownMenuItem>
