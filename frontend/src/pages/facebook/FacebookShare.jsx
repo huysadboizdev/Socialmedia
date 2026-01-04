@@ -1,0 +1,253 @@
+
+import React, { useState } from 'react';
+import { toast } from 'sonner';
+
+const FacebookShare = () => {
+  const [activeTab, setActiveTab] = useState('create');
+  const [selectedServer, setSelectedServer] = useState('sv1');
+  const [formData, setFormData] = useState({
+    link: '',
+    quantity: '',
+    discount: '',
+    note: ''
+  });
+
+  const servers = [
+    { 
+      id: 'sv1', 
+      name: 'Sv1', 
+      label: 'Share Bài Viết | ⚡ Cực Nhanh ⚡ | Cài Là Lên Luôn', 
+      price: 17.4, 
+      status: 'Hoạt động',
+      statusType: 'success'
+    }
+  ];
+
+  const currentServer = servers.find(s => s.id === selectedServer) || servers[0];
+
+  const totalPrice = (parseInt(formData.quantity) || 0) * currentServer.price;
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (!formData.link) {
+      toast.error('Vui lòng nhập Link hoặc UID bài viết');
+      return;
+    }
+    if (!formData.quantity || parseInt(formData.quantity) <= 0) {
+      toast.error('Vui lòng nhập số lượng hợp lệ');
+      return;
+    }
+
+    if (currentServer.status === 'Bảo trì') {
+      toast.error('Máy chủ này đang bảo trì, vui lòng chọn máy chủ khác');
+      return;
+    }
+
+    toast.success('Đang khởi tạo đơn hàng...');
+    console.log('Order Data:', {
+      server: selectedServer,
+      ...formData,
+      totalPrice
+    });
+  };
+
+  return (
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Main Content - Left Side */}
+        <div className="xl:col-span-2 space-y-6">
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('create')}
+              className={`flex-1 py-3 px-4 rounded font-bold text-white transition-colors ${
+                activeTab === 'create'
+                  ? 'bg-purple-600 hover:bg-purple-700'
+                  : 'bg-slate-400 hover:bg-slate-500'
+              }`}
+            >
+              <span className="mr-2">🛒</span> Khởi Tạo Đơn
+            </button>
+            <button
+              onClick={() => setActiveTab('list')}
+              className={`flex-1 py-3 px-4 rounded font-bold transition-colors ${
+                activeTab === 'list'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-transparent text-purple-600 hover:bg-purple-50'
+              }`}
+            >
+              <span className="mr-2">Ð</span> Danh Sách Đơn
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-lg p-6 shadow-sm border border-slate-100 dark:border-slate-800">
+            {/* Multi-order badge */}
+            <div className="flex items-center gap-2 mb-6">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">Bạn có thể :</span>
+              <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded">
+                Mua nhiều đơn cùng lúc
+              </span>
+            </div>
+
+            {/* Link Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
+                Link Hoặc UID
+              </label>
+              <input
+                type="text"
+                name="link"
+                value={formData.link}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-purple-300 dark:border-purple-800 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-purple-500 transition-all font-medium"
+                placeholder="Nhập link hoặc UID bài viết..."
+              />
+            </div>
+
+            {/* Server List */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+                Máy Chủ :
+              </label>
+              <div className="space-y-3">
+                {servers.map((server) => (
+                  <div key={server.id} className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="server"
+                      id={server.id}
+                      checked={selectedServer === server.id}
+                      onChange={() => setSelectedServer(server.id)}
+                      className="w-4 h-4 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    />
+                    <label htmlFor={server.id} className="flex flex-wrap items-center gap-2 cursor-pointer select-none text-sm">
+                      <span className="font-bold text-orange-500 px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-xs">
+                        {server.name}
+                      </span>
+                      <span className="text-slate-700 dark:text-slate-300">
+                        {server.label}
+                      </span>
+                      <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold">
+                        {server.price}đ
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-xs text-white ${
+                        server.statusType === 'success' ? 'bg-green-500' : 'bg-green-500'
+                      }`}>
+                        {server.status}
+                      </span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quantity and Discount */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
+                  Số Lượng : ( 0 - 0 )
+                </label>
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-purple-300 dark:border-purple-800 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                  placeholder="Nhập số lượng..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
+                  Mã giảm giá
+                </label>
+                <input
+                  type="text"
+                  name="discount"
+                  value={formData.discount}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-purple-300 dark:border-purple-800 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                  placeholder="Nhập mã giảm giá..."
+                />
+              </div>
+            </div>
+
+            {/* Note */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
+                Ghi chú
+              </label>
+              <textarea
+                rows="4"
+                name="note"
+                value={formData.note}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-purple-300 dark:border-purple-800 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-purple-500 transition-all resize-none"
+                placeholder="Nhập ghi chú (nếu có)..."
+              ></textarea>
+            </div>
+
+            {/* Total Footer */}
+            <div className="bg-purple-600 text-white p-4 rounded-lg mb-4 text-center">
+              <div className="text-xl font-bold mb-1">
+                Tổng thanh toán: <span className="text-yellow-300">{totalPrice.toLocaleString('vi-VN')} VNĐ</span>
+              </div>
+              <div className="text-sm opacity-90">
+                Cho <span className="font-bold">{formData.quantity || 0}</span> Lượt tương tác
+              </div>
+            </div>
+
+            <button 
+              onClick={handleSubmit} 
+              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined">shopping_cart</span>
+              Tạo đơn hàng
+            </button>
+          </div>
+        </div>
+
+        {/* Sidebar - Right Side */}
+        <div className="xl:col-span-1 space-y-6">
+          {/* Instructions */}
+          <div className="bg-sky-100 dark:bg-slate-800 border border-sky-200 dark:border-slate-700 rounded-lg p-4">
+            <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2">Hướng dẫn</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Đơn Lỗi Báo Ngay SUPER ADMIN
+            </p>
+          </div>
+
+          {/* Warning */}
+          <div className="bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <h3 className="font-bold text-red-600 dark:text-red-400 mb-4 border-b border-red-200 dark:border-red-800 pb-2">LƯU Ý!</h3>
+            <ul className="space-y-4 text-sm text-slate-700 dark:text-slate-300">
+              <li className="flex gap-2">
+                <span className="text-slate-500">•</span>
+                <span>
+                  Nghiêm cấm buff các đơn có nội dung vi phạm pháp luật, chính trị, đồi trụy... Nếu cố tình buff bạn sẽ bị trừ hết tiền và ban khỏi hệ thống vĩnh viễn, và phải chịu hoàn toàn trách nhiệm trước pháp luật.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-slate-500">•</span>
+                <span>
+                  Nếu đơn đang chạy trên hệ thống mà bạn vẫn mua ở các hệ thống bên khác, nếu có tình trạng hụt, thiếu số lượng giữa 2 bên thì sẽ không được xử lí.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-slate-500">•</span>
+                <span>
+                  Đơn cài sai thông tin hoặc lỗi trong quá trình tăng hệ thống sẽ không hoàn lại tiền.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FacebookShare;

@@ -9,6 +9,7 @@ import transactionModel from '../models/transactionModel.js'
 
 interface UpdateProfileParams {
   username?: string;
+  fullName?: string;
   imageFile?: Express.Multer.File;
 }
 
@@ -36,9 +37,10 @@ export const getInfo = async (userId: string) => {
 /**
  * Update user profile
  */
-export const updateProfile = async (userId: string, { username, imageFile }: UpdateProfileParams) => {
+export const updateProfile = async (userId: string, { username, fullName, imageFile }: UpdateProfileParams) => {
     const updateData: Partial<IUser> = {}
     if (username) updateData.username = username
+    if (fullName) updateData.fullName = fullName
 
     if (imageFile) {
         const upload = await cloudinary.uploader.upload(imageFile.path)

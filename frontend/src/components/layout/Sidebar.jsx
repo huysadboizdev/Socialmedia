@@ -16,6 +16,7 @@ import igGif from "@/assets/ig.gif"
 import allGif from "@/assets/alll_list.gif"
 import supportGif from "@/assets/supportusser.gif"
 import dieukhoanGif from "@/assets/dieukhoan.gif"
+import verifiedGif from "@/assets/vefied.jpg"
 
 export default function Sidebar({ onClose }) {
   const location = useLocation();
@@ -24,6 +25,7 @@ export default function Sidebar({ onClose }) {
   const [isFacebookExpanded, setIsFacebookExpanded] = useState(false);
   const [isTiktokExpanded, setIsTiktokExpanded] = useState(false);
   const [isInstagramExpanded, setIsInstagramExpanded] = useState(false);
+  const [isBlueTickExpanded, setIsBlueTickExpanded] = useState(false);
 
   const handleItemClick = (label) => {
     setActiveItem(label);
@@ -67,7 +69,7 @@ export default function Sidebar({ onClose }) {
              <NavItem label="Trang chủ" to="/home" icon={trangchuPng} active={location.pathname === "/home"} onClick={() => handleItemClick("Trang chủ")} isSubItem />
              <NavItem label="Thông tin cá nhân" to="/profile" icon={thongtinPng} active={location.pathname === "/profile"} onClick={() => handleItemClick("Thông tin cá nhân")} isSubItem />
              <NavItem label="Nạp tiền tài khoản" icon={naptienPng} active={activeItem === "Nạp tiền tài khoản"} onClick={() => handleItemClick("Nạp tiền tài khoản")} isSubItem />
-             <NavItem label="Lịch sử giao dịch" icon={lichsuGif} active={activeItem === "Lịch sử giao dịch"} onClick={() => handleItemClick("Lịch sử giao dịch")} isSubItem />
+             <NavItem label="Lịch sử giao dịch" to="/history" icon={lichsuGif} active={location.pathname === "/history"} onClick={() => handleItemClick("Lịch sử giao dịch")} isSubItem />
              <NavItem label="Tất cả tiến trình" icon={allGif} active={activeItem === "Tất cả tiến trình"} onClick={() => handleItemClick("Tất cả tiến trình")} isSubItem />
              <NavItem label="Dịch vụ & cấp bậc" icon={capbacGif} active={activeItem === "Dịch vụ & cấp bậc"} onClick={() => handleItemClick("Dịch vụ & cấp bậc")} isSubItem />
              <NavItem label="Hỗ Trợ Khách Hàng" icon={supportGif} active={activeItem === "Hỗ Trợ Khách Hàng"} onClick={() => handleItemClick("Hỗ Trợ Khách Hàng")} isSubItem />
@@ -82,7 +84,21 @@ export default function Sidebar({ onClose }) {
        
 
         <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-4">Services</div>
-        <NavItem label="Dịch Vụ Tích Xanh" icon="stars" isService active={activeItem === "Dịch Vụ Tích Xanh"} onClick={() => handleItemClick("Dịch Vụ Tích Xanh")} />
+        <NavItem 
+          label="Dịch Vụ Tích Xanh" 
+          icon={verifiedGif} 
+          active={activeItem === "Dịch Vụ Tích Xanh" || isBlueTickExpanded} 
+          hasSubmenu
+          isOpen={isBlueTickExpanded}
+          onClick={() => setIsBlueTickExpanded(!isBlueTickExpanded)} 
+        />
+        
+        {isBlueTickExpanded && (
+           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
+             <NavItem label="Tích Xanh Facebook" to="/service/facebook-blue" icon={fbGif} active={location.pathname === "/service/facebook-blue"} onClick={() => handleItemClick("Tích Xanh Facebook")} isSubItem />
+             <NavItem label="Tích Xanh Instagram" to="/service/instagram-blue" icon={igGif} active={location.pathname === "/service/instagram-blue"} onClick={() => handleItemClick("Tích Xanh Instagram")} isSubItem />
+           </div>
+        )}
         
         <NavItem 
           label="FaceBook" 
@@ -95,9 +111,9 @@ export default function Sidebar({ onClose }) {
 
         {isFacebookExpanded && (
           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
-            <NavItem label="Like Bài Viết" active={activeItem === "Like Bài Viết"} onClick={() => handleItemClick("Like Bài Viết")} isSubItem />
-            <NavItem label="Tăng Theo Dõi" active={activeItem === "Tăng Theo Dõi"} onClick={() => handleItemClick("Tăng Theo Dõi")} isSubItem />
-            <NavItem label="Share | Bài Viết" active={activeItem === "Share | Bài Viết"} onClick={() => handleItemClick("Share | Bài Viết")} isSubItem />
+            <NavItem label="Like Bài Viết" to="/service/facebook-like" active={location.pathname === "/service/facebook-like"} onClick={() => handleItemClick("FB_Like Bài Viết")} isSubItem />
+            <NavItem label="Tăng Theo Dõi" to="/service/facebook-follow" active={location.pathname === "/service/facebook-follow"} onClick={() => handleItemClick("FB_Tăng Theo Dõi")} isSubItem />
+            <NavItem label="Share | Bài Viết" to="/service/facebook-share" active={location.pathname === "/service/facebook-share"} onClick={() => handleItemClick("FB_Share | Bài Viết")} isSubItem />
           </div>
         )}
         <NavItem 
@@ -111,9 +127,9 @@ export default function Sidebar({ onClose }) {
 
         {isTiktokExpanded && (
           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
-            <NavItem label="Tym video" active={activeItem === "Tym video"} onClick={() => handleItemClick("Tym video")} isSubItem />
-            <NavItem label="Tăng theo dõi" active={activeItem === "Tăng theo dõi"} onClick={() => handleItemClick("Tăng theo dõi")} isSubItem />
-            <NavItem label="Share video" active={activeItem === "Share video"} onClick={() => handleItemClick("Share video")} isSubItem />
+            <NavItem label="Tym video" to="/service/tiktok-like" active={location.pathname === "/service/tiktok-like"} onClick={() => handleItemClick("TT_Tym video")} isSubItem />
+            <NavItem label="Tăng theo dõi" to="/service/tiktok-follow" active={location.pathname === "/service/tiktok-follow"} onClick={() => handleItemClick("TT_Tăng theo dõi")} isSubItem />
+            <NavItem label="Share video" to="/service/tiktok-share" active={location.pathname === "/service/tiktok-share"} onClick={() => handleItemClick("TT_Share video")} isSubItem />
           </div>
         )}
         <NavItem 
@@ -127,9 +143,9 @@ export default function Sidebar({ onClose }) {
 
         {isInstagramExpanded && (
           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
-            <NavItem label="Like Bài Viết" active={activeItem === "Like Bài Viết"} onClick={() => handleItemClick("Like Bài Viết")} isSubItem />
-            <NavItem label="Tăng Theo Dõi" active={activeItem === "Tăng Theo Dõi"} onClick={() => handleItemClick("Tăng Theo Dõi")} isSubItem />
-            <NavItem label="Share | Bài Viết" active={activeItem === "Share | Bài Viết"} onClick={() => handleItemClick("Share | Bài Viết")} isSubItem />
+            <NavItem label="Like Bài Viết" to="/service/instagram-like" active={location.pathname === "/service/instagram-like"} onClick={() => handleItemClick("IG_Like Bài Viết")} isSubItem />
+            <NavItem label="Tăng Theo Dõi" to="/service/instagram-follow" active={location.pathname === "/service/instagram-follow"} onClick={() => handleItemClick("IG_Tăng Theo Dõi")} isSubItem />
+            <NavItem label="Share | Bài Viết" to="/service/instagram-share" active={location.pathname === "/service/instagram-share"} onClick={() => handleItemClick("IG_Share | Bài Viết")} isSubItem />
           </div>
         )}
       </nav>

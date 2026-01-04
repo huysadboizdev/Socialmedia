@@ -48,6 +48,16 @@ export default function Header({ onMenu }) {
     "/home": "Trang Chủ",
     "/profile": "Thông Tin Cá Nhân",
     "/attendance": "Điểm Danh Hằng Ngày",
+    "/history": "Lịch Sử Giao Dịch",
+    "/service/facebook-like": "Like Bài Viết",
+    "/service/facebook-follow": "Tăng Theo Dõi",
+    "/service/facebook-share": "Share | Bài Viết",
+    "/service/tiktok-like": "Tym video",
+    "/service/tiktok-follow": "Tăng theo dõi",
+    "/service/tiktok-share": "Share video",
+    "/service/instagram-follow": "Tăng Theo Dõi",
+    "/service/instagram-like": "Like Bài Viết",
+    "/service/instagram-share": "Share | Bài Viết",
   }
 
   const currentPage = routeMap[location.pathname] || ""
