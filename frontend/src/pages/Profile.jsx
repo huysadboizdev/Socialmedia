@@ -1,11 +1,95 @@
 import AppLayout from "@/components/layout/AppLayout";
 import SharinganLoader from "@/components/common/SharinganLoader";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState("info");
   const [saving, setSaving] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [fullName, setFullName] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      
+      const res = await axios.get(`${API_URL}/api/user/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.success) {
+        setUserData(res.data.user);
+        setFullName(res.data.user.fullName || "");
+        setPreviewImage(res.data.user.image || null);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      toast.error("Không thể tải thông tin người dùng");
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      setSaving(true);
+      const token = localStorage.getItem("token");
+      
+      const formData = new FormData();
+      formData.append("fullName", fullName);
+      if (selectedImage) {
+        formData.append("image", selectedImage);
+      }
+
+      const res = await axios.put(
+        `${API_URL}/api/user/profile`,
+        formData,
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          } 
+        }
+      );
+
+      if (res.data.success) {
+        setUserData(prev => ({ ...prev, ...res.data.user }));
+        setPreviewImage(res.data.user.image);
+        setSelectedImage(null);
+        toast.success("Cập nhật thông tin thành công!");
+        // Update local storage if needed
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem("user", JSON.stringify({ ...storedUser, ...res.data.user }));
+      } else {
+        toast.error(res.data.message || "Cập nhật thất bại");
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error("Đã có lỗi xảy ra");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSavePassword = () => {
     setSaving(true);
@@ -38,11 +122,30 @@ export default function Profile() {
                 <div className="p-6 space-y-6">
                   {/* Avatar Placeholder */}
                   <div className="flex flex-col items-center gap-4 py-4 border-b border-slate-50 dark:border-slate-800 border-dashed">
-                    <div className="size-24 rounded-full bg-violet-50 dark:bg-violet-900/20 border-4 border-violet-100/50 dark:border-violet-800 flex items-center justify-center transition-colors">
-                      <span className="material-symbols-outlined text-4xl text-violet-600 dark:text-violet-400">person</span>
+                    <div className="relative group">
+                      <div className="size-24 rounded-full bg-violet-50 dark:bg-violet-900/20 border-4 border-violet-100/50 dark:border-violet-800 flex items-center justify-center transition-colors overflow-hidden">
+                        {previewImage ? (
+                          <img src={previewImage} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="material-symbols-outlined text-4xl text-violet-600 dark:text-violet-400">person</span>
+                        )}
+                      </div>
+                      <label 
+                        htmlFor="avatar-upload"
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-white">edit</span>
+                      </label>
+                      <input 
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
                     </div>
                     <div className="text-center">
-                      <div className="font-bold text-gray-800 dark:text-slate-100 text-lg uppercase tracking-wide">huydzv1</div>
+                      <div className="font-bold text-gray-800 dark:text-slate-100 text-lg uppercase tracking-wide">{userData?.username || "Loading..."}</div>
                       <div className="text-xs font-semibold px-3 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 rounded-full mt-1">THÀNH VIÊN</div>
                     </div>
                   </div>
@@ -51,19 +154,19 @@ export default function Profile() {
                     {/* Username */}
                     <div className="space-y-1.5">
                       <label className="text-[12px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tight">Tên Tài Khoản</label>
-                      <div className="w-full font-semibold text-gray-700 dark:text-slate-300">huydzv1</div>
+                      <div className="w-full font-semibold text-gray-700 dark:text-slate-300">{userData?.username || "..."}</div>
                     </div>
 
                     {/* Email */}
                     <div className="space-y-1.5">
                       <label className="text-[12px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tight">Địa chỉ Email</label>
-                      <div className="w-full font-semibold text-gray-700 dark:text-slate-300 break-all">hoicaiditmemay6@gmail.com</div>
+                      <div className="w-full font-semibold text-gray-700 dark:text-slate-300 break-all">{userData?.email || "..."}</div>
                     </div>
 
                     {/* Registered At */}
                     <div className="space-y-1.5">
                       <label className="text-[12px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-tight">Thời Gian Đăng Kí</label>
-                      <div className="w-full font-semibold text-gray-700 dark:text-slate-300">2025-12-28 16:41:03</div>
+                      <div className="w-full font-semibold text-gray-700 dark:text-slate-300">{userData ? new Date(userData.createdAt).toLocaleString('vi-VN') : "..."}</div>
                     </div>
                   </div>
                 </div>
@@ -108,16 +211,20 @@ export default function Profile() {
                         {/* Họ và tên */}
                         <div className="space-y-2">
                           <label className="text-[13px] font-bold text-gray-700 dark:text-slate-300">Họ và tên:</label>
-                          <div className="w-full px-5 py-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-gray-600 dark:text-slate-400 font-medium text-sm transition-colors">
-                            Công Kim
-                          </div>
+                          <input 
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Cập nhật họ tên..."
+                            className="w-full px-5 py-3.5 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-gray-700 dark:text-slate-100 font-medium text-sm transition-all focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 outline-none"
+                          />
                         </div>
 
                         {/* Email */}
                         <div className="space-y-2">
                           <label className="text-[13px] font-bold text-gray-700 dark:text-slate-300">Địa chỉ Email:</label>
                           <div className="w-full px-5 py-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-gray-600 dark:text-slate-400 font-medium text-sm transition-colors">
-                            hoicaiditmemay6@gmail.com
+                            {userData?.email || "..."}
                           </div>
                         </div>
 
@@ -125,7 +232,7 @@ export default function Profile() {
                         <div className="space-y-2">
                           <label className="text-[13px] font-bold text-gray-700 dark:text-slate-300">Tài khoản:</label>
                           <div className="w-full px-5 py-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-gray-600 dark:text-slate-400 font-medium text-sm transition-colors">
-                            huydzv1
+                            {userData?.username || "..."}
                           </div>
                         </div>
 
@@ -133,7 +240,7 @@ export default function Profile() {
                         <div className="space-y-2">
                           <label className="text-[13px] font-bold text-gray-700 dark:text-slate-300">Thời gian đăng kí:</label>
                           <div className="w-full px-5 py-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-gray-600 dark:text-slate-400 font-medium text-sm transition-colors">
-                            2025-12-28 16:41:03
+                            {userData ? new Date(userData.createdAt).toLocaleString('vi-VN') : "..."}
                           </div>
                         </div>
 
@@ -141,9 +248,20 @@ export default function Profile() {
                         <div className="space-y-2">
                           <label className="text-[13px] font-bold text-gray-700 dark:text-slate-300">Số dư:</label>
                           <div className="w-full px-5 py-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-gray-600 dark:text-slate-400 font-medium text-sm transition-colors">
-                            100 VNĐ
+                            {(userData?.balance || 0).toLocaleString('vi-VN')} VNĐ
                           </div>
                         </div>
+                      </div>
+
+                      <div className="flex justify-end pt-4">
+                        <button 
+                          onClick={handleUpdateProfile}
+                          disabled={saving}
+                          className="flex items-center gap-2 px-8 py-3.5 bg-violet-600 text-white rounded-xl font-bold text-sm hover:bg-violet-700 transition-all shadow-lg shadow-violet-200 dark:shadow-violet-900/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">save</span>
+                          {saving ? "Đang lưu..." : "Lưu thông tin"}
+                        </button>
                       </div>
                     </div>
                   )}
