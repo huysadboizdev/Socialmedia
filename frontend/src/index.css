@@ -1,15 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Lexend:wght@100..900&family=Pattaya&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
-*{
-
-    font-family: 'Outfit', sans-serif;
-}
-
 @theme inline {
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-heading: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
     --radius-sm: calc(var(--radius) - 4px);
 
@@ -307,7 +304,11 @@
     }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
     }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
 }
 
 /* Fix main content width relative to sidebar */
