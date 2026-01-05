@@ -58,6 +58,8 @@ export default function Header({ onMenu }) {
     "/service/instagram-follow": "Tăng Theo Dõi",
     "/service/instagram-like": "Like Bài Viết",
     "/service/instagram-share": "Share | Bài Viết",
+    "/service/facebook-blue": "Tích Xanh Facebook",
+    "/service/instagram-blue": "Tích Xanh Instagram",
   }
 
   const currentPage = routeMap[location.pathname] || ""

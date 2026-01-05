@@ -1,5 +1,5 @@
 import AppLayout from "@/components/layout/AppLayout";
-import sotienGif from "@/assets/sotien.gif";
+import NotificationModal from "@/components/common/NotificationModal";import sotienGif from "@/assets/sotien.gif";
 import tongnapGif from "@/assets/tongnap.gif";
 import napthangGif from "@/assets/napthang.gif";
 import capbacGif from "@/assets/capbac.gif";
@@ -9,6 +9,7 @@ export default function Home() {
   return (
     <div className="flex-1 min-h-full">
       <div className="w-full p-4 md:p-6 space-y-6">
+        <NotificationModal />
         
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

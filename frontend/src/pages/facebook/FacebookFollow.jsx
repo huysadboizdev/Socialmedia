@@ -80,23 +80,23 @@ const FacebookFollow = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab('create')}
-              className={`flex-1 py-3 px-4 rounded font-bold text-white transition-colors ${
+              className={`flex-1 py-3 px-4 rounded font-bold text-white transition-colors flex items-center justify-center gap-2 ${
                 activeTab === 'create'
                   ? 'bg-purple-600 hover:bg-purple-700'
                   : 'bg-slate-400 hover:bg-slate-500'
               }`}
             >
-              <span className="mr-2">🛒</span> Khởi Tạo Đơn
+              <span className="material-symbols-outlined text-[20px]">add_shopping_cart</span> Khởi Tạo Đơn
             </button>
             <button
               onClick={() => setActiveTab('list')}
-              className={`flex-1 py-3 px-4 rounded font-bold transition-colors ${
+              className={`flex-1 py-3 px-4 rounded font-bold transition-colors flex items-center justify-center gap-2 ${
                 activeTab === 'list'
                   ? 'bg-purple-600 text-white'
                   : 'bg-transparent text-purple-600 hover:bg-purple-50'
               }`}
             >
-              <span className="mr-2">Ð</span> Danh Sách Đơn
+              <span className="material-symbols-outlined text-[20px]">receipt_long</span> Danh Sách Đơn
             </button>
           </div>
 
