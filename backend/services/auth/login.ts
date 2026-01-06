@@ -15,6 +15,28 @@ const login = async ({ email, password }: LoginParams) => {
     return { success: false, message: 'Missing fields' }
   }
 
+  // Check for Admin from .env
+  const adminEmail = process.env.ADMIN_EMAIL
+  const adminPassword = process.env.ADMIN_PASSWORD
+
+  if (email === adminEmail && password === adminPassword) {
+    const token = jwt.sign(
+      { id: 'admin', role: 'admin' },
+      process.env.ACCESS_TOKEN_SECRET ?? 'secret'
+    )
+    return {
+      success: true,
+      token,
+      user: {
+        _id: 'admin',
+        username: 'Admin',
+        email: adminEmail,
+        role: 'admin',
+        balance: 999999999
+      }
+    }
+  }
+
   const user = await userModel.findOne({ email })
   if (!user) {
     return { success: false, message: 'Email not found' }

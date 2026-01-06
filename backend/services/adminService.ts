@@ -164,6 +164,7 @@ export const manageOrders = async ({ action, orderId, status }: OrderManagementP
         const orders = await orderModel
             .find()
             .populate('service')
+            .populate('userId', 'username email')
             .sort({ orderDate: -1 })
         return { success: true, orders }
     }
@@ -237,4 +238,48 @@ export const reassignMissionToUser = async (userId: string, missionId: string) =
     )
     await user.save()
     return { success: true, message: 'Mission assigned to user' }
+}
+
+/**
+ * Dashboard Statistics
+ */
+export const fetchDashboardStats = async () => {
+    const totalUsers = await userModel.countDocuments()
+    
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    const todayOrders = await orderModel.countDocuments({ orderDate: { $gte: startOfToday } })
+
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+    interface AggResult { total: number }
+
+    const monthlyRevenueData = (await orderModel.aggregate([
+        { $match: { status: 'Completed', orderDate: { $gte: startOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ])) as unknown as AggResult[]
+    const monthlyRevenue = monthlyRevenueData.length > 0 ? (monthlyRevenueData[0]?.total ?? 0) : 0
+
+    const userBalances = (await userModel.aggregate([
+        { $group: { _id: null, total: { $sum: '$balance' } } }
+    ])) as unknown as AggResult[]
+    const systemBalance = userBalances.length > 0 ? (userBalances[0]?.total ?? 0) : 0
+
+    const recentOrders = await orderModel.find()
+        .populate('service', 'name platform')
+        .populate('userId', 'username')
+        .sort({ orderDate: -1 })
+        .limit(10)
+
+    return {
+        success: true,
+        stats: {
+            totalUsers,
+            todayOrders,
+            monthlyRevenue,
+            systemBalance
+        },
+        recentOrders: recentOrders as unknown[]
+    }
 }

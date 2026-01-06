@@ -16,11 +16,13 @@ import {
     editMission,
     deleteMission,
     getAllMissions,
-    assignMissionToUser
+    assignMissionToUser,
+    getDashboardStats
 } from '../controller/adminController.js'
 
 const adminRouter = express.Router()
 
+adminRouter.get('/stats', getDashboardStats)
 adminRouter.post('/add-service', addService)
 adminRouter.post('/edit-service', editService) 
 adminRouter.post('/delete-service', deleteService)

@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 const InstagramBlue = () => {
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState(null);
   const [formData, setFormData] = useState({
     targetUrl: '',
     username: '',
@@ -11,25 +15,85 @@ const InstagramBlue = () => {
     note: ''
   });
 
-  const price = 499000;
+  const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.post(`${API_URL}/api/user/service`, { action: 'getServices' }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+          const igBlueServices = res.data.services.filter(s => s.platform === 'Instagram' && s.category === 'Tích Xanh' && s.isActive !== false);
+          setServices(igBlueServices);
+          if (igBlueServices.length > 0) {
+            setSelectedService(igBlueServices[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Fetch services error:", err);
+        toast.error("Không thể tải thông tin dịch vụ");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
+  }, [API_URL]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.targetUrl || !formData.username || !formData.password || !formData.contactInfo) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
-    toast.success('Đang khởi tạo đơn hàng...');
-    console.log('Order Data:', {
-      service: 'Instagram Blue Tick',
-      price,
-      ...formData
-    });
+    if (!selectedService) {
+      toast.error('Dịch vụ hiện không khả dụng');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      toast.loading('Đang khởi tạo đơn hàng...', { id: 'order-toast' });
+      
+      const res = await axios.post(`${API_URL}/api/user/service`, {
+        action: 'createOrder',
+        serviceId: selectedService._id,
+        quantity: 1,
+        link: formData.targetUrl,
+        note: formData.note,
+        details: {
+          username: formData.username,
+          password: formData.password,
+          twoFaCode: formData.twoFaCode,
+          contactInfo: formData.contactInfo
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.success) {
+        toast.success('Đặt dịch vụ thành công!', { id: 'order-toast' });
+        setFormData({
+          targetUrl: '',
+          username: '',
+          password: '',
+          twoFaCode: '',
+          contactInfo: '',
+          note: ''
+        });
+      } else {
+        toast.error(res.data.message || 'Lỗi khi đặt dịch vụ', { id: 'order-toast' });
+      }
+    } catch (err) {
+      console.error("Submit order error:", err);
+      toast.error('Lỗi kết nối máy chủ', { id: 'order-toast' });
+    }
   };
 
   return (
@@ -46,11 +110,48 @@ const InstagramBlue = () => {
 
             {/* Service Option */}
             <div className="mb-8">
-              <div className="p-4 border border-orange-200 bg-orange-50 dark:bg-orange-900/10 rounded-lg flex items-center justify-between">
-                <span className="font-bold text-slate-700 dark:text-slate-200">Dịch vụ Ngâm Tích Xanh Instagram</span>
-                <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                  {price.toLocaleString('vi-VN')} VNĐ
-                </span>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+                Lựa chọn gói dịch vụ :
+              </label>
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="flex items-center gap-2 py-4 text-slate-400">
+                    <span className="material-symbols-outlined animate-spin text-pink-500">sync</span>
+                    <span className="text-sm italic">Đang tải cấu hình giá...</span>
+                  </div>
+                ) : services.length === 0 ? (
+                  <div className="p-4 border border-red-200 bg-red-50 text-red-600 rounded-lg text-sm italic">
+                    Hiện tại dịch vụ này đang bảo trì. Vui lòng quay lại sau.
+                  </div>
+                ) : (
+                  services.map((service) => (
+                    <div 
+                      key={service._id} 
+                      onClick={() => setSelectedService(service)}
+                      className={`p-4 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
+                        selectedService?._id === service._id 
+                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/10 shadow-md' 
+                          : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 hover:border-pink-300'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-pink-600 dark:group-hover:text-pink-400">
+                          {service.name}
+                        </span>
+                        {service.description && (
+                          <span className="text-[10px] text-slate-500 line-clamp-1">{service.description}</span>
+                        )}
+                      </div>
+                      <span className={`px-4 py-1.5 rounded-full text-sm font-bold shadow-sm ${
+                        selectedService?._id === service._id 
+                          ? 'bg-pink-500 text-white' 
+                          : 'bg-white dark:bg-slate-700 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/30'
+                      }`}>
+                        {service.price.toLocaleString('vi-VN')} VNĐ
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -86,7 +187,7 @@ const InstagramBlue = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Mật khẩu Facebook:
+                  Mật khẩu Instagram:
                 </label>
                 <input
                   type="text"
@@ -129,7 +230,7 @@ const InstagramBlue = () => {
               ></textarea>
             </div>
 
-            {/* Contact Info (UPDATED AS REQUESTED) */}
+            {/* Contact Info */}
             <div className="mb-8">
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Link facebook hoặc sdt zalo để liên hệ:

@@ -160,3 +160,12 @@ export const assignMissionToUser = async (req: Request, res: Response) => {
         res.status(400).json({ success: false, message: error instanceof Error ? error.message : String(error) })
     }
 }
+
+export const getDashboardStats = async (req: Request, res: Response) => {
+    try {
+        const result = await adminService.fetchDashboardStats()
+        res.json(result)
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, message: 'Stats error', error: error instanceof Error ? error.message : String(error) })
+    }
+}

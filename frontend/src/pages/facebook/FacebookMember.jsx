@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
 
-const FacebookLike = () => {
+const FacebookMember = () => {
   const [activeTab, setActiveTab] = useState('create');
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,12 +25,12 @@ const FacebookLike = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data.success) {
-          const fbLikeServices = res.data.services.filter(s => 
+          const fbMemberServices = res.data.services.filter(s => 
             s.platform === 'Facebook' && 
             s.isActive !== false && 
-            (s.category === 'Tăng Like' || s.category === 'Like Bài Viết')
+            s.category === 'Tăng Member Group'
           );
-          setServices(fbLikeServices.map(s => ({
+          setServices(fbMemberServices.map(s => ({
             id: s._id,
             name: s.name,
             label: s.description || s.name,
@@ -38,8 +38,8 @@ const FacebookLike = () => {
             status: s.isActive ? 'Hoạt động' : 'Bảo trì',
             speed: s.speed
           })));
-          if (fbLikeServices.length > 0) {
-            setSelectedServer(fbLikeServices[0]._id);
+          if (fbMemberServices.length > 0) {
+            setSelectedServer(fbMemberServices[0]._id);
           }
         }
       } catch (err) {
@@ -63,7 +63,7 @@ const FacebookLike = () => {
 
   const handleSubmit = async () => {
     if (!formData.link) {
-      toast.error('Vui lòng nhập Link hoặc UID bài viết');
+      toast.error('Vui lòng nhập Link Group');
       return;
     }
     if (!formData.quantity || parseInt(formData.quantity) <= 0) {
@@ -71,9 +71,9 @@ const FacebookLike = () => {
       return;
     }
     if (!selectedServer) {
-      toast.error('Vui lòng chọn máy chủ');
-      return;
-    }
+        toast.error('Vui lòng chọn máy chủ');
+        return;
+      }
 
     try {
       const token = localStorage.getItem("token");
@@ -142,7 +142,7 @@ const FacebookLike = () => {
             {/* Link Input */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
-                Link Hoặc UID
+                Link Group
               </label>
               <input
                 type="text"
@@ -150,7 +150,7 @@ const FacebookLike = () => {
                 value={formData.link}
                 onChange={handleInputChange}
                 className="w-full p-3 border border-purple-300 dark:border-purple-800 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-purple-500 transition-all font-medium"
-                placeholder="Nhập link hoặc UID bài viết..."
+                placeholder="Nhập link group facebook..."
               />
             </div>
 
@@ -183,7 +183,11 @@ const FacebookLike = () => {
                           {server.name}
                         </span>
                         <span className="text-slate-700 dark:text-slate-300">
-                          {server.label}
+                           {server.label.includes('|') ? server.label.split('|').map((part, index) => (
+                                <span key={index} className={index > 0 ? "border-l border-slate-300 pl-2 ml-2 border-r pr-2 mr-2 last:border-0 last:mr-0 last:pr-0" : "mr-2 pr-2 border-r border-slate-300"}>
+                                    {part.trim()}
+                                </span>
+                            )) : server.label}
                         </span>
                         <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold">
                           {server.price}đ
@@ -254,7 +258,7 @@ const FacebookLike = () => {
                 Tổng thanh toán: <span className="text-yellow-300">{totalPrice.toLocaleString('vi-VN')} VNĐ</span>
               </div>
               <div className="text-sm opacity-90">
-                Cho <span className="font-bold">{formData.quantity || 0}</span> Lượt tương tác
+                Cho <span className="font-bold">{formData.quantity || 0}</span> Thành viên Group
               </div>
             </div>
 
@@ -267,7 +271,7 @@ const FacebookLike = () => {
             </button>
           </div>
           ) : (
-            <ServiceOrderList serviceType="facebook_like" />
+            <ServiceOrderList serviceType="facebook_member" />
           )}
         </div>
 
@@ -313,4 +317,4 @@ const FacebookLike = () => {
   );
 };
 
-export default FacebookLike;
+export default FacebookMember;
