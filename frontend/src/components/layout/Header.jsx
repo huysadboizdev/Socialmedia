@@ -47,8 +47,10 @@ export default function Header({ onMenu }) {
   const routeMap = {
     "/home": "Trang Chủ",
     "/profile": "Thông Tin Cá Nhân",
-    "/attendance": "Điểm Danh Hằng Ngày",
+    "/attendance": "Điểm Danh Hàng Ngày",
+    "/daily-task": "Nhiệm vụ Hàng Ngày",
     "/history": "Lịch Sử Giao Dịch",
+    "/all-orders": "Tất cả tiến trình",
     "/service/facebook-like": "Like Bài Viết",
     "/service/facebook-follow": "Tăng Theo Dõi",
     "/service/facebook-share": "Share | Bài Viết",
@@ -60,6 +62,12 @@ export default function Header({ onMenu }) {
     "/service/instagram-share": "Share | Bài Viết",
     "/service/facebook-blue": "Tích Xanh Facebook",
     "/service/instagram-blue": "Tích Xanh Instagram",
+    "/support": "Hỗ Trợ Khách Hàng",
+    "/terms": "Điều khoản dịch vụ",
+    "/admin": "Quản Trị Hệ Thống",
+    "/admin/users": "Quản Lý Người Dùng",
+    "/admin/services": "Quản Lý Dịch Vụ",
+    "/admin/orders": "Quản Lý Đơn Hàng",
   }
 
   const currentPage = routeMap[location.pathname] || ""

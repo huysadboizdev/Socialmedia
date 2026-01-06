@@ -74,7 +74,13 @@ export function LoginForm() {
   }
 
   if (showSuccess) {
-    return <SuccessModal username={typeof showSuccess === 'string' ? showSuccess : undefined} onConfirm={() => navigate("/home")} />
+    const userRole = JSON.parse(localStorage.getItem("user") || "{}").role;
+    return (
+      <SuccessModal 
+        username={typeof showSuccess === 'string' ? showSuccess : undefined} 
+        onConfirm={() => navigate(userRole === "admin" ? "/admin" : "/home")} 
+      />
+    );
   }
 
   return (

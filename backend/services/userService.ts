@@ -17,6 +17,9 @@ interface HandleServiceParams {
   action: string;
   serviceId?: string;
   quantity?: number;
+  link?: string;
+  note?: string;
+  details?: Record<string, unknown>;
 }
 
 interface ChangePasswordParams {
@@ -79,7 +82,7 @@ export const changePassword = async (userId: string, { oldPassword, newPassword1
 /**
  * Handle services and orders for user
  */
-export const handleService = async (userId: string, { action, serviceId, quantity = 1 }: HandleServiceParams) => {
+export const handleService = async (userId: string, { action, serviceId, quantity = 1, link, note, details }: HandleServiceParams) => {
     if (action === 'getServices') {
         const services = await serviceModel.find()
         return { success: true, services }
@@ -90,15 +93,29 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         const service = await serviceModel.findById(serviceId)
         if (!service) return { success: false, message: 'Service not found' }
 
+        const user = await userModel.findById(userId)
+        if (!user) return { success: false, message: 'User not found' }
+
+        const totalPrice = service.price * quantity
+        if ((user.balance || 0) < totalPrice) {
+            return { success: false, message: 'Số dư tài khoản không đủ. Vui lòng nạp thêm!' }
+        }
+
         const order = await orderModel.create({
             userId,
             service: serviceId,
             quantity,
-            totalPrice: service.price * quantity,
+            totalPrice,
+            link: link ?? "",
+            note: note ?? "",
+            details: details ?? {},
             status: 'Pending'
         })
 
-        return { success: true, order }
+        user.balance = (user.balance || 0) - totalPrice
+        await user.save()
+
+        return { success: true, order, balance: user.balance }
     }
 
     if (action === 'getOrderHistory') {

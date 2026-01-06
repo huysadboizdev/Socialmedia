@@ -23,6 +23,18 @@ const orderSchema = new Schema({
     type: Number,
     required: true
   },
+  link: {
+    type: String,
+    default: ""
+  },
+  note: {
+    type: String,
+    default: ""
+  },
+  details: {
+    type: Schema.Types.Mixed,
+    default: {}
+  },
   status: {
     type: String,
     enum: ["Pending", "In Progress", "Completed", "Cancelled"],

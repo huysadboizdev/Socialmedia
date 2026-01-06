@@ -70,15 +70,15 @@ export default function Sidebar({ onClose }) {
              <NavItem label="Thông tin cá nhân" to="/profile" icon={thongtinPng} active={location.pathname === "/profile"} onClick={() => handleItemClick("Thông tin cá nhân")} isSubItem />
              <NavItem label="Nạp tiền tài khoản" icon={naptienPng} active={activeItem === "Nạp tiền tài khoản"} onClick={() => handleItemClick("Nạp tiền tài khoản")} isSubItem />
              <NavItem label="Lịch sử giao dịch" to="/history" icon={lichsuGif} active={location.pathname === "/history"} onClick={() => handleItemClick("Lịch sử giao dịch")} isSubItem />
-             <NavItem label="Tất cả tiến trình" icon={allGif} active={activeItem === "Tất cả tiến trình"} onClick={() => handleItemClick("Tất cả tiến trình")} isSubItem />
+             <NavItem label="Tất cả tiến trình" to="/all-orders" icon={allGif} active={location.pathname === "/all-orders"} onClick={() => handleItemClick("Tất cả tiến trình")} isSubItem />
              <NavItem label="Dịch vụ & cấp bậc" icon={capbacGif} active={activeItem === "Dịch vụ & cấp bậc"} onClick={() => handleItemClick("Dịch vụ & cấp bậc")} isSubItem />
-             <NavItem label="Hỗ Trợ Khách Hàng" icon={supportGif} active={activeItem === "Hỗ Trợ Khách Hàng"} onClick={() => handleItemClick("Hỗ Trợ Khách Hàng")} isSubItem />
-             <NavItem label="Điều khoản dịch vụ" icon={dieukhoanGif} active={activeItem === "Điều khoản dịch vụ"} onClick={() => handleItemClick("Điều khoản dịch vụ")} isSubItem />
+             <NavItem label="Hỗ Trợ Khách Hàng" to="/support" icon={supportGif} active={location.pathname === "/support"} onClick={() => handleItemClick("Hỗ Trợ Khách Hàng")} isSubItem />
+             <NavItem label="Điều khoản dịch vụ" to="/terms" icon={dieukhoanGif} active={location.pathname === "/terms"} onClick={() => handleItemClick("Điều khoản dịch vụ")} isSubItem />
            </div>
         )}
 
         <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-4">Kiếm Tiền Miễn Phí</div>
-        <NavItem label="Nhiệm vụ Hàng Ngày" icon={nhiemvuGif} active={activeItem === "Nhiệm vụ Hàng Ngày"} onClick={() => handleItemClick("Nhiệm vụ Hàng Ngày")} />
+        <NavItem label="Nhiệm vụ Hàng Ngày" to="/daily-task" icon={nhiemvuGif} active={location.pathname === "/daily-task"} onClick={() => handleItemClick("Nhiệm vụ Hàng Ngày")} />
         <NavItem label="Điểm Danh Hàng Ngày" to="/attendance" icon={diemanhGif} active={location.pathname === "/attendance"} onClick={() => handleItemClick("Điểm Danh Hàng Ngày")} />
         <NavItem label="Bảng Đua Top Nạp Tiền" icon={tongnapGif} active={activeItem === "Bảng Đua Top Nạp Tiền"} onClick={() => handleItemClick("Bảng Đua Top Nạp Tiền")} />
        
