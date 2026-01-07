@@ -17,7 +17,11 @@ import {
     deleteMission,
     getAllMissions,
     assignMissionToUser,
-    getDashboardStats
+    getDashboardStats,
+    adjustBalance,
+    getPendingMissions,
+    approveMission,
+    rejectMission
 } from '../controller/adminController.js'
 
 const adminRouter = express.Router()
@@ -35,12 +39,16 @@ adminRouter.post('/approve', approveDeposit)
 adminRouter.post('/reject', rejectDeposit)
 adminRouter.get('/transactions', getTransactions)
 adminRouter.post('/manage-order', handleAdminOrders)
+adminRouter.post('/adjust-balance', adjustBalance)
 
 // mission
-adminRouter.post('/add-mission', addMission)
-adminRouter.post('/edit-mission', editMission)
-adminRouter.post('/delete-mission', deleteMission)
+adminRouter.post('/mission/create', addMission)
+adminRouter.post('/mission/update', editMission)
+adminRouter.post('/mission/delete', deleteMission)
 adminRouter.get('/missions', getAllMissions)
+adminRouter.get('/mission/pending', getPendingMissions)
+adminRouter.post('/mission/approve', approveMission)
+adminRouter.post('/mission/reject', rejectMission)
 adminRouter.post('/assign-mission', assignMissionToUser)
 
 export default adminRouter

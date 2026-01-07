@@ -53,6 +53,35 @@ const AdminUsers = () => {
       toast.error("Lỗi khi xóa người dùng");
     }
   };
+  const handleAdjustBalance = async (userId, username) => {
+    const amountStr = window.prompt(`Nhập số tiền muốn cộng cho "${username}" (Dùng số âm để trừ tiền):`, "0");
+    if (amountStr === null) return;
+    
+    const amount = parseInt(amountStr);
+    if (isNaN(amount)) {
+      toast.error("Số tiền không hợp lệ");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API_URL}/api/admin/adjust-balance`, { userId, amount }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setUsers(users.map(user => 
+          user._id === userId ? { ...user, balance: res.data.newBalance } : user
+        ));
+      } else {
+        toast.error(res.data.message || "Điều chỉnh số dư thất bại");
+      }
+    } catch (error) {
+      console.error("Error adjusting balance:", error);
+      toast.error("Lỗi khi điều chỉnh số dư");
+    }
+  };
 
   const filteredUsers = users.filter(user => 
     user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -143,8 +172,16 @@ const AdminUsers = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button 
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-green-500 transition-all"
+                            title="Cộng tiền"
+                            onClick={() => handleAdjustBalance(user._id, user.username)}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                          </button>
                            <button 
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-500 transition-all title='Chỉnh sửa'"
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-500 transition-all"
+                            title="Chỉnh sửa"
                             onClick={() => toast.info("Tính năng chỉnh sửa đang phát triển")}
                           >
                             <span className="material-symbols-outlined text-[18px]">edit</span>

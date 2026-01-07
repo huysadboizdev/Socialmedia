@@ -66,6 +66,22 @@ export default function AdminSidebar({ onClose }) {
         />
 
          <NavItem 
+          label="Nhiệm Vụ" 
+          to="/admin/missions" 
+          icon="task_alt" 
+          active={location.pathname === "/admin/missions"} 
+          onClick={handleItemClick}
+        />
+
+         <NavItem 
+          label="Duyệt Nhiệm Vụ" 
+          to="/admin/mission-requests" 
+          icon="fact_check" 
+          active={location.pathname === "/admin/mission-requests"} 
+          onClick={handleItemClick}
+        />
+
+         <NavItem 
           label="Cài Đặt" 
           to="/admin/settings" 
           icon="settings" 

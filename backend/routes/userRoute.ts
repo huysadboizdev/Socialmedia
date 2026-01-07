@@ -8,8 +8,10 @@ import {
   handleUserService,
   updatePassword,
   getMissions,
-  completeMission,
-  getCompletedMissions
+  getCompletedMissions,
+  attendance,
+  submitMission,
+  acceptMission
 } from '../controller/userController.js'
 import upload from '../middlewares/multer.js'
 import authUser from '../middlewares/authUser.js'
@@ -31,7 +33,11 @@ userRouter.post('/deposit', authUser, requestDeposit)
 // service & order
 userRouter.post('/service', authUser, handleUserService)
 userRouter.get('/missions', authUser, getMissions)
-userRouter.post('/mission/complete', authUser, completeMission)
+userRouter.post('/mission/accept', authUser, acceptMission)
+userRouter.post('/mission/submit', authUser, upload.single('imageProof'), submitMission)
 userRouter.get('/missions/completed', authUser, getCompletedMissions)
+
+// attendance
+userRouter.post('/attendance', authUser, attendance)
 
 export default userRouter

@@ -1,30 +1,155 @@
 import SharinganLoader from "@/components/common/SharinganLoader";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import axios from "axios";
 
 const rewards = [
-  { day: 1, amount: "100đ", status: "claimed" },
-  { day: 2, amount: "1000đ", status: "today" },
-  { day: 3, amount: "3000đ", status: "pending" },
-  { day: 4, amount: "5000đ", status: "pending" },
-  { day: 5, amount: "8000đ", status: "pending" },
-  { day: 6, amount: "20000đ", status: "pending" },
-  { day: 7, amount: "50000đ", status: "pending" },
+  { day: 1, amount: "100đ" },
+  { day: 2, amount: "1.000đ" },
+  { day: 3, amount: "3.000đ" },
+  { day: 4, amount: "5.000đ" },
+  { day: 5, amount: "8.000đ" },
+  { day: 6, amount: "20.000đ" },
+  { day: 7, amount: "50.000đ" },
 ];
 
 export default function Attendance() {
   const [claiming, setClaiming] = useState(false);
   const [claimedToday, setClaimedToday] = useState(false);
+  const [streak, setStreak] = useState(0); // 0-7
+  const [loading, setLoading] = useState(true);
 
-  const handleClaim = () => {
+  const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API_URL}/api/user/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.data.success) {
+           const { attendance } = res.data.user;
+           // Calculate local state based on attendance data
+           if (attendance) {
+             const lastDate = attendance.lastDate ? new Date(attendance.lastDate) : null;
+             let isToday = false;
+             
+             if (lastDate) {
+               const now = new Date();
+               if (lastDate.getDate() === now.getDate() && 
+                   lastDate.getMonth() === now.getMonth() && 
+                   lastDate.getFullYear() === now.getFullYear()) {
+                 isToday = true;
+               }
+             }
+
+             setClaimedToday(isToday);
+             // If claimed today, streak is current. If not, streak is pending (show next day)
+             // But if last date was > 1 day ago, streak will reset on next claim. 
+             // We can just show current streak from DB.
+             // Wait, if I missed yesterday, my DB streak is old. 
+             // Logic in backend resets streak on claim. Frontend should just show current DB streak if claimedToday, 
+             // else show streak + 1 (potential) OR just show DB streak and highlight next.
+
+             // Simplification: Just show DB streak. 
+             // If claimedToday, streak is X. 
+             // If NOT claimedToday, active day is streak + 1 (unless streak broken, then 1).
+             // However, without claiming, we don't know if streak is broken yet safely without duplicating backend logic.
+             // Let's rely on stored streak. 
+             
+             // Improvement:
+             // If lastDate was yesterday, next is streak + 1.
+             // If lastDate was older, next is 1.
+             // If lastDate was today, current is streak.
+             
+             let computedStreak = attendance.streak || 0;
+             if (!isToday && lastDate) { // Check if broken
+                 const now = new Date();
+                 const todayTs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                 const lastTs = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()).getTime();
+                 const oneDay = 24 * 60 * 60 * 1000;
+                 
+                 if (todayTs - lastTs > oneDay) {
+                    computedStreak = 0; // Will reset to 1 on claim
+                 }
+             }
+
+             setStreak(computedStreak); 
+           }
+        }
+      } catch (error) {
+        console.error("Fetch user error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAttendance();
+  }, [API_URL]);
+
+  const handleClaim = async () => {
     if (claimedToday) return;
     setClaiming(true);
-    // Simulate API call
-    setTimeout(() => {
+    
+    try {
+      const token = localStorage.getItem("token");
+      // Use user ID from token middleware, but controller expects body... wait, controller extracts from body. 
+      // Middleware usually injects into req.user or req.body?
+      // authUser middleware usually adds userId to req.body.
+      // So effectively we just need empty body or userId if client stores it.
+      // But typically authUser handles it. Let's check authUser usage.
+      // Usually passing {} is enough if authUser injects. 
+      // Checking userController: const { userId } = req.body.
+      // OK.
+      
+      const res = await axios.post(`${API_URL}/api/user/attendance`, {}, {
+         headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.success) {
+        setClaimedToday(true);
+        setStreak(res.data.streak);
+        toast.success(res.data.message);
+        // Dispatch custom event to update balance in header if needed
+        window.dispatchEvent(new Event('balanceUpdated'));
+      } else {
+        toast.error(res.data.message);
+        if (res.data.message.includes("hôm nay")) {
+            setClaimedToday(true);
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Lỗi khi điểm danh");
+    } finally {
       setClaiming(false);
-      setClaimedToday(true);
-      toast.success("Điểm danh thành công! +1000đ");
-    }, 1500);
+    }
+  };
+
+  const getDayStatus = (day) => {
+    // If we have claimed today, the streak includes today.
+    // e.g. streak 1, claimed today -> Day 1 is claimed.
+    // e.g. streak 2, claimed today -> Day 1, 2 claimed.
+    
+    // If NOT claimed today:
+    // e.g. streak 1 (from yesterday) -> Day 1 claimed. Day 2 is "today" (pending).
+    // e.g. streak 0 (broken) -> Day 1 is "today".
+    
+    if (loading) return "pending";
+
+    if (claimedToday) {
+       if (day <= streak) return "claimed";
+       return "pending";
+    } else {
+       // Not claimed yet
+       // If streak is 0 (broken/new), Day 1 is today.
+       // If streak is 1 (yesterday), Day 1 claimed, Day 2 today.
+       
+       if (day <= streak) return "claimed";
+       if (day === streak + 1) return "today";
+       if (streak === 0 && day === 1) return "today"; // New/Reset
+       return "pending";
+    }
   };
 
   return (
@@ -57,8 +182,9 @@ export default function Attendance() {
           {/* Reward Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-5 w-full">
             {rewards.map((r) => {
-              const isToday = r.status === "today" && !claimedToday;
-              const isClaimed = r.status === "claimed" || (r.status === "today" && claimedToday);
+              const status = getDayStatus(r.day);
+              const isToday = status === "today";
+              const isClaimed = status === "claimed";
               
               return (
                 <div 
@@ -102,18 +228,18 @@ export default function Attendance() {
             <div className="h-3 w-full bg-slate-50 dark:bg-slate-800/50 rounded-full overflow-hidden flex shadow-inner border border-slate-100 dark:border-slate-800 transition-colors">
                <div 
                   className="h-full bg-gradient-to-r from-pink-400 via-rose-500 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(244,63,94,0.3)]" 
-                  style={{ width: `${(claimedToday ? 2 : 1) / 7 * 100}%` }}
+                  style={{ width: `${(streak / 7) * 100}%` }}
                />
             </div>
             <div className="text-center font-bold text-slate-500 dark:text-slate-400 text-sm font-['Lexend'] tracking-wide transition-colors">
-              Đã hoàn thành: <span className="text-rose-500 dark:text-rose-400">{claimedToday ? 2 : 1}</span> / 7 ngày
+              Đã hoàn thành: <span className="text-rose-500 dark:text-rose-400">{streak}</span> / 7 ngày
             </div>
           </div>
 
           {/* Action Button */}
           <button 
             onClick={handleClaim}
-            disabled={claimedToday}
+            disabled={claimedToday || loading}
             className={`
               w-full md:w-auto px-20 py-5 rounded-[28px] font-black text-xl tracking-wide 
               transition-all duration-500 active:scale-95 shadow-2xl font-['Lexend']
@@ -123,7 +249,7 @@ export default function Attendance() {
               }
             `}
           >
-            {claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh"}
+            {loading ? "Đang tải..." : claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh"}
           </button>
 
         </div>

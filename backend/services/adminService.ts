@@ -3,6 +3,7 @@ import userModel from '../models/userModel.js'
 import transactionModel from '../models/transactionModel.js'
 import orderModel, { type OrderStatus } from '../models/orderModel.js'
 import missionModel from '../models/missionModel.js'
+import submissionModel from '../models/submissionModel.js'
 
 export interface AdminLoginParams {
   email?: string;
@@ -29,6 +30,7 @@ export interface OrderManagementParams {
 
 export interface MissionParams {
   title: string;
+  link: string;
   type: "like" | "follow" | "comment" | "share";
   reward: number;
 }
@@ -200,19 +202,19 @@ export const manageOrders = async ({ action, orderId, status }: OrderManagementP
 /**
  * Mission Management
  */
-export const createMission = async ({ title, type, reward }: MissionParams) => {
+export const createMission = async ({ title, link, type, reward }: MissionParams) => {
     if (!title) {
         return { success: false, message: 'Missing fields' }
     }
-    const mission = new missionModel({ title, type, reward })
+    const mission = new missionModel({ title, link, type, reward })
     await mission.save()
     return { success: true, mission }
 }
 
-export const updateMission = async ({ missionId, title, type, reward, isActive }: UpdateMissionParams) => {
+export const updateMission = async ({ missionId, title, link, type, reward, isActive }: UpdateMissionParams) => {
     const mission = await missionModel.findByIdAndUpdate(
         missionId,
-        { title, type, reward, isActive },
+        { title, link, type, reward, isActive },
         { new: true }
     )
     if (!mission) return { success: false, message: 'Mission not found' }
@@ -255,15 +257,15 @@ export const fetchDashboardStats = async () => {
     startOfMonth.setHours(0, 0, 0, 0)
     interface AggResult { total: number }
 
-    const monthlyRevenueData = (await orderModel.aggregate([
+    const monthlyRevenueData = await orderModel.aggregate<AggResult>([
         { $match: { status: 'Completed', orderDate: { $gte: startOfMonth } } },
         { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-    ])) as unknown as AggResult[]
+    ])
     const monthlyRevenue = monthlyRevenueData.length > 0 ? (monthlyRevenueData[0]?.total ?? 0) : 0
 
-    const userBalances = (await userModel.aggregate([
+    const userBalances = await userModel.aggregate<AggResult>([
         { $group: { _id: null, total: { $sum: '$balance' } } }
-    ])) as unknown as AggResult[]
+    ])
     const systemBalance = userBalances.length > 0 ? (userBalances[0]?.total ?? 0) : 0
 
     const recentOrders = await orderModel.find()
@@ -280,6 +282,99 @@ export const fetchDashboardStats = async () => {
             monthlyRevenue,
             systemBalance
         },
-        recentOrders: recentOrders as unknown[]
+        recentOrders
     }
+}
+
+/**
+ * Manual Balance Adjustment
+ */
+export const adjustUserBalance = async (userId: string, amount: number) => {
+    const user = await userModel.findById(userId)
+    if (!user) return { success: false, message: 'User not found' }
+
+    // Update user balance
+    user.balance += amount
+    await user.save()
+
+    // Create a transaction record for history
+    const transaction = new transactionModel({
+        userId,
+        amount,
+        status: 'approved',
+        createdAt: new Date()
+    })
+    await transaction.save()
+
+    return { 
+        success: true, 
+        message: `Successfully adjusted balance by ${amount.toLocaleString()}₫`,
+        newBalance: user.balance 
+    }
+}
+
+/**
+ * Fetch all pending mission submissions
+ */
+export const fetchPendingSubmissions = async () => {
+    const submissions = await submissionModel.find({ status: 'pending' })
+        .populate('userId', 'username fullName')
+        .populate('missionId', 'title reward link')
+        .sort({ createdAt: -1 })
+    
+    return { success: true, submissions }
+}
+
+/**
+ * Approve a mission submission
+ */
+export const approveUserSubmission = async (submissionId: string) => {
+    const submission = await submissionModel.findById(submissionId)
+    if (!submission || submission.status !== 'pending') {
+        return { success: false, message: 'Invalid or already processed submission' }
+    }
+
+    const mission = await missionModel.findById(submission.missionId)
+    if (!mission) return { success: false, message: 'Mission not found' }
+
+    // 1. Mark submission approved
+    submission.status = 'approved'
+    await submission.save()
+
+    // 2. Add reward to user balance
+    const user = await userModel.findById(submission.userId)
+    if (user) {
+        user.balance = (user.balance || 0) + (mission.reward || 0)
+        // 3. Add to completedMissions list
+        if (!user.completedMissions.includes(mission._id)) {
+            user.completedMissions.push(mission._id)
+        }
+        await user.save()
+
+        // 4. Create transaction record
+        await transactionModel.create({
+            userId: user._id,
+            amount: mission.reward,
+            status: 'approved',
+            createdAt: new Date()
+        })
+    }
+
+    return { success: true, message: 'Mission approved and reward sent' }
+}
+
+/**
+ * Reject a mission submission
+ */
+export const rejectUserSubmission = async (submissionId: string, note?: string) => {
+    const submission = await submissionModel.findById(submissionId)
+    if (!submission || submission.status !== 'pending') {
+        return { success: false, message: 'Invalid submission' }
+    }
+
+    submission.status = 'rejected'
+    submission.adminNote = note
+    await submission.save()
+
+    return { success: true, message: 'Submission rejected' }
 }
