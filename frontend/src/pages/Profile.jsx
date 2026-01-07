@@ -66,8 +66,7 @@ export default function Profile() {
         formData,
         { 
           headers: { 
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data"
+            Authorization: `Bearer ${token}`
           } 
         }
       );
@@ -132,7 +131,8 @@ export default function Profile() {
                       </div>
                       <label 
                         htmlFor="avatar-upload"
-                        className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                        title="Thay đổi ảnh đại diện"
                       >
                         <span className="material-symbols-outlined text-white">edit</span>
                       </label>

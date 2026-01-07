@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 
 const missionSchema = new Schema({
   title: { type: String, required: true },
+  link: { type: String, required: true },
   type: {
     type: String,
     enum: ["like", "follow", "comment", "share"],

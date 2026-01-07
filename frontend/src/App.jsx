@@ -36,6 +36,8 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"))
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"))
 const AdminServices = lazy(() => import("./pages/admin/AdminServices"))
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"))
+const AdminMissions = lazy(() => import("./pages/admin/AdminMissions"))
+const AdminMissionRequests = lazy(() => import("./pages/admin/AdminMissionRequests"))
 
 function App() {
   return (
@@ -91,6 +93,8 @@ function App() {
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/services" element={<AdminServices />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
+            <Route path="/admin/missions" element={<AdminMissions />} />
+            <Route path="/admin/mission-requests" element={<AdminMissionRequests />} />
           </Route>
         </Routes>
       </Suspense>

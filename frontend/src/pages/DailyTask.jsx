@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 const DailyTask = () => {
   const [activeTab, setActiveTab] = useState('list');
   const [withdrawalType, setWithdrawalType] = useState('web');
   const [amount, setAmount] = useState('');
+  
+  const [missions, setMissions] = useState([]);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
+  // Stats grid data
   const stats = [
     {
       label: 'Số Dư',
-      value: '0 đ',
+      value: userData ? `${userData.balance?.toLocaleString()} đ` : '0 đ',
       icon: 'database',
       color: 'bg-orange-50',
       iconColor: 'text-orange-500',
@@ -17,13 +24,84 @@ const DailyTask = () => {
     },
     {
       label: 'Đã Rút',
-      value: '0 đ',
+      value: '0 đ', // This could be fetched too if backend provides it
       icon: 'account_balance_wallet',
       color: 'bg-purple-50',
       iconColor: 'text-purple-500',
       circleColor: 'bg-purple-100'
     }
   ];
+
+  useEffect(() => {
+    fetchMissions();
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+            setUserData(res.data.user);
+        }
+    } catch (error) {
+        console.error('Fetch user data error:', error);
+    }
+  };
+
+  const fetchMissions = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user/missions`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+            setMissions(res.data.missions);
+        }
+    } catch (error) {
+        console.error('Fetch missions error:', error);
+        toast.error('Không thể tải danh sách nhiệm vụ');
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleLinkClick = (link) => {
+      window.open(link, '_blank');
+  };
+
+  const handleSubmitProof = async (missionId, file) => {
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('missionId', missionId);
+      formData.append('imageProof', file);
+
+      try {
+          setSubmitting(true);
+          const token = localStorage.getItem('token');
+          const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/submit`, formData, {
+              headers: { 
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'multipart/form-data'
+              }
+          });
+
+          if (res.data.success) {
+              toast.success(res.data.message);
+              fetchMissions(); // Refresh list to show new status
+          } else {
+              toast.error(res.data.message);
+          }
+      } catch (error) {
+          console.error("Submit error", error);
+          toast.error("Lỗi khi nộp nhiệm vụ");
+      } finally {
+          setSubmitting(false);
+      }
+  }
 
   const handleWithdrawal = () => {
     if (!amount || parseInt(amount) < 10000) {
@@ -33,6 +111,29 @@ const DailyTask = () => {
     toast.success('Yêu cầu rút tiền đã được gửi!');
     setAmount('');
   };
+
+  // Filter Logic
+  const filteredMissions = activeTab === 'list' 
+    ? missions.filter(m => m.status === 'available')
+    : missions.filter(m => m.status !== 'available');
+
+  const handleAcceptMission = async (missionId) => {
+      try {
+          const token = localStorage.getItem('token');
+          const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/accept`, { missionId }, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.data.success) {
+              toast.success(res.data.message);
+              fetchMissions(); // Refresh lists
+              setActiveTab('received'); // Auto switch to received tab
+          } else {
+              toast.error(res.data.message);
+          }
+      } catch (error) {
+          toast.error("Lỗi khi nhận nhiệm vụ");
+      }
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
@@ -54,7 +155,7 @@ const DailyTask = () => {
       </div>
 
       {/* Task Tabs */}
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="flex flex-wrap gap-4">
           <button
             onClick={() => setActiveTab('list')}
@@ -74,15 +175,123 @@ const DailyTask = () => {
                 : 'bg-white border-[#007bff] text-[#007bff] hover:bg-blue-50'
             }`}
           >
-            Nhiệm vụ đã nhận
+            Nhiệm vụ đã nhận ({missions.filter(m => m.status !== 'available').length})
           </button>
         </div>
 
-        {/* Empty State */}
-        <div className="py-20 text-center">
-          <p className="text-slate-500 dark:text-slate-400 font-medium italic">
-            Hiện không có nhiệm vụ nào
-          </p>
+        {/* Mission List */}
+        <div className="space-y-4">
+            {loading ? (
+                <div className="text-center py-10 text-slate-500">Đang tải nhiệm vụ...</div>
+            ) : filteredMissions.length === 0 ? (
+                <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">assignment_late</span>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Hiện không có nhiệm vụ nào</p>
+                </div>
+            ) : (
+                filteredMissions.map((mission) => (
+                    <div key={mission._id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center gap-6">
+                        <div className={`shrink-0 size-16 rounded-2xl flex items-center justify-center ${
+                             mission.type === 'like' ? 'bg-blue-50 text-blue-600' :
+                             mission.type === 'follow' ? 'bg-pink-50 text-pink-600' :
+                             'bg-violet-50 text-violet-600'
+                        }`}>
+                            <span className="material-symbols-outlined text-3xl">
+                                {mission.type === 'like' ? 'thumb_up' : mission.type === 'follow' ? 'person_add' : 'share'}
+                            </span>
+                        </div>
+                        
+                        <div className="flex-1 text-center md:text-left space-y-1">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{mission.title}</h3>
+                            <p className="text-sm font-medium text-slate-500 flex justify-center md:justify-start items-center gap-1">
+                                <span className="material-symbols-outlined text-[16px]">monetization_on</span>
+                                Thưởng: <span className="text-emerald-600 font-bold">+{mission.reward?.toLocaleString()} đ</span>
+                            </p>
+                            
+                            {/* Hide Link for Available missions */}
+                            {mission.status !== 'available' && (
+                                <a 
+                                    href={mission.link} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-500 hover:underline truncate max-w-[200px] inline-block"
+                                >
+                                    Link nhiệm vụ
+                                </a>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 min-w-[140px]">
+                            {/* 1. AVAILABLE -> Show "Nhận nhiệm vụ" */}
+                            {mission.status === 'available' && (
+                                <button 
+                                    onClick={() => handleAcceptMission(mission._id)}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">add_task</span>
+                                    Nhận nhiệm vụ
+                                </button>
+                            )}
+
+                            {/* 2. ACCEPTED or REJECTED -> Show Submit Actions */}
+                            {(mission.status === 'accepted' || mission.status === 'rejected') && (
+                                <>
+                                    <button 
+                                        onClick={() => handleLinkClick(mission.link)}
+                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                                        Thực hiện
+                                    </button>
+                                    
+                                    <div className="relative">
+                                        <input 
+                                            type="file" 
+                                            id={`file-${mission._id}`} 
+                                            className="hidden" 
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                if(e.target.files?.[0]) {
+                                                    handleSubmitProof(mission._id, e.target.files[0]);
+                                                }
+                                            }}
+                                            disabled={submitting}
+                                        />
+                                        <label 
+                                            htmlFor={`file-${mission._id}`}
+                                            className={`w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer ${submitting ? 'opacity-50 pointer-events-none' : ''}`}
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">upload</span>
+                                            {submitting ? 'Đang gửi...' : 'Gửi ảnh'}
+                                        </label>
+                                    </div>
+                                </>
+                            )}
+
+                            {mission.status === 'pending' && (
+                                <div className="px-4 py-2 bg-yellow-50 text-yellow-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-yellow-200">
+                                    <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
+                                    Chờ duyệt 24h
+                                </div>
+                            )}
+
+                             {mission.status === 'approved' && (
+                                <div className="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-green-200">
+                                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                    Đã hoàn thành
+                                </div>
+                            )}
+
+                            {mission.status === 'rejected' && (
+                                <div className="text-xs text-center text-red-500 font-bold mb-1">
+                                    Bị từ chối. Hãy nộp lại!
+                                </div>
+                            )}
+                            
+                        </div>
+                    </div>
+                ))
+            )}
         </div>
       </div>
 
@@ -102,7 +311,7 @@ const DailyTask = () => {
             </div>
             <div className="flex items-center gap-2 text-[#856404] font-medium text-sm px-3">
               <span className="material-symbols-outlined text-[18px]">info</span>
-              <span>Số dư có thể rút của bạn là : <span className="font-bold">0 đ</span></span>
+              <span>Số dư có thể rút của bạn là : <span className="font-bold">{userData ? `${userData.balance?.toLocaleString()} đ` : '0 đ'}</span></span>
             </div>
             <div className="flex items-start gap-2 text-red-600 font-bold text-sm px-3">
               <span className="material-symbols-outlined text-[18px]">warning</span>

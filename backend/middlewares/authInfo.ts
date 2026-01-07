@@ -8,7 +8,8 @@ interface TokenPayload {
 
 export const authenticateUser = async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
     try {
-        const token = req.header("Authorization");
+        const authHeader = req.header("Authorization");
+        const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
 
         if (!token) {
             return res.status(401).json({ success: false, message: "Access Denied" });
@@ -25,7 +26,6 @@ export const authenticateUser = async (req: Request & { user?: IUser }, res: Res
         next();
         return;
     } catch (_error: unknown) {
-        res.status(401).json({ success: false, message: "Invalid Token" });
-        return;
+        return res.status(401).json({ success: false, message: "Invalid Token" });
     }
 };

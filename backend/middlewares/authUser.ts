@@ -5,6 +5,10 @@ interface TokenDecode {
     id: string;
 }
 
+interface AuthRequest extends Request {
+  authUserId?: string;
+}
+
 // user authentication middleware
 const authUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -32,7 +36,8 @@ const authUser = async (req: Request, res: Response, next: NextFunction) => {
         }
 
         req.body ??= {};
-        (req.body as { userId: string }).userId = token_decode.id
+        (req.body as { userId: string }).userId = token_decode.id;
+        (req as AuthRequest).authUserId = token_decode.id // Backup for multer
 
         // Add a dummy await to satisfy lint if no async work is done, 
         // but normally we might check if user still exists in DB

@@ -13,8 +13,13 @@ router.get(
 router.get(
   '/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }) as express.RequestHandler,
-  (req, res) => {
-    const user = req.user as IUser;
+  (req: express.Request, res: express.Response) => {
+    const user = req.user as IUser | undefined;
+    if (!user) {
+      res.redirect(`${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login?error=auth_failed`);
+      return;
+    }
+
     const token = jwt.sign(
       { id: user._id },
       process.env.ACCESS_TOKEN_SECRET ?? 'secret'
@@ -23,6 +28,7 @@ router.get(
     // Redirect to frontend with token
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
     res.redirect(`${frontendUrl}/login?token=${token}`)
+    return;
   }
 )
 

@@ -14,7 +14,11 @@ const userSchema = new Schema(
     balance: { type: Number, default: 0 },
     image: { type: String },
     isBlocked: { type: Boolean, default: false },
-    completedMissions: [{ type: Schema.Types.ObjectId, ref: 'mission' }]
+    completedMissions: [{ type: Schema.Types.ObjectId, ref: 'mission' }],
+    attendance: {
+      lastDate: { type: Date, default: null },
+      streak: { type: Number, default: 0 }
+    }
   },
   { timestamps: true }
 );

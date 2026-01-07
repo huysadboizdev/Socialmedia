@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import passport from 'passport'
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
+import { Strategy as GoogleStrategy, type Profile } from 'passport-google-oauth20'
 import userModel, { type IUser } from '../models/userModel.js'
 
 passport.use(
@@ -10,7 +10,7 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
       callbackURL: '/auth/google/callback'
     },
-    (_accessToken, _refreshToken, profile, done) => {
+    (_accessToken: string, _refreshToken: string, profile: Profile, done: (error: Error | null, user?: IUser | false) => void) => {
       userModel.findOne({ googleId: profile.id })
         .then(user => {
           if (!user) {
@@ -28,7 +28,7 @@ passport.use(
           done(null, user)
         })
         .catch((err: unknown) => {
-          done(err instanceof Error ? err : new Error(String(err)), undefined)
+          done(err instanceof Error ? err : new Error(String(err)), false)
         })
     }
   )
