@@ -16,6 +16,7 @@ export interface ServiceParams {
   name: string;
   price: number;
   speed: string;
+  isMaintenance?: boolean;
 }
 
 export interface UpdateServiceParams extends ServiceParams {
@@ -83,22 +84,22 @@ export const adminAuthUser = async ({ email }: { email?: string }) => {
 /**
  * Service Management
  */
-export const createService = async ({ platform, category, name, price, speed }: ServiceParams) => {
+export const createService = async ({ platform, category, name, price, speed, isMaintenance }: ServiceParams) => {
     if (!platform || !category || !name || !price || !speed) {
         return { success: false, message: 'Please Fill In All Information' }
     }
-    const newService = new Service({ platform, category, name, price, speed })
+    const newService = new Service({ platform, category, name, price, speed, isMaintenance })
     await newService.save()
     return { success: true, service: newService }
 }
 
-export const updateService = async ({ serviceId, platform, category, name, price, speed }: UpdateServiceParams) => {
+export const updateService = async ({ serviceId, platform, category, name, price, speed, isMaintenance }: UpdateServiceParams) => {
     if (!serviceId || !platform || !category || !name || !price || !speed) {
         return { success: false, message: 'Please fill in the information completely' }
     }
     const updatedService = await Service.findByIdAndUpdate(
         serviceId,
-        { platform, category, name, price, speed },
+        { platform, category, name, price, speed, isMaintenance },
         { new: true }
     )
     if (!updatedService) {
@@ -129,10 +130,20 @@ export const approveUserDeposit = async (transactionId: string) => {
     transaction.status = 'approved'
     await transaction.save()
 
-    await userModel.findByIdAndUpdate(
+    const user = await userModel.findByIdAndUpdate(
         transaction.userId,
-        { $inc: { balance: transaction.amount } }
+        { $inc: { balance: transaction.amount } },
+        { new: true }
     )
+
+    if (user) {
+        transaction.oldBalance = user.balance - transaction.amount
+        transaction.newBalance = user.balance
+        transaction.type = 'deposit'
+        transaction.balanceType = 'profile'
+        transaction.description = 'Nạp tiền vào tài khoản'
+        await transaction.save()
+    }
 
     return { success: true, message: 'Deposit successful' }
 }
@@ -202,23 +213,39 @@ export const manageOrders = async ({ action, orderId, status }: OrderManagementP
 /**
  * Mission Management
  */
-export const createMission = async ({ title, link, type, reward }: MissionParams) => {
-    if (!title) {
-        return { success: false, message: 'Missing fields' }
-    }
-    const mission = new missionModel({ title, link, type, reward })
-    await mission.save()
-    return { success: true, mission }
+const validateMissionLink = (link: string): boolean => {
+    const pattern = /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com|instagram\.com|tiktok\.com|vt\.tiktok\.com)\/.*$/i;
+    return pattern.test(link);
 }
 
-export const updateMission = async ({ missionId, title, link, type, reward, isActive }: UpdateMissionParams) => {
-    const mission = await missionModel.findByIdAndUpdate(
-        missionId,
-        { title, link, type, reward, isActive },
-        { new: true }
-    )
-    if (!mission) return { success: false, message: 'Mission not found' }
-    return { success: true, mission }
+/**
+ * Create a new mission
+ */
+export const createMission = async ({ title, link, type, reward }: MissionParams) => {
+    if (!title || !link || !type || reward === undefined) {
+        return { success: false, message: 'Vui lòng điền đầy đủ thông tin' }
+    }
+
+    if (!validateMissionLink(link)) {
+        return { success: false, message: 'Link nhiệm vụ phải là Facebook, Instagram hoặc TikTok hợp lệ' }
+    }
+
+    const newMission = new missionModel({ title, link, type, reward })
+    await newMission.save()
+    return { success: true, mission: newMission }
+}
+
+/**
+ * Update an existing mission
+ */
+export const updateMission = async ({ missionId, ...updateData }: UpdateMissionParams) => {
+    if (updateData.link && !validateMissionLink(updateData.link)) {
+        return { success: false, message: 'Link nhiệm vụ phải là Facebook, Instagram hoặc TikTok hợp lệ' }
+    }
+
+    const updatedMission = await missionModel.findByIdAndUpdate(missionId, updateData, { new: true })
+    if (!updatedMission) return { success: false, message: 'Mission not found' }
+    return { success: true, mission: updatedMission }
 }
 
 export const removeMission = async (missionId: string) => {
@@ -294,13 +321,18 @@ export const adjustUserBalance = async (userId: string, amount: number) => {
     if (!user) return { success: false, message: 'User not found' }
 
     // Update user balance
-    user.balance += amount
+    user.balance = Number(user.balance || 0) + Number(amount)
     await user.save()
 
     // Create a transaction record for history
     const transaction = new transactionModel({
         userId,
-        amount,
+        amount: Number(amount),
+        type: 'adjustment',
+        description: amount >= 0 ? 'Admin cộng tiền' : 'Admin trừ tiền',
+        oldBalance: Number(user.balance) - Number(amount),
+        newBalance: Number(user.balance),
+        balanceType: 'profile',
         status: 'approved',
         createdAt: new Date()
     })
@@ -311,6 +343,49 @@ export const adjustUserBalance = async (userId: string, amount: number) => {
         message: `Successfully adjusted balance by ${amount.toLocaleString()}₫`,
         newBalance: user.balance 
     }
+}
+
+/**
+ * Emergency utility to fix balances corrupted by string concatenation
+ * This will parse the string-concatenated values back into the intended numbers or cap them.
+ */
+export const fixCorruptedBalances = async () => {
+    const users = await userModel.find({});
+    let fixCount = 0;
+
+    for (const user of users) {
+        let needsFix = false;
+        
+        // Fix main balance
+        if (user.balance > 1000000000) { // Over 1 Billion
+            const balStr = String(user.balance);
+            if (balStr.endsWith("000000")) {
+                user.balance = Number(user.balance) / 1000000;
+                needsFix = true;
+            } else if (balStr.endsWith("000")) {
+                user.balance = Number(user.balance) / 1000;
+                needsFix = true;
+            }
+        }
+
+        // Fix mission balance
+        if (user.missionBalance > 1000000000) {
+            const mBalStr = String(user.missionBalance);
+            if (mBalStr.endsWith("000000")) {
+                user.missionBalance = Number(user.missionBalance) / 1000000;
+                needsFix = true;
+            } else if (mBalStr.endsWith("000")) {
+                user.missionBalance = Number(user.missionBalance) / 1000;
+                needsFix = true;
+            }
+        }
+
+        if (needsFix) {
+            await user.save();
+            fixCount++;
+        }
+    }
+    return { success: true, fixed: fixCount };
 }
 
 /**
@@ -344,7 +419,7 @@ export const approveUserSubmission = async (submissionId: string) => {
     // 2. Add reward to user balance
     const user = await userModel.findById(submission.userId)
     if (user) {
-        user.balance = (user.balance || 0) + (mission.reward || 0)
+        user.missionBalance = (user.missionBalance || 0) + (mission.reward || 0)
         // 3. Add to completedMissions list
         if (!user.completedMissions.includes(mission._id)) {
             user.completedMissions.push(mission._id)
@@ -355,6 +430,11 @@ export const approveUserSubmission = async (submissionId: string) => {
         await transactionModel.create({
             userId: user._id,
             amount: mission.reward,
+            type: 'mission',
+            description: `Hoàn thành nhiệm vụ: ${mission.title}`,
+            oldBalance: user.missionBalance - (mission.reward || 0),
+            newBalance: user.missionBalance,
+            balanceType: 'mission',
             status: 'approved',
             createdAt: new Date()
         })
@@ -377,4 +457,81 @@ export const rejectUserSubmission = async (submissionId: string, note?: string) 
     await submission.save()
 
     return { success: true, message: 'Submission rejected' }
+}
+
+/**
+ * Fetch processed mission submissions (approved or rejected)
+ */
+export const fetchSubmissionHistory = async () => {
+    const submissions = await submissionModel.find({ status: { $in: ['approved', 'rejected'] } })
+        .populate('userId', 'username fullName')
+        .populate('missionId', 'title reward link')
+        .sort({ updatedAt: -1 })
+    
+    return { success: true, submissions }
+}
+/**
+ * Fetch all withdrawal requests
+ */
+export const fetchWithdrawalRequests = async () => {
+    const requests = await transactionModel.find({ 
+        type: 'withdraw', 
+        balanceType: 'mission' 
+    }).populate({
+        path: 'userId',
+        model: 'user',
+        select: 'username fullName email'
+    }).sort({ createdAt: -1 })
+    
+    return { success: true, requests }
+}
+
+/**
+ * Approve withdrawal request
+ */
+export const approveWithdrawalRequest = async (transactionId: string) => {
+    const transaction = await transactionModel.findById(transactionId)
+    if (!transaction || transaction.status !== 'pending' || transaction.type !== 'withdraw') {
+        return { success: false, message: 'Invalid or already processed withdrawal' }
+    }
+
+    transaction.status = 'approved'
+    await transaction.save()
+
+    return { success: true, message: 'Withdrawal approved' }
+}
+
+/**
+ * Reject withdrawal request (Refunding user's mission balance)
+ */
+export const rejectWithdrawalRequest = async (transactionId: string) => {
+    const transaction = await transactionModel.findById(transactionId)
+    if (!transaction || transaction.status !== 'pending' || transaction.type !== 'withdraw') {
+        return { success: false, message: 'Invalid or already processed withdrawal' }
+    }
+
+    transaction.status = 'rejected'
+    await transaction.save()
+
+    // Refund mission balance
+    const user = await userModel.findById(transaction.userId)
+    if (user) {
+        user.missionBalance = (user.missionBalance || 0) + Math.abs(transaction.amount)
+        await user.save()
+
+        // Create a refund record
+        await transactionModel.create({
+            userId: user._id,
+            amount: Math.abs(transaction.amount),
+            type: 'adjustment',
+            description: `Hoàn trả tiền rút bị từ chối: ${transactionId}`,
+            oldBalance: user.missionBalance - Math.abs(transaction.amount),
+            newBalance: user.missionBalance,
+            balanceType: 'mission',
+            status: 'approved',
+            createdAt: new Date()
+        })
+    }
+
+    return { success: true, message: 'Withdrawal rejected and refunded' }
 }

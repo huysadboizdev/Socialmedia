@@ -32,6 +32,10 @@ const serviceSchema = new Schema({
     isActive: {
       type: Boolean,
       default: true
+    },
+    isMaintenance: {
+      type: Boolean,
+      default: false
     }
   },
   {

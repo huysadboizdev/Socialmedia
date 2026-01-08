@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { validateLink, validateGmail } from '@/lib/validation';
 
 const FacebookBlue = () => {
   const [services, setServices] = useState([]);
@@ -52,6 +53,16 @@ const FacebookBlue = () => {
       return;
     }
 
+    if (!validateLink(formData.targetUrl, 'facebook')) {
+      toast.error('Link Facebook không hợp lệ!');
+      return;
+    }
+
+    if (!validateGmail(formData.username)) {
+      toast.error('Tài khoản phải là địa chỉ Gmail (@gmail.com)!');
+      return;
+    }
+
     if (!selectedService) {
       toast.error('Dịch vụ hiện không khả dụng');
       return;
@@ -76,6 +87,11 @@ const FacebookBlue = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (selectedService?.isMaintenance) {
+        toast.error('Máy chủ này đang bảo trì, vui lòng chọn máy chủ khác', { id: 'order-toast' });
+        return;
+      }
 
       if (res.data.success) {
         toast.success('Đặt dịch vụ thành công!', { id: 'order-toast' });
@@ -127,11 +143,13 @@ const FacebookBlue = () => {
                   services.map((service) => (
                     <div 
                       key={service._id} 
-                      onClick={() => setSelectedService(service)}
+                      onClick={() => !service.isMaintenance && setSelectedService(service)}
                       className={`p-4 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
-                        selectedService?._id === service._id 
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md' 
-                          : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 hover:border-blue-300'
+                        service.isMaintenance 
+                          ? 'opacity-50 grayscale cursor-not-allowed border-red-300 bg-red-50 dark:bg-red-900/20'
+                          : selectedService?._id === service._id 
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md' 
+                            : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 hover:border-blue-300'
                       }`}
                     >
                       <div className="flex flex-col gap-1">
@@ -141,9 +159,14 @@ const FacebookBlue = () => {
                         {service.description && (
                           <span className="text-[10px] text-slate-500 line-clamp-1">{service.description}</span>
                         )}
+                        {service.status && (
+                          <span className={`${service.isMaintenance ? 'bg-red-500' : 'bg-green-500'} text-white px-2 py-0.5 rounded text-xs w-fit`}>
+                            {service.status}
+                          </span>
+                        )}
                       </div>
                       <span className={`px-4 py-1.5 rounded-full text-sm font-bold shadow-sm ${
-                        selectedService?._id === service._id 
+                        selectedService?._id === service._id && !service.isMaintenance
                           ? 'bg-blue-600 text-white' 
                           : 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30'
                       }`}>
@@ -167,6 +190,7 @@ const FacebookBlue = () => {
                 onChange={handleInputChange}
                 className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 placeholder="Ví dụ: https://www.facebook.com/profile.php?id=..."
+                disabled={selectedService?.isMaintenance}
               />
             </div>
 
@@ -183,6 +207,7 @@ const FacebookBlue = () => {
                   onChange={handleInputChange}
                   className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   placeholder="Email hoặc số điện thoại đăng nhập"
+                  disabled={selectedService?.isMaintenance}
                 />
               </div>
               <div>
@@ -196,6 +221,7 @@ const FacebookBlue = () => {
                   onChange={handleInputChange}
                   className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   placeholder="Mật khẩu Facebook"
+                  disabled={selectedService?.isMaintenance}
                 />
               </div>
             </div>
@@ -212,6 +238,7 @@ const FacebookBlue = () => {
                 onChange={handleInputChange}
                 className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 placeholder="Mã 2FA (nếu có, để trống nếu không)"
+                disabled={selectedService?.isMaintenance}
               />
             </div>
 
@@ -227,6 +254,7 @@ const FacebookBlue = () => {
                 onChange={handleInputChange}
                 className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
                 placeholder="Ví dụ: Cần ngâm để lên tích xanh nhanh nhất có thể..."
+                disabled={selectedService?.isMaintenance}
               ></textarea>
             </div>
 
@@ -242,12 +270,14 @@ const FacebookBlue = () => {
                 onChange={handleInputChange}
                 className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 placeholder="Nhập link Facebook hoặc SĐT Zalo của bạn..."
+                disabled={selectedService?.isMaintenance}
               />
             </div>
 
             <button 
               onClick={handleSubmit} 
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-lg shadow-lg shadow-blue-200 dark:shadow-blue-900/20"
+              disabled={selectedService?.isMaintenance}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-lg shadow-lg shadow-blue-200 dark:shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Đặt dịch vụ ngay
             </button>

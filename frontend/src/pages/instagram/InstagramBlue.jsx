@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { validateLink, validateGmail } from '@/lib/validation';
 
 const InstagramBlue = () => {
   const [services, setServices] = useState([]);
@@ -52,6 +53,16 @@ const InstagramBlue = () => {
       return;
     }
 
+    if (!validateLink(formData.targetUrl, 'instagram')) {
+      toast.error('Link Instagram không hợp lệ!');
+      return;
+    }
+
+    if (!validateGmail(formData.username)) {
+      toast.error('Tài khoản phải là địa chỉ Gmail (@gmail.com)!');
+      return;
+    }
+
     if (!selectedService) {
       toast.error('Dịch vụ hiện không khả dụng');
       return;
@@ -76,6 +87,11 @@ const InstagramBlue = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (selectedService?.isMaintenance) {
+        toast.error('Máy chủ này đang bảo trì, vui lòng chọn máy chủ khác', { id: 'order-toast' });
+        return;
+      }
 
       if (res.data.success) {
         toast.success('Đặt dịch vụ thành công!', { id: 'order-toast' });
@@ -127,11 +143,13 @@ const InstagramBlue = () => {
                   services.map((service) => (
                     <div 
                       key={service._id} 
-                      onClick={() => setSelectedService(service)}
-                      className={`p-4 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
-                        selectedService?._id === service._id 
-                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/10 shadow-md' 
-                          : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 hover:border-pink-300'
+                      onClick={() => !service.isMaintenance && setSelectedService(service)}
+                      className={`p-4 border rounded-xl transition-all flex items-center justify-between group ${
+                        service.isMaintenance 
+                          ? 'opacity-60 grayscale cursor-not-allowed border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50'
+                          : selectedService?._id === service._id 
+                            ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/10 shadow-md cursor-pointer' 
+                            : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 hover:border-pink-300 cursor-pointer'
                       }`}
                     >
                       <div className="flex flex-col gap-1">
@@ -141,9 +159,14 @@ const InstagramBlue = () => {
                         {service.description && (
                           <span className="text-[10px] text-slate-500 line-clamp-1">{service.description}</span>
                         )}
+                        {service.status && (
+                          <span className={`${service.isMaintenance ? 'bg-red-500' : 'bg-green-500'} text-white px-2 py-0.5 rounded text-xs w-fit`}>
+                            {service.status}
+                          </span>
+                        )}
                       </div>
                       <span className={`px-4 py-1.5 rounded-full text-sm font-bold shadow-sm ${
-                        selectedService?._id === service._id 
+                        selectedService?._id === service._id && !service.isMaintenance
                           ? 'bg-pink-500 text-white' 
                           : 'bg-white dark:bg-slate-700 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/30'
                       }`}>
@@ -247,7 +270,8 @@ const InstagramBlue = () => {
 
             <button 
               onClick={handleSubmit} 
-              className="w-full py-4 bg-linear-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-lg shadow-lg shadow-pink-200 dark:shadow-pink-900/20"
+              disabled={selectedService?.isMaintenance}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Đặt dịch vụ ngay
             </button>

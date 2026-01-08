@@ -172,11 +172,11 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
 
 export const adjustBalance = async (req: Request, res: Response) => {
     try {
-        const { userId, amount } = req.body as { userId: string, amount: number }
+        const { userId, amount } = req.body as { userId: string, amount: any }
         if (!userId) {
             return res.status(400).json({ success: false, message: 'User ID is required' })
         }
-        const result = await adminService.adjustUserBalance(userId, amount || 0)
+        const result = await adminService.adjustUserBalance(userId, Number(amount || 0))
         return res.json(result)
     } catch (error: unknown) {
         return res.status(400).json({ success: false, message: error instanceof Error ? error.message : String(error) })
@@ -207,6 +207,52 @@ export const rejectMission = async (req: Request, res: Response) => {
     try {
         const { submissionId, note } = req.body as { submissionId: string, note?: string }
         const result = await adminService.rejectUserSubmission(submissionId, note)
+        return res.json(result)
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
+export const getMissionHistory = async (_req: Request, res: Response) => {
+    try {
+        const result = await adminService.fetchSubmissionHistory()
+        return res.json(result)
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+export const getWithdrawals = async (_req: Request, res: Response) => {
+    try {
+        const result = await adminService.fetchWithdrawalRequests()
+        return res.json(result)
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
+export const approveWithdrawal = async (req: Request, res: Response) => {
+    try {
+        const { transactionId } = req.body as { transactionId: string }
+        const result = await adminService.approveWithdrawalRequest(transactionId)
+        return res.json(result)
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
+export const rejectWithdrawal = async (req: Request, res: Response) => {
+    try {
+        const { transactionId } = req.body as { transactionId: string }
+        const result = await adminService.rejectWithdrawalRequest(transactionId)
+        return res.json(result)
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
+export const runBalanceFix = async (_req: Request, res: Response) => {
+    try {
+        const result = await adminService.fixCorruptedBalances()
         return res.json(result)
     } catch (error: unknown) {
         return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })

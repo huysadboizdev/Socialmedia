@@ -5,9 +5,6 @@ import registerService, { type RegisterParams } from '../services/auth/register.
 
 interface AuthRequest extends Request {
   authUserId?: string;
-  user?: {
-    userId: string;
-  };
 }
 
 // register user
@@ -74,8 +71,8 @@ export const updatePassword = async (req: Request, res: Response) => {
 // service & order
 export const handleUserService = async (req: Request, res: Response) => {
   try {
-    const { userId, action, serviceId, quantity, link, note, details } = req.body as { userId: string, action: string, serviceId: string, quantity: number, link?: string, note?: string, details?: Record<string, unknown> }
-    const result = await userService.handleService(userId, { action, serviceId, quantity, link, note, details })
+    const { userId, action, serviceId, quantity, link, note, details } = req.body as { userId: string, action: string, serviceId: string, quantity: any, link?: string, note?: string, details?: Record<string, unknown> }
+    const result = await userService.handleService(userId, { action, serviceId, quantity: Number(quantity), link, note, details })
     res.json(result)
   } catch (err: unknown) {
     res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
@@ -85,8 +82,8 @@ export const handleUserService = async (req: Request, res: Response) => {
 // deposit money
 export const requestDeposit = async (req: Request, res: Response) => {
   try {
-    const { userId, amount } = req.body as { userId: string, amount: number }
-    const result = await userService.depositRequest(userId, amount)
+    const { userId, amount } = req.body as { userId: string, amount: any }
+    const result = await userService.depositRequest(userId, Number(amount))
     res.json(result)
   } catch (err: unknown) {
     res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
@@ -169,6 +166,49 @@ export const acceptMission = async (req: AuthRequest, res: Response) => {
         return res.json(result);
     } catch (error: unknown) {
         return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) });
+    }
+}
+
+// withdraw mission balance
+export const withdrawMissionBalance = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.authUserId
+        if (!userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' })
+        }
+        const { amount, method, bankName, bankAccount } = req.body as { 
+            amount: any; 
+            method?: 'web' | 'bank';
+            bankName?: string;
+            bankAccount?: string;
+        }
+        const qrCodeFile = req.file;
+
+        const result = await userService.withdrawMissionBalance(userId, Number(amount), method, {
+            bankName,
+            bankAccount,
+            qrCodeFile
+        })
+        return res.json(result)
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        return res.status(500).json({ success: false, message: errorMessage })
+    }
+}
+
+// get transactions
+export const getTransactionHistory = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.authUserId
+        if (!userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' })
+        }
+        const { type } = req.query as { type?: string }
+        const result = await userService.getTransactions(userId, type)
+        return res.json(result)
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        return res.status(500).json({ success: false, message: errorMessage })
     }
 }
 
