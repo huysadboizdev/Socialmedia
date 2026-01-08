@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
+import { validateLink } from '@/lib/validation';
 
 const TiktokLike = () => {
   const [activeTab, setActiveTab] = useState('create');
@@ -35,7 +36,8 @@ const TiktokLike = () => {
             name: s.name,
             label: s.description || s.name,
             price: s.price,
-            status: s.isActive ? 'Hoạt động' : 'Bảo trì',
+            status: s.isMaintenance ? 'Bảo trì' : (s.isActive ? 'Hoạt động' : 'Tắt'),
+            isMaintenance: s.isMaintenance === true,
             speed: s.speed
           })));
           if (tiktokLikeServices.length > 0) {
@@ -63,11 +65,19 @@ const TiktokLike = () => {
 
   const handleSubmit = async () => {
     if (!formData.link) {
-      toast.error('Vui lòng nhập Link hoặc UID video');
+      toast.error('Vui lòng nhập Link');
       return;
     }
-    if (!formData.quantity || parseInt(formData.quantity) <= 0) {
-      toast.error('Vui lòng nhập số lượng hợp lệ');
+    if (!validateLink(formData.link, 'tiktok')) {
+      toast.error('Link TikTok không hợp lệ!');
+      return;
+    }
+    if (!formData.quantity || parseInt(formData.quantity) < 1000) {
+      toast.error('Số lượng tối thiểu là 1,000');
+      return;
+    }
+    if (parseInt(formData.quantity) > 1000000) {
+      toast.error('Số lượng tối đa là 1,000,000');
       return;
     }
 
@@ -84,6 +94,11 @@ const TiktokLike = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (currentServer?.isMaintenance) {
+        toast.error('Máy chủ này đang bảo trì, vui lòng chọn máy chủ khác', { id: 'order-toast' });
+        return;
+      }
 
       if (res.data.success) {
         toast.success('Tạo đơn hàng thành công!', { id: 'order-toast' });
@@ -175,7 +190,8 @@ const TiktokLike = () => {
                           id={server.id}
                           checked={selectedServer === server.id}
                           onChange={() => setSelectedServer(server.id)}
-                          className="peer absolute opacity-0 cursor-pointer inset-0 z-10"
+                          disabled={server.isMaintenance}
+                          className="peer absolute opacity-0 cursor-pointer inset-0 z-10 disabled:cursor-not-allowed"
                         />
                         <label 
                           htmlFor={server.id} 
@@ -183,7 +199,7 @@ const TiktokLike = () => {
                             selectedServer === server.id 
                               ? 'border-[#6f42c1] bg-purple-50/50 dark:bg-purple-900/10' 
                               : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
-                          }`}
+                          } ${server.isMaintenance ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                         >
                           <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                              selectedServer === server.id ? 'border-[#6f42c1]' : 'border-slate-300'
@@ -207,7 +223,7 @@ const TiktokLike = () => {
                             {server.price}đ
                           </span>
 
-                          <span className="bg-[#22c55e] text-white px-2.5 py-1 rounded-md text-xs font-bold shadow-md shadow-green-500/20">
+                          <span className={`${server.isMaintenance ? 'bg-red-500' : 'bg-[#22c55e]'} text-white px-2.5 py-1 rounded-md text-xs font-bold shadow-md shadow-green-500/20`}>
                             {server.status}
                           </span>
                           {server.speed && (
@@ -226,7 +242,7 @@ const TiktokLike = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="block text-sm font-bold text-[#2e1065] dark:text-purple-400 mb-2.5">
-                    Số Lượng : ( 0 ~ 0 )
+                    Số Lượng : ( 1,000 ~ 1,000,000 )
                   </label>
                   <input
                     type="number"
@@ -279,7 +295,8 @@ const TiktokLike = () => {
 
               <button 
                 onClick={handleSubmit} 
-                className="w-full py-4 bg-[#6610f2] hover:bg-[#520dc2] text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center justify-center gap-2 uppercase tracking-wide text-sm"
+                disabled={currentServer?.isMaintenance}
+                className="w-full py-4 bg-[#6610f2] hover:bg-[#520dc2] text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center justify-center gap-2 uppercase tracking-wide text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined filled">shopping_cart</span>
                 Tạo đơn hàng

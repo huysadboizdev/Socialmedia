@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
+import { validateLink } from '@/lib/validation';
 
 const FacebookMember = () => {
   const [activeTab, setActiveTab] = useState('create');
@@ -35,7 +36,8 @@ const FacebookMember = () => {
             name: s.name,
             label: s.description || s.name,
             price: s.price,
-            status: s.isActive ? 'Hoạt động' : 'Bảo trì',
+            status: s.isMaintenance ? 'Bảo trì' : (s.isActive ? 'Hoạt động' : 'Tắt'),
+            isMaintenance: s.isMaintenance === true,
             speed: s.speed
           })));
           if (fbMemberServices.length > 0) {
@@ -63,11 +65,19 @@ const FacebookMember = () => {
 
   const handleSubmit = async () => {
     if (!formData.link) {
-      toast.error('Vui lòng nhập Link Group');
+      toast.error('Vui lòng nhập Link hoặc UID Group');
       return;
     }
-    if (!formData.quantity || parseInt(formData.quantity) <= 0) {
-      toast.error('Vui lòng nhập số lượng hợp lệ');
+    if (!validateLink(formData.link, 'facebook')) {
+      toast.error('Link Facebook không hợp lệ!');
+      return;
+    }
+    if (!formData.quantity || parseInt(formData.quantity) < 1000) {
+      toast.error('Số lượng tối thiểu là 1,000');
+      return;
+    }
+    if (parseInt(formData.quantity) > 1000000) {
+      toast.error('Số lượng tối đa là 1,000,000');
       return;
     }
     if (!selectedServer) {
@@ -88,6 +98,11 @@ const FacebookMember = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (currentServer?.isMaintenance) {
+        toast.error('Máy chủ này đang bảo trì, vui lòng chọn máy chủ khác', { id: 'order-toast' });
+        return;
+      }
 
       if (res.data.success) {
         toast.success('Tạo đơn hàng thành công!', { id: 'order-toast' });
@@ -176,9 +191,10 @@ const FacebookMember = () => {
                         id={server.id}
                         checked={selectedServer === server.id}
                         onChange={() => setSelectedServer(server.id)}
-                        className="w-4 h-4 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                        disabled={server.isMaintenance}
+                        className="w-4 h-4 text-purple-600 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed"
                       />
-                      <label htmlFor={server.id} className="flex flex-wrap items-center gap-2 cursor-pointer select-none text-sm">
+                      <label htmlFor={server.id} className={`flex flex-wrap items-center gap-2 cursor-pointer select-none text-sm ${server.isMaintenance ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}>
                         <span className="font-bold text-orange-500 px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-xs text-center min-w-[50px]">
                           {server.name}
                         </span>
@@ -192,7 +208,7 @@ const FacebookMember = () => {
                         <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold">
                           {server.price}đ
                         </span>
-                        <span className="bg-green-500 text-white px-2 py-0.5 rounded text-xs">
+                        <span className={`${server.isMaintenance ? 'bg-red-500' : 'bg-green-500'} text-white px-2 py-0.5 rounded text-xs`}>
                           {server.status}
                         </span>
                         {server.speed && (
@@ -211,7 +227,7 @@ const FacebookMember = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
-                  Số Lượng : ( 0 - 0 )
+                  Số Lượng : ( 1,000 - 1,000,000 )
                 </label>
                 <input
                   type="number"
@@ -264,7 +280,8 @@ const FacebookMember = () => {
 
             <button 
               onClick={handleSubmit} 
-              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+              disabled={currentServer?.isMaintenance}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined">shopping_cart</span>
               Tạo đơn hàng

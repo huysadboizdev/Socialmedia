@@ -153,34 +153,33 @@ export default function Attendance() {
   };
 
   return (
-    <div className="flex-1 min-h-full flex flex-col">
+    <div className="flex-1 min-h-full flex flex-col bg-[#fff5f7]">
       {claiming && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]">
-          <SharinganLoader size={140} />
+        <div className="fixed inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-[9999]">
+          <SharinganLoader size={120} />
         </div>
       )}
 
-      <div className="w-full p-4 md:p-6 lg:p-8 space-y-8 flex-1 flex flex-col items-center">
+      <div className="w-full p-4 md:p-8 lg:p-12 space-y-8 flex-1 flex flex-col items-center justify-center">
 
         {/* Main Card */}
-        <div className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[40px] p-8 md:p-12 shadow-[0_30px_70px_-20px_rgba(255,100,150,0.2)] dark:shadow-[0_30px_70px_-20px_rgba(255,100,150,0.1)] border border-pink-50 dark:border-pink-900/20 relative overflow-hidden flex flex-col items-center space-y-12 transition-colors">
+        <div className="w-full max-w-6xl bg-white dark:bg-slate-900 rounded-[60px] p-8 md:p-16 lg:p-20 shadow-[0_40px_100px_-20px_rgba(255,182,193,0.3)] dark:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] border border-pink-50 dark:border-pink-900/10 relative flex flex-col items-center space-y-16 transition-all">
           
-          {/* Subtle Glow Header */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent via-pink-400 dark:via-pink-500 to-transparent blur-sm" />
-
           {/* Title Section */}
-          <div className="text-center space-y-5">
-            <h1 className="text-4xl md:text-6xl font-normal text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 font-['Pattaya'] py-2">
+          <div className="text-center space-y-6">
+            <h1 className="text-3xl md:text-5xl font-medium text-slate-900 dark:text-white tracking-tight py-2 leading-tight">
               Điểm danh hằng ngày
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-bold text-lg md:text-2xl font-['Lexend'] tracking-tight">
-              Nhận Quà Lên Đến <span className="text-rose-500 dark:text-rose-400">100k</span>
-            </p>
-            <div className="text-slate-400 dark:text-slate-600 font-bold text-xs tracking-[0.3em] uppercase opacity-70">Sub6sao.com</div>
+            <div className="space-y-3">
+              <p className="text-slate-600 dark:text-slate-300 font-medium text-lg md:text-2xl tracking-tight">
+                Nhận Quà Lên Đến <span className="text-[#FF1493] dark:text-[#FF69B4]">100k</span>
+              </p>
+              <div className="text-slate-300 dark:text-slate-600 font-medium text-[10px] tracking-[0.6em] uppercase">SUB6SAO.COM</div>
+            </div>
           </div>
 
           {/* Reward Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-5 w-full">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6 w-full">
             {rewards.map((r) => {
               const status = getDayStatus(r.day);
               const isToday = status === "today";
@@ -190,49 +189,44 @@ export default function Attendance() {
                 <div 
                   key={r.day}
                   className={`
-                    relative group rounded-[24px] p-5 flex flex-col items-center justify-center gap-2.5 
-                    transition-all duration-500 border-2
+                    relative rounded-[32px] p-6 aspect-square flex flex-col items-center justify-center gap-2
+                    transition-all duration-500 border
                     ${isClaimed 
-                      ? "bg-pink-50/50 dark:bg-pink-900/20 border-pink-200 dark:border-pink-800" 
+                      ? "bg-white border-[#FFB6C1] shadow-[0_10px_25px_rgba(255,182,193,0.2)]" 
                       : isToday 
-                        ? "bg-gradient-to-b from-yellow-50 to-white dark:from-yellow-900/20 dark:to-slate-900 border-yellow-300 dark:border-yellow-700 shadow-[0_15px_30px_rgba(253,224,71,0.2)] dark:shadow-[0_15px_30px_rgba(0,0,0,0.3)] scale-105" 
-                        : "bg-white dark:bg-slate-800/40 border-slate-50 dark:border-slate-800 grayscale hover:grayscale-0 hover:border-pink-100 dark:hover:border-pink-900 shadow-sm"
+                        ? "bg-white border-[#FFB6C1] shadow-[0_15px_30px_rgba(255,182,193,0.3)] scale-105" 
+                        : "bg-white border-slate-100 dark:border-slate-800 opacity-60 grayscale-[0.5]"
                     }
                   `}
                 >
-                  {/* Status Icons */}
-                  {isClaimed && (
-                    <div className="absolute -top-2 -right-2 bg-pink-500 text-white rounded-full p-1 shadow-lg z-10 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[14px] font-bold">done</span>
-                    </div>
-                  )}
-                  {isToday && (
-                    <div className="absolute -top-3 -right-3 text-yellow-500 animate-bounce transition-transform duration-300 group-hover:scale-125 z-10">
-                      <span className="material-symbols-outlined text-[28px] drop-shadow-sm">redeem</span>
+                  {/* Status Circle Badge */}
+                  {(isClaimed || (isToday && claimedToday)) && (
+                    <div className="absolute -top-3 -right-3 bg-[#FF1493] text-white rounded-full size-8 shadow-lg z-10 flex items-center justify-center border-4 border-white">
+                      <span className="material-symbols-outlined text-[16px] font-bold">done</span>
                     </div>
                   )}
 
-                  <div className={`text-xl font-black font-['Lexend'] tracking-tighter ${isClaimed ? "text-pink-500 dark:text-pink-400" : isToday ? "text-yellow-600 dark:text-yellow-400" : "text-gray-300 dark:text-slate-700"}`}>
+                  <div className={`text-xl font-bold ${isClaimed || (isToday && claimedToday) ? "text-[#FF1493]" : "text-slate-400"}`}>
                     {r.amount}
                   </div>
-                  <div className={`text-[10px] font-bold uppercase tracking-widest ${isClaimed ? "text-pink-400/80 dark:text-pink-500" : isToday ? "text-yellow-500" : "text-gray-300 dark:text-slate-700"}`}>
-                    Ngày {r.day}
+                  <div className={`text-[10px] font-bold uppercase tracking-wider ${isClaimed || (isToday && claimedToday) ? "text-[#FFB6C1]" : "text-slate-300"}`}>
+                    NGÀY {r.day}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Progress Bar Section */}
-          <div className="w-full max-w-2xl space-y-5">
-            <div className="h-3 w-full bg-slate-50 dark:bg-slate-800/50 rounded-full overflow-hidden flex shadow-inner border border-slate-100 dark:border-slate-800 transition-colors">
+          {/* Progress Section */}
+          <div className="w-full max-w-2xl space-y-6">
+            <div className="h-2 w-full bg-slate-50 dark:bg-slate-800/50 rounded-full overflow-hidden flex shadow-inner border border-slate-50 dark:border-slate-800 transition-all">
                <div 
-                  className="h-full bg-gradient-to-r from-pink-400 via-rose-500 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(244,63,94,0.3)]" 
+                  className="h-full bg-gradient-to-r from-[#FFB6C1] to-[#FF1493] transition-all duration-1000" 
                   style={{ width: `${(streak / 7) * 100}%` }}
                />
             </div>
-            <div className="text-center font-bold text-slate-500 dark:text-slate-400 text-sm font-['Lexend'] tracking-wide transition-colors">
-              Đã hoàn thành: <span className="text-rose-500 dark:text-rose-400">{streak}</span> / 7 ngày
+            <div className="text-center font-bold text-slate-400 dark:text-slate-500 text-sm tracking-wide">
+              Đã hoàn thành: <span className="text-slate-600 dark:text-slate-300">{streak} / 7 ngày</span>
             </div>
           </div>
 
@@ -241,15 +235,15 @@ export default function Attendance() {
             onClick={handleClaim}
             disabled={claimedToday || loading}
             className={`
-              w-full md:w-auto px-20 py-5 rounded-[28px] font-black text-xl tracking-wide 
-              transition-all duration-500 active:scale-95 shadow-2xl font-['Lexend']
+              w-full md:w-auto px-24 py-6 rounded-[35px] font-bold text-xl tracking-tight
+              transition-all duration-500 active:scale-[0.98]
               ${claimedToday 
-                ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none" 
-                : "bg-gradient-to-r from-pink-400 via-rose-500 to-rose-400 text-white shadow-rose-200 dark:shadow-rose-900/40 hover:shadow-rose-400 dark:hover:shadow-rose-900/60 hover:brightness-110 hover:-translate-y-1"
+                ? "bg-[#edf2f7] dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed" 
+                : "bg-gradient-to-r from-[#FFB6C1] to-[#FF69B4] text-white shadow-xl shadow-pink-200 dark:shadow-none hover:shadow-2xl hover:-translate-y-1"
               }
             `}
           >
-            {loading ? "Đang tải..." : claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh"}
+            {loading ? "Đang tải..." : claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh ngay"}
           </button>
 
         </div>

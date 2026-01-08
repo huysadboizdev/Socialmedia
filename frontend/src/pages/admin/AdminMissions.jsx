@@ -46,8 +46,21 @@ const AdminMissions = () => {
         }));
     };
 
+    const validateLink = (link) => {
+        if (!link) return false;
+        // Regex for FB, IG, TikTok
+        const pattern = /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com|instagram\.com|tiktok\.com|vt\.tiktok\.com)\/.*$/i;
+        return pattern.test(link);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (!validateLink(formData.link)) {
+            toast.error('Link không hợp lệ! Vui lòng nhập link Facebook, Instagram hoặc TikTok hợp lệ.');
+            return;
+        }
+
         try {
             const token = localStorage.getItem('token');
             const url = editingMission 

@@ -14,7 +14,8 @@ const AdminServices = () => {
     price: '',
     speed: '',
     description: '',
-    isActive: true
+    isActive: true,
+    isMaintenance: false
   });
 
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
@@ -49,7 +50,8 @@ const AdminServices = () => {
         price: service.price,
         speed: service.speed,
         description: service.description || '',
-        isActive: service.isActive !== false
+        isActive: service.isActive !== false,
+        isMaintenance: service.isMaintenance === true
       });
     } else {
       setEditingService(null);
@@ -60,7 +62,8 @@ const AdminServices = () => {
         price: '',
         speed: '',
         description: '',
-        isActive: true
+        isActive: true,
+        isMaintenance: false
       });
     }
     setIsModalOpen(true);
@@ -150,7 +153,8 @@ const AdminServices = () => {
                   <th className="px-6 py-4">Nền tảng</th>
                   <th className="px-6 py-4">Giá (đ)</th>
                   <th className="px-6 py-4">Tốc độ</th>
-                  <th className="px-6 py-4 text-center">Trạng thái</th>
+                  <th className="px-6 py-4 text-center">Hoạt động</th>
+                  <th className="px-6 py-4 text-center">Bảo trì</th>
                   <th className="px-6 py-4 text-right">Thao tác</th>
                 </tr>
               </thead>
@@ -191,7 +195,16 @@ const AdminServices = () => {
                               ? 'bg-green-500/10 text-green-500 border-green-500/20' 
                               : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
                          }`}>
-                           {service.isActive !== false ? 'Hoạt động' : 'Tắt'}
+                           {service.isActive !== false ? 'Bật' : 'Tắt'}
+                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                            service.isMaintenance === true 
+                              ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' 
+                              : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                         }`}>
+                           {service.isMaintenance === true ? 'Bảo trì' : 'Bình thường'}
                          </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -308,15 +321,28 @@ const AdminServices = () => {
                 ></textarea>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input 
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
-                  className="size-4 rounded accent-purple-600"
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">Hoạt động dịch vụ</label>
+              <div className="flex items-center gap-6 pt-2">
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox"
+                    id="isActive"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                    className="size-4 rounded accent-purple-600"
+                  />
+                  <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">Hoạt động dịch vụ</label>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox"
+                    id="isMaintenance"
+                    checked={formData.isMaintenance}
+                    onChange={(e) => setFormData({...formData, isMaintenance: e.target.checked})}
+                    className="size-4 rounded accent-orange-600"
+                  />
+                  <label htmlFor="isMaintenance" className="text-sm font-medium text-slate-700 dark:text-slate-300">Bảo trì dịch vụ</label>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">

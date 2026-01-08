@@ -46,6 +46,41 @@ interface MissionWithStatus {
 export const getInfo = async (userId: string) => {
     const user = await userModel.findById(userId).select('-password')
     if (!user) return { success: false, message: 'User not found' }
+
+    // One-time migration of mission rewards for existing users
+    if (!user.isMissionBalanceMigrated) {
+        try {
+            const missions = await missionModel.find({ _id: { $in: user.completedMissions } });
+            const totalMissionRewards = missions.reduce((sum, mission) => sum + (mission.reward || 0), 0);
+
+            if (totalMissionRewards > 0) {
+                // Move mission rewards from balance to missionBalance
+                const oldMissionBalance = user.missionBalance || 0;
+                user.missionBalance = oldMissionBalance + totalMissionRewards;
+                user.balance = (user.balance || 0) - totalMissionRewards;
+
+                // Create a migration transaction record
+                await transactionModel.create({
+                    userId,
+                    amount: totalMissionRewards,
+                    type: 'mission',
+                    description: `Đồng bộ tiền thưởng từ ${missions.length} nhiệm vụ đã hoàn thành trước đó`,
+                    oldBalance: oldMissionBalance,
+                    newBalance: user.missionBalance,
+                    balanceType: 'mission',
+                    status: 'approved',
+                    createdAt: new Date()
+                });
+            }
+            
+            user.isMissionBalanceMigrated = true;
+            await user.save();
+        } catch (error) {
+            console.error("Migration error for user", userId, error);
+            // Continue anyway to not block user info fetch
+        }
+    }
+
     return { success: true, user }
 }
 
@@ -119,6 +154,30 @@ export const changePassword = async (userId: string, { oldPassword, newPassword1
     return { success: true }
 }
 
+const validateServiceLink = (link: string, platform: string): boolean => {
+    if (!link) return false;
+    let pattern;
+    switch (platform.toLowerCase()) {
+        case 'facebook':
+            pattern = /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com)\/.*$/i;
+            break;
+        case 'instagram':
+            pattern = /^(https?:\/\/)?(www\.)?(instagram\.com)\/.*$/i;
+            break;
+        case 'tiktok':
+            pattern = /^(https?:\/\/)?(www\.)?(tiktok\.com|vt\.tiktok\.com)\/.*$/i;
+            break;
+        default:
+            return true;
+    }
+    return pattern.test(link);
+}
+
+const validateGmail = (email: string): boolean => {
+    if (!email) return false;
+    return email.toLowerCase().endsWith('@gmail.com');
+}
+
 /**
  * Handle services and orders for user
  */
@@ -133,8 +192,33 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         const service = await serviceModel.findById(serviceId)
         if (!service) return { success: false, message: 'Service not found' }
 
+        if ((service as { isMaintenance?: boolean }).isMaintenance) {
+            return { success: false, message: 'Dịch vụ này đang bảo trì, vui lòng quay lại sau!' }
+        }
+
+        if (link && !validateServiceLink(link, service.platform)) {
+            return { success: false, message: `Link ${service.platform} không hợp lệ!` }
+        }
+
+        if (service.category === 'Tích Xanh') {
+            const blueTickDetails = details as { username?: string };
+            const username = blueTickDetails.username;
+            if (typeof username !== 'string' || !validateGmail(username)) {
+                return { success: false, message: 'Dịch vụ Tích Xanh yêu cầu tài khoản Gmail (@gmail.com)!' }
+            }
+        }
+
         const user = await userModel.findById(userId)
         if (!user) return { success: false, message: 'User not found' }
+
+        if (service.category !== 'Tích Xanh') {
+            if (quantity < 1000) {
+                return { success: false, message: 'Số lượng tối thiểu là 1,000!' }
+            }
+            if (quantity > 1000000) {
+                return { success: false, message: 'Số lượng tối đa là 1,000,000!' }
+            }
+        }
 
         const totalPrice = service.price * quantity
         if ((user.balance || 0) < totalPrice) {
@@ -155,6 +239,19 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         user.balance = (user.balance || 0) - totalPrice
         await user.save()
 
+        // Create transaction record for the payment
+        await transactionModel.create({
+            userId,
+            amount: -totalPrice,
+            type: 'payment',
+            description: `Thanh toán đơn hàng: ${service.name}`,
+            oldBalance: user.balance + totalPrice,
+            newBalance: user.balance,
+            balanceType: 'profile',
+            status: 'approved',
+            createdAt: new Date()
+        })
+
         return { success: true, order, balance: user.balance }
     }
 
@@ -172,7 +269,14 @@ export const handleService = async (userId: string, { action, serviceId, quantit
 export const depositRequest = async (userId: string, amount: number) => {
     if (amount <= 0) return { success: false, message: 'Invalid amount' }
 
-    await transactionModel.create({ userId, amount })
+    await transactionModel.create({ 
+        userId, 
+        amount, 
+        type: 'deposit',
+        description: 'Yêu cầu nạp tiền',
+        balanceType: 'profile',
+        status: 'pending'
+    })
     return { success: true }
 }
 
@@ -202,10 +306,23 @@ export const completeMissionAction = async (userId: string, missionId: string) =
         return { success: false, message: 'Mission already completed' }
     }
 
-    user.balance = (user.balance || 0) + (mission.reward || 0)
+    user.missionBalance = (user.missionBalance || 0) + (mission.reward || 0)
     user.completedMissions.push(new Types.ObjectId(missionId))
 
     await user.save()
+
+    // Create transaction record
+    await transactionModel.create({
+        userId,
+        amount: mission.reward,
+        type: 'mission',
+        description: `Hoàn thành nhiệm vụ: ${mission.title}`,
+        oldBalance: user.missionBalance - (mission.reward || 0),
+        newBalance: user.missionBalance,
+        balanceType: 'mission',
+        status: 'approved',
+        createdAt: new Date()
+    })
 
     return {
         success: true,
@@ -282,7 +399,7 @@ export const checkAttendance = async (userId: string) => {
     const rewardAmount = rewards[user.attendance.streak] ?? 100
 
     // Update User
-    user.balance = (user.balance || 0) + rewardAmount
+    user.missionBalance = (user.missionBalance || 0) + rewardAmount
     user.attendance.lastDate = now
     await user.save()
 
@@ -290,6 +407,11 @@ export const checkAttendance = async (userId: string) => {
     await transactionModel.create({
         userId: new Types.ObjectId(userId),
         amount: rewardAmount,
+        type: 'attendance',
+        description: `Điểm danh thành công (Ngày ${user.attendance.streak})`,
+        oldBalance: user.missionBalance - rewardAmount,
+        newBalance: user.missionBalance,
+        balanceType: 'mission',
         status: 'approved', // Auto-approved
         createdAt: now
     })
@@ -321,7 +443,7 @@ export const getAvailableMissions = async (userId: string) => {
     const missionsWithStatus: MissionWithStatus[] = missions.map(mission => {
         const missionIdStr = mission._id.toString();
         const submission = submissionMap.get(missionIdStr);
-        // Determine status: 'available', 'pending', 'approved' (completed), 'rejected'
+        // Determine status: 'available', 'pending', 'approved', 'rejected'
         let status = 'available';
         
         if (submission) {
@@ -444,4 +566,126 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
             fs.unlinkSync(imageProof.path);
         }
     }
+}
+
+/**
+ * Withdraw mission balance
+ */
+export const withdrawMissionBalance = async (
+    userId: string, 
+    amount: number, 
+    method: 'web' | 'bank' = 'web',
+    details?: { bankName?: string; bankAccount?: string; qrCodeFile?: Express.Multer.File }
+) => {
+    if (amount < 10000) return { success: false, message: 'Số tiền rút tối thiểu là 10.000 đ' }
+
+    const user = await userModel.findById(userId)
+    if (!user) return { success: false, message: 'User not found' }
+
+    if ((user.missionBalance || 0) < amount) {
+        return { success: false, message: 'Số dư nhiệm vụ không đủ' }
+    }
+
+    // Deduct from mission balance first
+    user.missionBalance = (user.missionBalance || 0) - amount
+
+    if (method === 'web') {
+        // Instant transfer to profile balance
+        user.balance = (user.balance || 0) + amount
+        await user.save()
+
+        // Create an approved transaction record
+        await transactionModel.create({
+            userId,
+            amount,
+            type: 'transfer',
+            description: 'Đổi tiền từ ví nhiệm vụ sang ví chính (Web Account)',
+            oldBalance: user.missionBalance,
+            newBalance: user.missionBalance, // This is for mission balance type
+            balanceType: 'mission',
+            status: 'approved',
+            withdrawalDetails: { method: 'web' },
+            createdAt: new Date()
+        })
+
+        // Also record the addition to profile balance
+        await transactionModel.create({
+            userId,
+            amount,
+            type: 'adjustment',
+            description: 'Nhận tiền từ ví nhiệm vụ (Web Account)',
+            oldBalance: (user.balance || 0) - amount,
+            newBalance: user.balance,
+            balanceType: 'profile',
+            status: 'approved',
+            createdAt: new Date()
+        })
+
+        return { 
+            success: true, 
+            message: 'Rút tiền về ví chính thành công!', 
+            missionBalance: user.missionBalance,
+            balance: user.balance
+        }
+    } else {
+        // Bank withdrawal - needs admin approval and has 20% fee
+        let qrCodeUrl = "";
+        
+        if (details?.qrCodeFile) {
+            try {
+                const upload = await cloudinary.uploader.upload(details.qrCodeFile.path, {
+                    folder: 'withdrawal_qrs'
+                });
+                qrCodeUrl = upload.secure_url;
+            } catch (error) {
+                console.error("QR Upload error", error);
+            } finally {
+                if (fs.existsSync(details.qrCodeFile.path)) {
+                    fs.unlinkSync(details.qrCodeFile.path);
+                }
+            }
+        }
+
+        const fee = amount * 0.2;
+        const finalAmount = amount - fee;
+
+        await user.save();
+
+        // Create a pending transaction record
+        await transactionModel.create({
+            userId,
+            amount: -amount,
+            type: 'withdraw',
+            description: `Yêu cầu rút tiền về ngân hàng (${details?.bankName}). Thực nhận: ${finalAmount.toLocaleString()} đ (Phí 20%: ${fee.toLocaleString()} đ)`,
+            oldBalance: user.missionBalance + amount,
+            newBalance: user.missionBalance,
+            balanceType: 'mission',
+            status: 'pending',
+            withdrawalDetails: {
+                method: 'bank',
+                bankName: details?.bankName,
+                bankAccount: details?.bankAccount,
+                qrCode: qrCodeUrl
+            },
+            createdAt: new Date()
+        })
+
+        return { 
+            success: true, 
+            message: 'Yêu cầu rút tiền về ngân hàng đã được gửi! Vui lòng chờ Admin duyệt.', 
+            missionBalance: user.missionBalance 
+        }
+    }
+}
+
+/**
+ * Get user transaction history
+ */
+export const getTransactions = async (userId: string, type?: string) => {
+    const query: Record<string, string> = { userId }
+    if (type) {
+        query.type = type
+    }
+    const transactions = await transactionModel.find(query).sort({ createdAt: -1 })
+    return { success: true, transactions }
 }

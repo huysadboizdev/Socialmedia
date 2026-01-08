@@ -82,6 +82,14 @@ export default function AdminSidebar({ onClose }) {
         />
 
          <NavItem 
+          label="Duyệt Rút Tiền" 
+          to="/admin/withdrawals" 
+          icon="currency_exchange" 
+          active={location.pathname === "/admin/withdrawals"} 
+          onClick={handleItemClick}
+        />
+
+         <NavItem 
           label="Cài Đặt" 
           to="/admin/settings" 
           icon="settings" 

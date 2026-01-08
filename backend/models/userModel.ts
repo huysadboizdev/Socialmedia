@@ -12,6 +12,8 @@ const userSchema = new Schema(
     },
     googleId: { type: String },
     balance: { type: Number, default: 0 },
+    missionBalance: { type: Number, default: 0 },
+    isMissionBalanceMigrated: { type: Boolean, default: false },
     image: { type: String },
     isBlocked: { type: Boolean, default: false },
     completedMissions: [{ type: Schema.Types.ObjectId, ref: 'mission' }],

@@ -16,7 +16,7 @@ const DailyTask = () => {
   const stats = [
     {
       label: 'Số Dư',
-      value: userData ? `${userData.balance?.toLocaleString()} đ` : '0 đ',
+      value: userData ? `${(userData.missionBalance || 0).toLocaleString()} đ` : '0 đ',
       icon: 'database',
       color: 'bg-orange-50',
       iconColor: 'text-orange-500',
@@ -103,15 +103,69 @@ const DailyTask = () => {
       }
   }
 
-  const handleWithdrawal = () => {
-    if (!amount || parseInt(amount) < 10000) {
+  const [bankName, setBankName] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [qrCodeFile, setQrCodeFile] = useState(null);
+
+  const handleWithdrawal = async () => {
+    const numAmount = parseInt(amount);
+    if (!amount || numAmount < 10000) {
       toast.error('Số tiền rút tối thiểu là 10.000 đ');
       return;
     }
-    toast.success('Yêu cầu rút tiền đã được gửi!');
-    setAmount('');
-  };
+    
+    if (userData && (userData.missionBalance || 0) < numAmount) {
+        toast.error('Số dư nhiệm vụ không đủ');
+        return;
+    }
 
+    if (withdrawalType === 'bank') {
+        if (!bankName || !bankAccount) {
+            toast.error('Vui lòng nhập đầy đủ thông tin ngân hàng');
+            return;
+        }
+    }
+
+    try {
+        setSubmitting(true);
+        const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('amount', numAmount);
+        formData.append('method', withdrawalType);
+        
+        if (withdrawalType === 'bank') {
+            formData.append('bankName', bankName);
+            formData.append('bankAccount', bankAccount);
+            if (qrCodeFile) {
+                formData.append('qrCode', qrCodeFile);
+            }
+        }
+
+        const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/withdraw`, formData, {
+            headers: { 
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        if (res.data.success) {
+            toast.success(res.data.message + ". Tiền sẽ về tài khoản sau 24h.");
+            setAmount('');
+            setBankName('');
+            setBankAccount('');
+            setQrCodeFile(null);
+            fetchUserData(); // Refresh balance
+        } else {
+            toast.error(res.data.message);
+        }
+    } catch (_error) {
+        console.error("Withdrawal error", _error);
+        toast.error("Lỗi khi gửi yêu cầu rút tiền");
+    } finally {
+        setSubmitting(false);
+    }
+  };
+ 
   // Filter Logic
   const filteredMissions = activeTab === 'list' 
     ? missions.filter(m => m.status === 'available')
@@ -130,10 +184,13 @@ const DailyTask = () => {
           } else {
               toast.error(res.data.message);
           }
-      } catch (error) {
+      } catch {
           toast.error("Lỗi khi nhận nhiệm vụ");
       }
   }
+
+  const fee = withdrawalType === 'bank' ? (parseInt(amount) || 0) * 0.2 : 0;
+  const finalAmount = (parseInt(amount) || 0) - fee;
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
@@ -161,8 +218,8 @@ const DailyTask = () => {
             onClick={() => setActiveTab('list')}
             className={`px-8 py-3 rounded-full font-bold transition-all border-2 ${
               activeTab === 'list'
-                ? 'bg-[#007bff] border-[#007bff] text-white shadow-lg shadow-blue-500/30'
-                : 'bg-white border-[#007bff] text-[#007bff] hover:bg-blue-50'
+                ? 'bg-[#6610f2] border-[#6610f2] text-white shadow-lg shadow-purple-500/30'
+                : 'bg-white border-[#6610f2] text-[#6610f2] hover:bg-purple-50'
             }`}
           >
             Danh sách nhiệm vụ
@@ -171,8 +228,8 @@ const DailyTask = () => {
             onClick={() => setActiveTab('received')}
             className={`px-8 py-3 rounded-full font-bold transition-all border-2 ${
               activeTab === 'received'
-                ? 'bg-[#007bff] border-[#007bff] text-white shadow-lg shadow-blue-500/30'
-                : 'bg-white border-[#007bff] text-[#007bff] hover:bg-blue-50'
+                ? 'bg-[#6610f2] border-[#6610f2] text-white shadow-lg shadow-purple-500/30'
+                : 'bg-white border-[#6610f2] text-[#6610f2] hover:bg-purple-50'
             }`}
           >
             Nhiệm vụ đã nhận ({missions.filter(m => m.status !== 'available').length})
@@ -311,7 +368,7 @@ const DailyTask = () => {
             </div>
             <div className="flex items-center gap-2 text-[#856404] font-medium text-sm px-3">
               <span className="material-symbols-outlined text-[18px]">info</span>
-              <span>Số dư có thể rút của bạn là : <span className="font-bold">{userData ? `${userData.balance?.toLocaleString()} đ` : '0 đ'}</span></span>
+              <span>Số dư có thể rút của bạn là : <span className="font-bold">{userData ? `${(userData.missionBalance || 0).toLocaleString()} đ` : '0 đ'}</span></span>
             </div>
             <div className="flex items-start gap-2 text-red-600 font-bold text-sm px-3">
               <span className="material-symbols-outlined text-[18px]">warning</span>
@@ -347,6 +404,58 @@ const DailyTask = () => {
               </div>
             </div>
 
+            {withdrawalType === 'bank' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                            Tên Ngân Hàng
+                        </label>
+                        <input
+                            type="text"
+                            value={bankName}
+                            onChange={(e) => setBankName(e.target.value)}
+                            className="w-full p-3.5 border border-[#6610f2]/30 rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-4 focus:ring-purple-500/10 transition-all font-medium"
+                            placeholder="Ví dụ: MB Bank, Vietcombank..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                            Số Tài Khoản
+                        </label>
+                        <input
+                            type="text"
+                            value={bankAccount}
+                            onChange={(e) => setBankAccount(e.target.value)}
+                            className="w-full p-3.5 border border-[#6610f2]/30 rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-4 focus:ring-purple-500/10 transition-all font-medium"
+                            placeholder="Nhập số tài khoản..."
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                            Tải Ảnh QR Nhận Tiền
+                        </label>
+                        <div className="relative">
+                            <input 
+                                type="file" 
+                                id="qr-upload" 
+                                className="hidden" 
+                                accept="image/*"
+                                onChange={(e) => setQrCodeFile(e.target.files?.[0])}
+                            />
+                            <label 
+                                htmlFor="qr-upload"
+                                className="w-full p-3.5 border border-dashed border-[#6610f2]/30 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-100 transition-all group"
+                            >
+                                <span className="material-symbols-outlined text-purple-600 group-hover:scale-110 transition-transform">qr_code_2</span>
+                                <span className="text-sm font-medium text-slate-600">
+                                    {qrCodeFile ? qrCodeFile.name : 'Chọn ảnh QR để admin dễ nhận diện'}
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
                 Số Tiền Rút
@@ -358,16 +467,23 @@ const DailyTask = () => {
                 className="w-full p-3.5 border border-[#6610f2]/30 rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-4 focus:ring-purple-500/10 transition-all font-medium"
                 placeholder="Nhập số tiền muốn rút..."
               />
+              {amount && withdrawalType === 'bank' && (
+                  <div className="mt-2 text-xs font-bold text-slate-500 flex justify-between px-1">
+                      <span>Thực nhận: <span className="text-emerald-600">{finalAmount.toLocaleString()} đ</span></span>
+                      <span>Phí 20%: <span className="text-red-500">{fee.toLocaleString()} đ</span></span>
+                  </div>
+              )}
             </div>
 
             <button
               onClick={handleWithdrawal}
-              className="w-full py-4 bg-[#6610f2] hover:bg-[#520dc2] text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center justify-center gap-2 uppercase tracking-wide group"
+              disabled={submitting}
+              className="w-full py-4 bg-[#6610f2] hover:bg-[#520dc2] text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center justify-center gap-2 uppercase tracking-wide group disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform">
                 send
               </span>
-              Rút Tiền Ngay
+              {submitting ? 'ĐANG XỬ LÝ...' : 'RÚT TIỀN NGAY'}
             </button>
           </div>
         </div>
