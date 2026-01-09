@@ -1,16 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const AdminServices = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPlatform, setFilterPlatform] = useState('All');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const [formData, setFormData] = useState({
     name: '',
     platform: 'Facebook',
-    category: '',
+    category: 'Tăng Like',
     price: '',
     speed: '',
     description: '',
@@ -58,7 +83,7 @@ const AdminServices = () => {
       setFormData({
         name: '',
         platform: 'Facebook',
-        category: '',
+        category: 'Tăng Like',
         price: '',
         speed: '',
         description: '',
@@ -121,244 +146,399 @@ const AdminServices = () => {
     }
   };
 
+  const filteredServices = services.filter(s => {
+    const matchesSearch = searchTerm === '' || s.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPlatform = filterPlatform === 'All' || s.platform === filterPlatform;
+    const matchesCategory = filterCategory === 'All' || s.category === filterCategory;
+    return matchesSearch && matchesPlatform && matchesCategory;
+  });
+
+  const totalPages = Math.ceil(filteredServices.length / pageSize);
+  const paginatedServices = filteredServices.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const toggleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedServices(paginatedServices.map(s => s._id));
+    } else {
+      setSelectedServices([]);
+    }
+  };
+
+  const toggleSelectService = (id, checked) => {
+    if (checked) {
+      setSelectedServices([...selectedServices, id]);
+    } else {
+      setSelectedServices(selectedServices.filter(sid => sid !== id));
+    }
+  };
+
+  const platforms = [...new Set(services.map(s => s.platform))];
+  const categories = [...new Set(services.map(s => s.category))];
+
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-full">
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Quản Lý Dịch Vụ</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Cấu hình các gói dịch vụ và giá cả trên hệ thống.</p>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Quản lý dịch vụ</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Danh sách tất cả dịch vụ trên hệ thống</p>
+        </div>
+        <Button 
+          onClick={() => handleOpenModal()}
+          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm rounded-lg flex items-center gap-2 h-9 px-4"
+        >
+          <span className="material-symbols-outlined text-sm">add</span>
+          Thêm dịch vụ mới
+        </Button>
+      </div>
+
+      {/* Filters Section */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-xs">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+          <Input 
+            placeholder="Tìm tên dịch vụ..." 
+            className="pl-9 bg-white border-slate-200 h-9 rounded-lg"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         
-        <button 
-          onClick={() => handleOpenModal()}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/20"
-        >
-          <span className="material-symbols-outlined">add</span>
-          Thêm dịch vụ mới
-        </button>
+        <Select value={filterPlatform} onValueChange={setFilterPlatform}>
+          <SelectTrigger className="w-[160px] bg-white border-slate-200 h-9 rounded-lg">
+            <SelectValue placeholder="Nền tảng" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">Tất cả nền tảng</SelectItem>
+            {platforms.map(p => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[180px] bg-white border-slate-200 h-9 rounded-lg">
+            <SelectValue placeholder="Danh mục" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">Tất cả danh mục</SelectItem>
+            {categories.map(c => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-slate-400 dark:text-slate-500">
-            <span className="material-symbols-outlined text-5xl animate-spin opacity-20">sync</span>
-            <p className="mt-4 font-medium opacity-50">Đang tải danh sách dịch vụ...</p>
+      {/* Table Section */}
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#990033] hover:bg-[#990033] border-0">
+                <TableHead className="w-12 text-center text-white">
+                  <Checkbox 
+                    checked={selectedServices.length === paginatedServices.length && paginatedServices.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    className="border-white data-[state=checked]:bg-white data-[state=checked]:text-[#990033]"
+                  />
+                </TableHead>
+                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Tên dịch vụ</TableHead>
+                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Nền tảng</TableHead>
+                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Giá (đ)</TableHead>
+                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Tốc độ</TableHead>
+                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Trạng thái</TableHead>
+                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Hành động</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-64 text-center">
+                    <div className="flex justify-center">
+                      <span className="material-symbols-outlined animate-spin text-slate-400 text-4xl">sync</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : paginatedServices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-64 text-center text-slate-500 italic">
+                    Không tìm thấy dịch vụ nào.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedServices.map((service) => (
+                  <TableRow key={service._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                    <TableCell className="text-center">
+                      <Checkbox 
+                        checked={selectedServices.includes(service._id)}
+                        onCheckedChange={(checked) => toggleSelectService(service._id, checked)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-center py-4">
+                      <div className="flex flex-col items-center">
+                        <span className="text-sm font-bold text-slate-700">{service.name}</span>
+                        <span className="text-[11px] text-slate-500 uppercase font-medium">{service.category}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                         service.platform === 'Facebook' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                         service.platform === 'TikTok' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
+                         'bg-pink-50 text-pink-600 border border-pink-100'
+                       }`}>
+                         {service.platform}
+                       </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="text-sm font-bold text-purple-600">{service.price.toLocaleString()}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="text-sm text-slate-600 font-medium">{service.speed}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                          service.isActive !== false ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'
+                        }`}>
+                          {service.isActive !== false ? 'Active' : 'Off'}
+                        </span>
+                        {service.isMaintenance && (
+                          <span className="px-2 py-0.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-[10px] font-bold uppercase">
+                            Maintenance
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="size-8 text-slate-400 hover:text-blue-600"
+                          onClick={() => handleOpenModal(service)}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="size-8 text-slate-400 hover:text-red-500"
+                          onClick={() => handleDelete(service._id, service.name)}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination Section */}
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
+          <div className="text-sm text-slate-500">
+            Đã chọn {selectedServices.length} trong {paginatedServices.length} hàng.
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-6 py-4">Dịch vụ</th>
-                  <th className="px-6 py-4">Nền tảng</th>
-                  <th className="px-6 py-4">Giá (đ)</th>
-                  <th className="px-6 py-4">Tốc độ</th>
-                  <th className="px-6 py-4 text-center">Hoạt động</th>
-                  <th className="px-6 py-4 text-center">Bảo trì</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                {services.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 italic">
-                      Chưa có dịch vụ nào được tạo.
-                    </td>
-                  </tr>
-                ) : (
-                  services.map((service) => (
-                    <tr key={service._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-700 dark:text-slate-200 leading-tight">{service.name}</span>
-                          <span className="text-xs text-slate-500">{service.category}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                           service.platform === 'Facebook' ? 'bg-blue-500/10 text-blue-500' :
-                           service.platform === 'TikTok' ? 'bg-slate-900/10 dark:bg-white/10 text-slate-900 dark:text-white' :
-                           'bg-pink-500/10 text-pink-500'
-                         }`}>
-                           {service.platform}
-                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-purple-600 dark:text-purple-400">{service.price.toLocaleString()}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-slate-600 dark:text-slate-400">{service.speed}</span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                            service.isActive !== false 
-                              ? 'bg-green-500/10 text-green-500 border-green-500/20' 
-                              : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                         }`}>
-                           {service.isActive !== false ? 'Bật' : 'Tắt'}
-                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                            service.isMaintenance === true 
-                              ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' 
-                              : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                         }`}>
-                           {service.isMaintenance === true ? 'Bảo trì' : 'Bình thường'}
-                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button 
-                            onClick={() => handleOpenModal(service)}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-500 transition-all"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">edit</span>
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(service._id, service.name)}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-500 transition-all"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Tổng: {filteredServices.length}</span>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+                Trang {currentPage}/{totalPages || 1}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="size-8 rounded border-slate-200"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  <span className="material-symbols-outlined text-[18px]">keyboard_double_arrow_left</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="size-8 rounded border-slate-200"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="size-8 rounded border-slate-200"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="size-8 rounded border-slate-200"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  <span className="material-symbols-outlined text-[18px]">keyboard_double_arrow_right</span>
+                </Button>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={handleCloseModal}></div>
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={handleCloseModal}></div>
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-bold text-slate-800 dark:text-white">
                 {editingService ? "Chỉnh sửa dịch vụ" : "Thêm dịch vụ mới"}
               </h2>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nền tảng</label>
-                  <select 
-                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                    value={formData.platform}
-                    onChange={(e) => setFormData({...formData, platform: e.target.value})}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Nền tảng</label>
+                  <Select 
+                    value={formData.platform} 
+                    onValueChange={(v) => setFormData({...formData, platform: v})}
                   >
-                    <option value="Facebook">Facebook</option>
-                    <option value="TikTok">TikTok</option>
-                    <option value="Instagram">Instagram</option>
-                  </select>
+                    <SelectTrigger className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl">
+                      <SelectValue placeholder="Chọn nền tảng" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Facebook">Facebook</SelectItem>
+                      <SelectItem value="TikTok">TikTok</SelectItem>
+                      <SelectItem value="Instagram">Instagram</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Danh mục</label>
-                  <select 
-                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                <div className="space-y-1.5">
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Danh mục</label>
+                   <Select 
+                    value={formData.category} 
+                    onValueChange={(v) => setFormData({...formData, category: v})}
                   >
-                    <option value="Tăng Like">Tăng Like</option>
-                    <option value="Tăng Theo Dõi">Tăng Theo Dõi</option>
-                    <option value="Tăng Share">Tăng Share</option>
-                    <option value="Tích Xanh">Tích Xanh</option>
-                  </select>
+                    <SelectTrigger className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl">
+                      <SelectValue placeholder="Chọn danh mục" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Tăng Like">Tăng Like</SelectItem>
+                      <SelectItem value="Tăng Theo Dõi">Tăng Theo Dõi</SelectItem>
+                      <SelectItem value="Tăng Share">Tăng Share</SelectItem>
+                      <SelectItem value="Tích Xanh">Tích Xanh</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tên dịch vụ / Máy chủ</label>
-                <input 
-                  type="text"
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tên dịch vụ / Máy chủ</label>
+                <Input 
                   required
                   placeholder="VD: Server 1 (Like Việt)"
-                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Giá mỗi tương tác (đ)</label>
-                  <input 
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Giá tiền (đ)</label>
+                  <Input 
                     type="number"
                     required
-                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    placeholder="25"
+                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tốc độ chạy</label>
-                  <input 
-                    type="text"
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tốc độ chạy</label>
+                  <Input 
                     required
                     placeholder="VD: Siêu nhanh, 24h..."
-                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
                     value={formData.speed}
                     onChange={(e) => setFormData({...formData, speed: e.target.value})}
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mô tả (nếu có)</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Mô tả chi tiết</label>
                 <textarea 
-                  rows="2"
-                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  rows="3"
+                  placeholder="Nhập mô tả về dịch vụ..."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none transition-all"
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                 ></textarea>
               </div>
 
-              <div className="flex items-center gap-6 pt-2">
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox"
+              <div className="flex items-center gap-8 pt-1">
+                <div className="flex items-center gap-2.5 cursor-pointer group">
+                  <Checkbox 
                     id="isActive"
                     checked={formData.isActive}
-                    onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
-                    className="size-4 rounded accent-purple-600"
+                    onCheckedChange={(checked) => setFormData({...formData, isActive: !!checked})}
+                    className="size-5 rounded-md"
                   />
-                  <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">Hoạt động dịch vụ</label>
+                  <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 cursor-pointer group-hover:text-purple-600 transition-colors">Hiển thị dịch vụ</label>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox"
+                <div className="flex items-center gap-2.5 cursor-pointer group">
+                  <Checkbox 
                     id="isMaintenance"
                     checked={formData.isMaintenance}
-                    onChange={(e) => setFormData({...formData, isMaintenance: e.target.checked})}
-                    className="size-4 rounded accent-orange-600"
+                    onCheckedChange={(checked) => setFormData({...formData, isMaintenance: !!checked})}
+                    className="size-5 rounded-md data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                   />
-                  <label htmlFor="isMaintenance" className="text-sm font-medium text-slate-700 dark:text-slate-300">Bảo trì dịch vụ</label>
+                  <label htmlFor="isMaintenance" className="text-sm font-semibold text-slate-700 cursor-pointer group-hover:text-orange-600 transition-colors">Bảo trì</label>
                 </div>
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button 
+                <Button 
                   type="button" 
+                  variant="outline"
                   onClick={handleCloseModal}
-                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                  className="flex-1 h-11 border-slate-200 text-slate-600 font-bold rounded-xl"
                 >
-                  Hủy
-                </button>
-                <button 
+                  Đóng
+                </Button>
+                <Button 
                   type="submit"
-                  className="flex-1 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/20"
+                  className="flex-1 h-11 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-500/10 transition-all active:scale-[0.98]"
                 >
-                  {editingService ? "Cập nhật" : "Lưu dịch vụ"}
-                </button>
+                  {editingService ? "Lưu thay đổi" : "Tạo dịch vụ"}
+                </Button>
               </div>
             </form>
           </div>

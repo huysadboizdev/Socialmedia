@@ -2,6 +2,23 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -10,6 +27,9 @@ const AdminWithdrawals = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('pending');
     const [viewingQR, setViewingQR] = useState(null);
+    const [selectedRequests, setSelectedRequests] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
     // Dialog state
     const [dialogConfig, setDialogConfig] = useState({
@@ -29,7 +49,7 @@ const AdminWithdrawals = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                setRequests(res.data.requests);
+                setRequests(res.data.requests || []);
             }
         } catch (_error) {
             console.error(_error);
@@ -66,7 +86,7 @@ const AdminWithdrawals = () => {
                 fetchWithdrawals();
                 setDialogConfig(prev => ({ ...prev, isOpen: false }));
             }
-        } catch (_error) {
+        } catch {
             toast.error('Duyệt thất bại');
         } finally {
             setDialogConfig(prev => ({ ...prev, confirmLoading: false }));
@@ -96,7 +116,7 @@ const AdminWithdrawals = () => {
                 fetchWithdrawals();
                 setDialogConfig(prev => ({ ...prev, isOpen: false }));
             }
-        } catch (_error) {
+        } catch {
             toast.error('Từ chối thất bại');
         } finally {
             setDialogConfig(prev => ({ ...prev, confirmLoading: false }));
@@ -107,155 +127,288 @@ const AdminWithdrawals = () => {
         ? requests.filter(r => r.status === 'pending')
         : requests.filter(r => r.status !== 'pending');
 
+    const totalPages = Math.ceil(filteredRequests.length / pageSize);
+    const paginatedData = filteredRequests.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    const toggleSelectAll = (checked) => {
+        if (checked) {
+            setSelectedRequests(paginatedData.map(r => r._id));
+        } else {
+            setSelectedRequests([]);
+        }
+    };
+
+    const toggleSelectRequest = (id, checked) => {
+        if (checked) {
+            setSelectedRequests([...selectedRequests, id]);
+        } else {
+            setSelectedRequests(selectedRequests.filter(sid => sid !== id));
+        }
+    };
+
     return (
-        <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 gap-4">
-                <div>
-                   <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Quản Lý Rút Tiền</h1>
-                   <p className="text-slate-500 dark:text-slate-400 mt-1">Duyệt các yêu cầu rút tiền từ ví nhiệm vụ về ngân hàng</p>
+        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-full">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Quản Lý Rút Tiền</h1>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Duyệt các yêu cầu rút tiền từ ví nhiệm vụ về ngân hàng</p>
                 </div>
                 
-                <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+                {/* Tab Switcher */}
+                <div className="flex p-0.5 bg-slate-200/50 dark:bg-slate-800 rounded-lg border border-slate-200/60 w-fit">
                     <button 
-                        onClick={() => setActiveTab('pending')}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
+                        className={`px-4 py-1.5 rounded-md text-[13px] font-bold transition-all ${activeTab === 'pending' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Chờ Duyệt ({requests.filter(r => r.status === 'pending').length})
                     </button>
                     <button 
-                        onClick={() => setActiveTab('history')}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => { setActiveTab('history'); setCurrentPage(1); }}
+                        className={`px-4 py-1.5 rounded-md text-[13px] font-bold transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Lịch Sử
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            {/* Table Section */}
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thành Viên</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Số Tiền Rút</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thông Tin Ngân Hàng</th>
-                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">QR Code</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thời Gian</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Hành Động</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-[#990033] hover:bg-[#990033] border-0">
+                                <TableHead className="w-12 text-center text-white">
+                                    <Checkbox 
+                                        checked={selectedRequests.length === paginatedData.length && paginatedData.length > 0}
+                                        onCheckedChange={toggleSelectAll}
+                                        className="border-white data-[state=checked]:bg-white data-[state=checked]:text-[#990033]"
+                                    />
+                                </TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Thành Viên</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Số Tiền Rút</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Thông Tin Ngân Hàng</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">QR Code</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Thời Gian</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Hành Động</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {loading ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-10 text-center text-slate-400 italic">Đang tải dữ liệu...</td>
-                                </tr>
-                            ) : filteredRequests.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-10 text-center text-slate-400 italic">
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-64 text-center">
+                                        <div className="flex justify-center">
+                                            <span className="material-symbols-outlined animate-spin text-slate-400 text-4xl">sync</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : paginatedData.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-64 text-center text-slate-500 italic">
                                         Không có yêu cầu nào
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ) : (
-                                filteredRequests.map((req) => {
+                                paginatedData.map((req) => {
                                     const amount = Math.abs(req.amount);
                                     const fee = amount * 0.2;
                                     const final = amount - fee;
                                     
                                     return (
-                                        <tr key={req._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <td className="px-6 py-4">
+                                        <TableRow key={req._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                                            <TableCell className="text-center">
+                                                <Checkbox 
+                                                    checked={selectedRequests.includes(req._id)}
+                                                    onCheckedChange={(checked) => toggleSelectRequest(req._id, checked)}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-700 dark:text-slate-200">{req.userId?.username}</span>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-200 text-[13px]">{req.userId?.username}</span>
                                                     <span className="text-[11px] text-slate-400">{req.userId?.fullName}</span>
-                                                    <span className="text-[10px] text-slate-400 italic">{req.userId?.email}</span>
+                                                    <span className="text-[10px] text-slate-400 italic font-medium">{req.userId?.email}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-red-600">-{amount.toLocaleString()} đ</span>
-                                                    <span className="text-[10px] text-slate-500">Phí 20%: {fee.toLocaleString()} đ</span>
-                                                    <span className="text-xs font-bold text-emerald-600">Thực nhận: {final.toLocaleString()} đ</span>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-[13px] font-black text-rose-600">-{amount.toLocaleString()} đ</span>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded">Phí 20%</span>
+                                                        <span className="text-[10px] text-slate-500 font-bold">-{fee.toLocaleString()} đ</span>
+                                                    </div>
+                                                    <span className="text-[12px] font-black text-emerald-600 mt-1">Thực nhận: {final.toLocaleString()} đ</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col text-xs space-y-1">
-                                                    <p>🏦 <span className="font-bold text-slate-600 dark:text-slate-300">{req.withdrawalDetails?.bankName}</span></p>
-                                                    <p>💳 <span className="font-bold text-slate-600 dark:text-slate-300">{req.withdrawalDetails?.bankAccount}</span></p>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col items-center gap-1 text-[11px]">
+                                                    <div className="flex items-center gap-1.5 bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100/50 w-full max-w-[140px]">
+                                                        <span className="material-symbols-outlined text-[14px] text-blue-600">account_balance</span>
+                                                        <span className="font-bold text-slate-700 truncate">{req.withdrawalDetails?.bankName}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/50 w-full max-w-[140px]">
+                                                        <span className="material-symbols-outlined text-[14px] text-slate-500">credit_card</span>
+                                                        <span className="font-black text-slate-600 text-[12px]">{req.withdrawalDetails?.bankAccount}</span>
+                                                    </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 {req.withdrawalDetails?.qrCode ? (
                                                     <button 
                                                         onClick={() => setViewingQR(req.withdrawalDetails.qrCode)}
-                                                        className="size-12 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden mx-auto hover:scale-110 transition-transform"
+                                                        className="relative group size-10 rounded-lg border border-slate-200 overflow-hidden mx-auto hover:ring-2 hover:ring-purple-500/20 transition-all bg-white p-0.5"
                                                     >
-                                                        <img src={req.withdrawalDetails.qrCode} alt="QR" className="w-full h-full object-cover" />
+                                                        <img src={req.withdrawalDetails.qrCode} alt="QR" className="w-full h-full object-contain" />
+                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <span className="material-symbols-outlined text-white text-sm">visibility</span>
+                                                        </div>
                                                     </button>
-                                                ) : <span className="text-xs text-slate-400 italic">N/A</span>}
-                                            </td>
-                                            <td className="px-6 py-4 text-xs text-slate-500">
+                                                ) : <span className="text-[10px] text-slate-400 italic">N/A</span>}
+                                            </TableCell>
+                                            <TableCell className="text-center text-[11px] text-slate-400 font-medium">
                                                 {new Date(req.createdAt).toLocaleString('vi-VN')}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 {req.status === 'pending' ? (
-                                                    <div className="flex justify-end gap-2">
-                                                        <button 
+                                                    <div className="flex justify-center gap-1.5">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm"
                                                             onClick={() => handleApproveClick(req._id)}
-                                                            className="p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors shadow-sm"
+                                                            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700 rounded-md transition-all active:scale-90"
                                                             title="Duyệt"
                                                         >
                                                             <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                                                        </button>
-                                                        <button 
+                                                        </Button>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm"
                                                             onClick={() => handleRejectClick(req._id)}
-                                                            className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors shadow-sm"
+                                                            className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-md transition-all active:scale-90"
                                                             title="Từ chối"
                                                         >
                                                             <span className="material-symbols-outlined text-[20px]">cancel</span>
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                 ) : (
-                                                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase ${req.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                        {req.status === 'approved' ? 'Thành công' : 'Đã từ chối'}
-                                                    </span>
+                                                    <div className="flex justify-center">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                                                            req.status === 'approved' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-rose-50 text-rose-600 border-rose-200'
+                                                        }`}>
+                                                            {req.status === 'approved' ? 'Thành công' : 'Đã từ chối'}
+                                                        </span>
+                                                    </div>
                                                 )}
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     );
                                 })
                             )}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* Pagination Section */}
+                <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
+                    <div className="text-sm text-slate-500">
+                        Đã chọn {selectedRequests.length} trong {paginatedData.length} hàng.
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-slate-500">Tổng: {filteredRequests.length}</span>
+                            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
+                                    <SelectValue placeholder="10" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="10">10</SelectItem>
+                                    <SelectItem value="20">20</SelectItem>
+                                    <SelectItem value="50">50</SelectItem>
+                                    <SelectItem value="100">100</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+                                Trang {currentPage}/{totalPages || 1}
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">keyboard_double_arrow_left</span>
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">keyboard_double_arrow_right</span>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* QR PREVIEW MODAL */}
             {viewingQR && (
                 <div 
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
                     onClick={() => setViewingQR(null)}
                 >
-                    <div className="relative max-w-sm w-full bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-slate-800 dark:text-slate-100">Mã QR Nhận Tiền</h3>
-                            <button onClick={() => setViewingQR(null)} className="text-slate-400 hover:text-slate-600">
-                                <span className="material-symbols-outlined">close</span>
+                    <div className="relative max-w-sm w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-5">
+                            <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-purple-600">qr_code_2</span>
+                                Mã QR Nhận Tiền
+                            </h3>
+                            <button onClick={() => setViewingQR(null)} className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                                <span className="material-symbols-outlined text-[18px]">close</span>
                             </button>
                         </div>
-                        <img 
-                            src={viewingQR} 
-                            alt="Full QR" 
-                            className="w-full aspect-square object-contain rounded-lg border border-slate-100 dark:border-slate-800"
-                        />
-                        <div className="mt-4 flex gap-2">
+                        <div className="relative bg-slate-50 p-2 rounded-2xl border-4 border-slate-100">
+                             <img 
+                                src={viewingQR} 
+                                alt="Full QR" 
+                                className="w-full aspect-square object-contain rounded-xl"
+                            />
+                        </div>
+                        <div className="mt-6">
                              <a 
                                 href={viewingQR} 
                                 download 
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-center text-sm transition-colors"
+                                className="flex items-center justify-center gap-2 w-full py-3.5 bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-purple-200 dark:shadow-purple-900/20 active:scale-[0.98]"
                              >
-                                Mở Ảnh Gốc
+                                <span className="material-symbols-outlined text-[18px]">download</span>
+                                Tải Ảnh QR Ngay
                              </a>
                         </div>
                     </div>

@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -9,6 +27,12 @@ const AdminMissions = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMission, setEditingMission] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState('All');
+    const [selectedMissions, setSelectedMissions] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
+
     const [formData, setFormData] = useState({
         title: '',
         link: '',
@@ -23,15 +47,16 @@ const AdminMissions = () => {
 
     const fetchMissions = async () => {
         try {
+            setLoading(true);
             const token = localStorage.getItem('token');
             const res = await axios.get(`${API_URL}/api/admin/missions`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                setMissions(res.data.missions);
+                setMissions(res.data.missions || []);
             }
-        } catch (error) {
-            console.error(error);
+        } catch (_error) {
+            console.error(_error);
             toast.error('Failed to fetch missions');
         } finally {
             setLoading(false);
@@ -48,14 +73,12 @@ const AdminMissions = () => {
 
     const validateLink = (link) => {
         if (!link) return false;
-        // Regex for FB, IG, TikTok
         const pattern = /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com|instagram\.com|tiktok\.com|vt\.tiktok\.com)\/.*$/i;
         return pattern.test(link);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
         if (!validateLink(formData.link)) {
             toast.error('Link không hợp lệ! Vui lòng nhập link Facebook, Instagram hoặc TikTok hợp lệ.');
             return;
@@ -84,7 +107,7 @@ const AdminMissions = () => {
             } else {
                 toast.error(res.data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Operation failed');
         }
     };
@@ -112,62 +135,128 @@ const AdminMissions = () => {
                 toast.success('Đã xóa nhiệm vụ');
                 fetchMissions();
             }
-        } catch (error) {
+        } catch {
             toast.error('Delete failed');
         }
     };
 
+    const filteredMissions = missions.filter(m => {
+        const matchesSearch = searchTerm === '' || m.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = filterType === 'All' || m.type === filterType;
+        return matchesSearch && matchesType;
+    });
+
+    const totalPages = Math.ceil(filteredMissions.length / pageSize);
+    const paginatedMissions = filteredMissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    const toggleSelectAll = (checked) => {
+        if (checked) {
+            setSelectedMissions(paginatedMissions.map(m => m._id));
+        } else {
+            setSelectedMissions([]);
+        }
+    };
+
+    const toggleSelectMission = (id, checked) => {
+        if (checked) {
+            setSelectedMissions([...selectedMissions, id]);
+        } else {
+            setSelectedMissions(selectedMissions.filter(sid => sid !== id));
+        }
+    };
+
     return (
-        <div className="p-6 max-w-[1600px] mx-auto space-y-6">
-            <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                <div>
-                   <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Quản lý Nhiệm Vụ</h1>
-                   <p className="text-slate-500 dark:text-slate-400 mt-1">Tạo và quản lý các nhiệm vụ kiếm tiền cho người dùng</p>
+        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-full">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Quản lý nhiệm vụ</h1>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Danh sách các nhiệm vụ hệ thống cho người dùng</p>
                 </div>
-                <button 
+                <Button 
                     onClick={() => {
                         setEditingMission(null);
                         setFormData({ title: '', link: '', type: 'like', reward: 0, isActive: true });
                         setIsModalOpen(true);
                     }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-violet-200 dark:shadow-violet-900/20"
+                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm rounded-lg flex items-center gap-2 h-9 px-4"
                 >
-                    <span className="material-symbols-outlined">add</span>
+                    <span className="material-symbols-outlined text-sm">add</span>
                     Thêm Nhiệm Vụ
-                </button>
+                </Button>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            {/* Filters Section */}
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="relative w-full max-w-xs">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                    <Input 
+                        placeholder="Tìm tên nhiệm vụ..." 
+                        className="pl-9 bg-white border-slate-200 h-9 rounded-lg"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                
+                <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-[160px] bg-white border-slate-200 h-9 rounded-lg">
+                        <SelectValue placeholder="Loại" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All">Tất cả loại</SelectItem>
+                        <SelectItem value="like">Like</SelectItem>
+                        <SelectItem value="follow">Follow</SelectItem>
+                        <SelectItem value="share">Share</SelectItem>
+                        <SelectItem value="comment">Comment</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Table Section */}
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tên Nhiệm Vụ</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Link</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Loại</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thưởng (VNĐ)</th>
-                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng thái</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-[#990033] hover:bg-[#990033] border-0">
+                                <TableHead className="w-12 text-center text-white">
+                                    <Checkbox 
+                                        checked={selectedMissions.length === paginatedMissions.length && paginatedMissions.length > 0}
+                                        onCheckedChange={toggleSelectAll}
+                                        className="border-white data-[state=checked]:bg-white data-[state=checked]:text-[#990033]"
+                                    />
+                                </TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Tên Nhiệm Vụ</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Link</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Loại</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Thưởng (VNĐ)</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Trạng thái</TableHead>
+                                <TableHead className="text-white font-bold h-11 text-center border-l border-white/20">Hành động</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {loading ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-8 text-center text-slate-500">Đang tải dữ liệu...</td>
-                                </tr>
-                            ) : missions.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-8 text-center text-slate-500">Chưa có nhiệm vụ nào</td>
-                                </tr>
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-64 text-center text-slate-500 italic">Đang tải dữ liệu...</TableCell>
+                                </TableRow>
+                            ) : paginatedMissions.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-64 text-center text-slate-500 italic">Không tìm thấy nhiệm vụ nào.</TableCell>
+                                </TableRow>
                             ) : (
-                                missions.map((mission) => (
-                                    <tr key={mission._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                                        <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">{mission.title}</td>
-                                        <td className="px-6 py-4 text-sm text-blue-600 dark:text-blue-400 max-w-xs truncate">
+                                paginatedMissions.map((mission) => (
+                                    <tr key={mission._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 last:border-0">
+                                        <TableCell className="text-center">
+                                            <Checkbox 
+                                                checked={selectedMissions.includes(mission._id)}
+                                                onCheckedChange={(checked) => toggleSelectMission(mission._id, checked)}
+                                            />
+                                        </TableCell>
+                                        <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200 text-center">{mission.title}</td>
+                                        <td className="px-6 py-4 text-sm text-blue-600 dark:text-blue-400 max-w-xs truncate text-center">
                                             <a href={mission.link} target="_blank" rel="noopener noreferrer" className="hover:underline">{mission.link}</a>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase border ${
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
                                                 mission.type === 'like' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                                                 mission.type === 'follow' ? 'bg-pink-50 text-pink-700 border-pink-200' :
                                                 'bg-slate-50 text-slate-700 border-slate-200'
@@ -175,41 +264,113 @@ const AdminMissions = () => {
                                                 {mission.type}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 font-bold text-emerald-600 dark:text-emerald-400">
+                                        <td className="px-6 py-4 font-bold text-emerald-600 dark:text-emerald-400 text-center">
                                             {mission.reward?.toLocaleString()} đ
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                              <span className={`inline-block w-2.5 h-2.5 rounded-full ${mission.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
                                         </td>
-                                        <td className="px-6 py-4 text-right space-x-2">
-                                            <button 
-                                                onClick={() => handleEdit(mission)}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="Sửa"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">edit</span>
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDelete(mission._id)}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Xóa"
-                                            >
-                                                <span className="material-symbols-outlined text-[20px]">delete</span>
-                                            </button>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon"
+                                                    className="size-8 text-slate-400 hover:text-blue-600"
+                                                    onClick={() => handleEdit(mission)}
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon"
+                                                    className="size-8 text-slate-400 hover:text-red-500"
+                                                    onClick={() => handleDelete(mission._id)}
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
                             )}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* Pagination Section */}
+                <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
+                    <div className="text-sm text-slate-500">
+                        Đã chọn {selectedMissions.length} trong {paginatedMissions.length} hàng.
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-slate-500">Tổng: {filteredMissions.length}</span>
+                            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
+                                    <SelectValue placeholder="20" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="20">20</SelectItem>
+                                    <SelectItem value="50">50</SelectItem>
+                                    <SelectItem value="100">100</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+                                Trang {currentPage}/{totalPages || 1}
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">keyboard_double_arrow_left</span>
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="size-8 rounded border-slate-200"
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">keyboard_double_arrow_right</span>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* MODAL */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsModalOpen(false)}></div>
+                    <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50">
                             <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">
                                 {editingMission ? 'Chỉnh Sửa Nhiệm Vụ' : 'Tạo Nhiệm Vụ Mới'}
                             </h3>
@@ -219,76 +380,87 @@ const AdminMissions = () => {
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Tên Nhiệm Vụ</label>
-                                <input 
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tên Nhiệm Vụ</label>
+                                <Input 
                                     type="text" 
                                     name="title" 
                                     value={formData.title} 
                                     onChange={handleInputChange} 
                                     required
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-medium"
+                                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
                                     placeholder="Ví dụ: Like Fanpage A"
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Link Nhiệm Vụ</label>
-                                <input 
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Link Nhiệm Vụ</label>
+                                <Input 
                                     type="text" 
                                     name="link" 
                                     value={formData.link} 
                                     onChange={handleInputChange} 
                                     required
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-medium"
+                                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
                                     placeholder="https://facebook.com/..."
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Loại</label>
-                                    <select 
-                                        name="type" 
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Loại</label>
+                                    <Select 
                                         value={formData.type} 
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-medium appearance-none"
+                                        onValueChange={(v) => setFormData({...formData, type: v})}
                                     >
-                                        <option value="like">Like</option>
-                                        <option value="follow">Follow</option>
-                                        <option value="share">Share</option>
-                                        <option value="comment">Comment</option>
-                                    </select>
+                                        <SelectTrigger className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl">
+                                            <SelectValue placeholder="Chọn loại" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="like">Like</SelectItem>
+                                            <SelectItem value="follow">Follow</SelectItem>
+                                            <SelectItem value="share">Share</SelectItem>
+                                            <SelectItem value="comment">Comment</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Tiền Thưởng</label>
-                                    <input 
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tiền Thưởng</label>
+                                    <Input 
                                         type="number" 
                                         name="reward" 
                                         value={formData.reward} 
                                         onChange={handleInputChange} 
                                         required
                                         min="0"
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-medium"
+                                        className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
                                     />
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-2 pt-2">
-                                <input 
-                                    type="checkbox" 
-                                    name="isActive" 
+                            <div className="flex items-center gap-2 pt-1 group cursor-pointer">
+                                <Checkbox 
                                     id="isActive"
                                     checked={formData.isActive} 
-                                    onChange={handleInputChange} 
-                                    className="w-5 h-5 rounded text-violet-600 focus:ring-violet-500 border-gray-300"
+                                    onCheckedChange={(checked) => setFormData({...formData, isActive: !!checked})}
+                                    className="size-5 rounded-md"
                                 />
-                                <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Kích hoạt nhiệm vụ ngay</label>
+                                <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer group-hover:text-purple-600 transition-colors">Kích hoạt nhiệm vụ ngay</label>
                             </div>
 
-                            <button 
-                                type="submit" 
-                                className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-lg shadow-violet-200 dark:shadow-violet-900/20 active:scale-95 transition-all mt-2"
-                            >
-                                {editingMission ? 'Lưu Thay Đổi' : 'Tạo Nhiệm Vụ'}
-                            </button>
+                            <div className="flex gap-3 pt-4">
+                                <Button 
+                                    type="button" 
+                                    variant="outline"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="flex-1 h-11 border-slate-200 text-slate-600 font-bold rounded-xl"
+                                >
+                                    Hủy
+                                </Button>
+                                <Button 
+                                    type="submit"
+                                    className="flex-1 h-11 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg transition-all active:scale-[0.98]"
+                                >
+                                    {editingMission ? 'Lưu Thay Đổi' : 'Tạo Nhiệm Vụ'}
+                                </Button>
+                            </div>
                         </form>
                     </div>
                 </div>
