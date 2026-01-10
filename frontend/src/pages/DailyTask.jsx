@@ -12,6 +12,7 @@ const DailyTask = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+
   // Stats grid data
   const stats = [
     {
@@ -68,19 +69,64 @@ const DailyTask = () => {
     }
   };
 
-  const handleLinkClick = (link) => {
+  const handleLinkClick = async (missionId, link) => {
       window.open(link, '_blank');
+      
+      try {
+          const token = localStorage.getItem('token');
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/click`, { missionId }, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+      } catch (error) {
+          console.error("Track click error", error);
+      }
+  };
+
+  /* Utility: Compress Image using Canvas */
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1000; // Limit max width to 1000px
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Compress to JPEG with 0.7 quality
+                canvas.toBlob((blob) => {
+                    resolve(new File([blob], file.name, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now(),
+                    }));
+                }, 'image/jpeg', 0.7); 
+            };
+        };
+    });
   };
 
   const handleSubmitProof = async (missionId, file) => {
       if (!file) return;
 
-      const formData = new FormData();
-      formData.append('missionId', missionId);
-      formData.append('imageProof', file);
-
       try {
           setSubmitting(true);
+          toast.info("Đang xử lý ảnh...");
+          
+          // Compress image before upload
+          const compressedFile = await compressImage(file);
+          console.log(`Original: ${file.size / 1024}KB, Compressed: ${compressedFile.size / 1024}KB`);
+
+          const formData = new FormData();
+          formData.append('missionId', missionId);
+          formData.append('imageProof', compressedFile);
+
           const token = localStorage.getItem('token');
           const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/submit`, formData, {
               headers: { 
@@ -166,10 +212,25 @@ const DailyTask = () => {
     }
   };
  
+  // Pagination Logic
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  // Reset page when switching tabs
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
+
   // Filter Logic
   const filteredMissions = activeTab === 'list' 
     ? missions.filter(m => m.status === 'available')
     : missions.filter(m => m.status !== 'available');
+
+  const totalPages = Math.ceil(filteredMissions.length / itemsPerPage);
+  const currentMissions = filteredMissions.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+  );
 
   const handleAcceptMission = async (missionId) => {
       try {
@@ -246,108 +307,146 @@ const DailyTask = () => {
                     <p className="text-slate-500 dark:text-slate-400 font-medium">Hiện không có nhiệm vụ nào</p>
                 </div>
             ) : (
-                filteredMissions.map((mission) => (
-                    <div key={mission._id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center gap-6">
-                        <div className={`shrink-0 size-16 rounded-2xl flex items-center justify-center ${
-                             mission.type === 'like' ? 'bg-blue-50 text-blue-600' :
-                             mission.type === 'follow' ? 'bg-pink-50 text-pink-600' :
-                             'bg-violet-50 text-violet-600'
-                        }`}>
-                            <span className="material-symbols-outlined text-3xl">
-                                {mission.type === 'like' ? 'thumb_up' : mission.type === 'follow' ? 'person_add' : 'share'}
-                            </span>
-                        </div>
-                        
-                        <div className="flex-1 text-center md:text-left space-y-1">
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{mission.title}</h3>
-                            <p className="text-sm font-medium text-slate-500 flex justify-center md:justify-start items-center gap-1">
-                                <span className="material-symbols-outlined text-[16px]">monetization_on</span>
-                                Thưởng: <span className="text-emerald-600 font-bold">+{mission.reward?.toLocaleString()} đ</span>
-                            </p>
+                <>
+                    {currentMissions.map((mission) => (
+                        <div key={mission._id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center gap-6">
+                            <div className={`shrink-0 size-16 rounded-2xl flex items-center justify-center ${
+                                    mission.type === 'like' ? 'bg-blue-50 text-blue-600' :
+                                    mission.type === 'follow' ? 'bg-pink-50 text-pink-600' :
+                                    'bg-violet-50 text-violet-600'
+                            }`}>
+                                <span className="material-symbols-outlined text-3xl">
+                                    {mission.type === 'like' ? 'thumb_up' : mission.type === 'follow' ? 'person_add' : 'share'}
+                                </span>
+                            </div>
                             
-                            {/* Hide Link for Available missions */}
-                            {mission.status !== 'available' && (
-                                <a 
-                                    href={mission.link} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-blue-500 hover:underline truncate max-w-[200px] inline-block"
-                                >
-                                    Link nhiệm vụ
-                                </a>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col gap-2 min-w-[140px]">
-                            {/* 1. AVAILABLE -> Show "Nhận nhiệm vụ" */}
-                            {mission.status === 'available' && (
-                                <button 
-                                    onClick={() => handleAcceptMission(mission._id)}
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">add_task</span>
-                                    Nhận nhiệm vụ
-                                </button>
-                            )}
-
-                            {/* 2. ACCEPTED or REJECTED -> Show Submit Actions */}
-                            {(mission.status === 'accepted' || mission.status === 'rejected') && (
-                                <>
-                                    <button 
-                                        onClick={() => handleLinkClick(mission.link)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                            <div className="flex-1 text-center md:text-left space-y-1">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{mission.title}</h3>
+                                <p className="text-sm font-medium text-slate-500 flex justify-center md:justify-start items-center gap-1">
+                                    <span className="material-symbols-outlined text-[16px]">monetization_on</span>
+                                    Thưởng: <span className="text-emerald-600 font-bold">+{mission.reward?.toLocaleString()} đ</span>
+                                </p>
+                                
+                                {/* Hide Link for Available missions */}
+                                {mission.status !== 'available' && (
+                                    <a 
+                                        href={mission.link} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        onClick={() => handleLinkClick(mission._id, mission.link)}
+                                        className="text-xs text-blue-500 hover:underline truncate max-w-[200px] inline-block"
                                     >
-                                        <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-                                        Thực hiện
+                                        Link nhiệm vụ
+                                    </a>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-2 min-w-[140px]">
+                                {/* 1. AVAILABLE -> Show "Nhận nhiệm vụ" */}
+                                {mission.status === 'available' && (
+                                    <button 
+                                        onClick={() => handleAcceptMission(mission._id)}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">add_task</span>
+                                        Nhận nhiệm vụ
                                     </button>
-                                    
-                                    <div className="relative">
-                                        <input 
-                                            type="file" 
-                                            id={`file-${mission._id}`} 
-                                            className="hidden" 
-                                            accept="image/*"
-                                            onChange={(e) => {
-                                                if(e.target.files?.[0]) {
-                                                    handleSubmitProof(mission._id, e.target.files[0]);
-                                                }
-                                            }}
-                                            disabled={submitting}
-                                        />
-                                        <label 
-                                            htmlFor={`file-${mission._id}`}
-                                            className={`w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer ${submitting ? 'opacity-50 pointer-events-none' : ''}`}
+                                )}
+
+                                {/* 2. ACCEPTED or REJECTED -> Show Submit Actions */}
+                                {(mission.status === 'accepted' || mission.status === 'rejected') && (
+                                    <>
+                                        <button 
+                                            onClick={() => handleLinkClick(mission._id, mission.link)}
+                                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
                                         >
-                                            <span className="material-symbols-outlined text-[18px]">upload</span>
-                                            {submitting ? 'Đang gửi...' : 'Gửi ảnh'}
-                                        </label>
+                                            <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                                            Thực hiện
+                                        </button>
+                                        
+                                        <div className="relative">
+                                            <input 
+                                                type="file" 
+                                                id={`file-${mission._id}`} 
+                                                className="hidden" 
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    if(e.target.files?.[0]) {
+                                                        handleSubmitProof(mission._id, e.target.files[0]);
+                                                    }
+                                                }}
+                                                disabled={submitting}
+                                            />
+                                            <label 
+                                                htmlFor={`file-${mission._id}`}
+                                                className={`w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer ${submitting ? 'opacity-50 pointer-events-none' : ''}`}
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">upload</span>
+                                                {submitting ? 'Đang gửi...' : 'Gửi ảnh'}
+                                            </label>
+                                        </div>
+                                    </>
+                                )}
+
+                                {mission.status === 'pending' && (
+                                    <div className="px-4 py-2 bg-yellow-50 text-yellow-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-yellow-200">
+                                        <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
+                                        Chờ duyệt 24h
                                     </div>
-                                </>
-                            )}
+                                )}
 
-                            {mission.status === 'pending' && (
-                                <div className="px-4 py-2 bg-yellow-50 text-yellow-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-yellow-200">
-                                    <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
-                                    Chờ duyệt 24h
-                                </div>
-                            )}
+                                    {mission.status === 'approved' && (
+                                    <div className="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-green-200">
+                                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                        Đã hoàn thành
+                                    </div>
+                                )}
 
-                             {mission.status === 'approved' && (
-                                <div className="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-green-200">
-                                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                                    Đã hoàn thành
-                                </div>
-                            )}
-
-                            {mission.status === 'rejected' && (
-                                <div className="text-xs text-center text-red-500 font-bold mb-1">
-                                    Bị từ chối. Hãy nộp lại!
-                                </div>
-                            )}
-                            
+                                {mission.status === 'rejected' && (
+                                    <div className="text-xs text-center text-red-500 font-bold mb-1">
+                                        Bị từ chối. Hãy nộp lại!
+                                    </div>
+                                )}
+                                
+                            </div>
                         </div>
-                    </div>
-                ))
+                    ))}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-6">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="size-10 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800 text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <span className="material-symbols-outlined">chevron_left</span>
+                            </button>
+                            
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`size-10 flex items-center justify-center rounded-lg font-bold transition-all shadow-sm ${
+                                        currentPage === page
+                                            ? 'bg-blue-600 text-white shadow-blue-500/30'
+                                            : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-500 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+                            
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="size-10 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800 text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <span className="material-symbols-outlined">chevron_right</span>
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
       </div>

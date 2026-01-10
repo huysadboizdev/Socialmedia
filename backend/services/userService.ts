@@ -2,6 +2,7 @@ import { Types } from 'mongoose'
 import fs from 'fs'
 import { v2 as cloudinary } from 'cloudinary'
 import bcrypt from 'bcrypt'
+
 import userModel, { type IUser } from '../models/userModel.js'
 import missionModel from '../models/missionModel.js'
 import serviceModel from '../models/serviceModel.js'
@@ -491,9 +492,44 @@ export const acceptMission = async (userId: string, missionId: string) => {
 }
 
 /**
+ * Track info when user click link
+ */
+export const trackMissionLinkClick = async (userId: string, missionId: string) => {
+    // Check if mission exists
+    const mission = await missionModel.findById(missionId);
+    if (!mission || !mission.isActive) {
+        return { success: false, message: 'Nhiệm vụ không tồn tại hoặc đã hết hạn' }
+    }
+
+    let submission = await submissionModel.findOne({ userId, missionId });
+
+    if (!submission) {
+        // Create new submission if not exists (e.g. user hasn't accepted explicitly but we treat click as interest, 
+        // OR more likely user accepted but submission record was created then. 
+        // If flow is Accept -> Click -> Submit, submission should exist as 'accepted' from acceptMission step.
+        // If flow is just Click (for available missions?), we might need to create it.
+        // But usually user accepts first.
+        // Let's assume user must accept first.
+        // Actually, if we want to be safe, if submission doesn't exist, we create it?
+        // Let's create it if not exists to be safe, set status 'accepted' (meaning they are working on it)
+        submission = await submissionModel.create({
+            userId,
+            missionId,
+            status: 'accepted',
+            hasClickedLink: true
+        });
+    } else {
+        submission.hasClickedLink = true;
+        await submission.save();
+    }
+
+    return { success: true, message: 'Link click recorded' }
+}
+
+/**
  * Submit mission proof
  */
-export const submitMissionProof = async (userId: string, missionId: string, imageProof?: Express.Multer.File) => {
+export const submitMissionProof = async (userId: string, missionId: string, imageProof?: Express.Multer.File, _isLinkClicked?: string) => {
     if (!missionId) return { success: false, message: 'Mission ID is required' }
     if (!imageProof) return { success: false, message: 'Vui lòng tải lên ảnh bằng chứng' }
 
@@ -522,6 +558,28 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
         return { success: false, message: 'Bạn đã nộp nhiệm vụ này rồi, vui lòng chờ duyệt' }
     }
 
+    // Check if user clicked the link (Server-side check)
+    if (!existingSubmission || !existingSubmission.hasClickedLink) {
+        if (fs.existsSync(imageProof.path)) {
+            try { fs.unlinkSync(imageProof.path) } catch (_error) { void _error }
+        }
+        
+        if (existingSubmission) {
+            existingSubmission.status = 'rejected';
+            existingSubmission.adminNote = 'Hệ thống: Bạn chưa ấn "Thực hiện" hoặc "Link nhiệm vụ". Vui lòng ấn vào link trước khi nộp ảnh bằng chứng.';
+            await existingSubmission.save();
+        } else {
+             await submissionModel.create({
+                userId,
+                missionId,
+                status: 'rejected',
+                adminNote: 'Hệ thống: Bạn chưa ấn "Thực hiện" hoặc "Link nhiệm vụ". Vui lòng ấn vào link trước khi nộp ảnh bằng chứng.',
+                imageProof: '' // No image yet
+            });
+        }
+        return { success: false, message: 'Bạn phải truy cập link nhiệm vụ hoặc ấn "Thực hiện" trước khi nộp bằng chứng.' }
+    }
+
     try {
         console.log("Uploading proof for mission:", mission.title);
 
@@ -534,28 +592,56 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
              throw new Error("Missing Cloudinary configuration");
         }
 
-        // Upload to Cloudinary
+        // Upload to Cloudinary with extended timeout (5 mins)
         const upload = await cloudinary.uploader.upload(imageProof.path, {
-            folder: 'mission_proofs'
+            folder: 'mission_proofs',
+            timeout: 300000 // 300 seconds (5 minutes)
         });
 
+        // Check AI Verification -> REMOVED
+        // Auto approve if clicked link (already checked above)
+        
+        const finalStatus = 'approved';
+        const adminNote = 'Hệ thống: Đã click link - Tự động duyệt';
+
+        // Distribute rewards instantly
+        const user = await userModel.findById(userId);
+        if (user) {
+            const oldBalance = user.missionBalance || 0;
+            user.missionBalance = oldBalance + (mission.reward || 0);
+            await user.save();
+
+            // Create transaction record
+            await transactionModel.create({
+                userId,
+                amount: mission.reward,
+                type: 'mission',
+                description: `[Hệ thống] Hoàn thành: ${mission.title}`,
+                oldBalance: oldBalance,
+                newBalance: user.missionBalance,
+                balanceType: 'mission',
+                status: 'approved',
+                createdAt: new Date()
+            });
+        }
+
         if (existingSubmission) {
-            // Update existing record (accepted -> pending or rejected -> pending)
+            // Update existing record
             existingSubmission.imageProof = upload.secure_url;
-            existingSubmission.status = 'pending';
-            existingSubmission.adminNote = undefined;
+            existingSubmission.status = finalStatus as 'pending' | 'approved' | 'rejected' | 'accepted';
+            existingSubmission.adminNote = adminNote;
             await existingSubmission.save();
         } else {
-            // Fallback: create new if for some reason acceptance didn't happen (or direct submission allowance)
             await submissionModel.create({
                 userId,
                 missionId,
                 imageProof: upload.secure_url,
-                status: 'pending'
+                status: finalStatus,
+                adminNote: adminNote
             });
         }
 
-        return { success: true, message: 'Nộp nhiệm vụ thành công! Vui lòng chờ Admin duyệt trong 24h.' }
+        return { success: true, message: `Nhiệm vụ được hệ thống duyệt tự động! Bạn nhận được +${mission.reward.toLocaleString()}đ` }
 
     } catch (error: unknown) {
         console.error("Mission submission error:", error);

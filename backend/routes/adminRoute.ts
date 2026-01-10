@@ -26,7 +26,8 @@ import {
     getWithdrawals,
     approveWithdrawal,
     rejectWithdrawal,
-    runBalanceFix
+    runBalanceFix,
+    editUser
 } from '../controller/adminController.js'
 import { updateAnnouncement } from '../controller/settingController.js'
 
@@ -38,6 +39,7 @@ adminRouter.post('/edit-service', editService)
 adminRouter.post('/delete-service', deleteService)
 adminRouter.get('/list', listService)
 adminRouter.get('/all-user', getAllUser)
+adminRouter.post('/edit-user', editUser)
 adminRouter.post('/delete-user', deleteUser)
 adminRouter.post('/user-audit', login_user)
 adminRouter.post('/login', login_admin)

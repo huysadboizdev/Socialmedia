@@ -153,6 +153,22 @@ export const submitMission = async (req: AuthRequest, res: Response) => {
     }
 }
 
+// tracking click
+export const trackMissionClick = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.authUserId
+        if (!userId) {
+          return res.status(403).json({ success: false, message: 'Unauthorized' })
+        }
+        const { missionId } = req.body as { missionId: string }
+        
+        const result = await userService.trackMissionLinkClick(userId, missionId);
+        return res.json(result);
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) });
+    }
+}
+
 // accept mission
 export const acceptMission = async (req: AuthRequest, res: Response) => {
     try {

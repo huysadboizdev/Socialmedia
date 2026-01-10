@@ -12,6 +12,7 @@ import {
   attendance,
   submitMission,
   acceptMission,
+  trackMissionClick,
   withdrawMissionBalance,
   getTransactionHistory
 } from '../controller/userController.js'
@@ -37,6 +38,7 @@ userRouter.post('/deposit', authUser, requestDeposit)
 userRouter.post('/service', authUser, handleUserService)
 userRouter.get('/missions', authUser, getMissions as any)
 userRouter.post('/mission/accept', authUser, acceptMission as any)
+userRouter.post('/mission/click', authUser, trackMissionClick as any)
 userRouter.post('/mission/submit', authUser, upload.single('imageProof'), submitMission as any)
 userRouter.post('/mission/withdraw', authUser, upload.single('qrCode'), withdrawMissionBalance as any)
 userRouter.get('/missions/completed', authUser, getCompletedMissions as any)
