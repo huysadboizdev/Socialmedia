@@ -19,6 +19,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -30,7 +36,15 @@ const AdminOrders = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    setIsViewOpen(true);
+  };
 
   const fetchOrders = async () => {
     try {
@@ -201,6 +215,7 @@ const AdminOrders = () => {
             </TableHeader>
             <TableBody>
               {loading ? (
+                /* ... loading state ... */
                 <TableRow>
                   <TableCell colSpan={8} className="h-64 text-center">
                     <div className="flex justify-center">
@@ -209,14 +224,16 @@ const AdminOrders = () => {
                   </TableCell>
                 </TableRow>
               ) : paginatedOrders.length === 0 ? (
+                /* ... empty state ... */
                 <TableRow>
-                  <TableCell colSpan={8} className="h-64 text-center text-slate-500 italic">
+                   <TableCell colSpan={8} className="h-64 text-center text-slate-500 italic">
                     Không tìm thấy đơn hàng nào.
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedOrders.map((order) => (
                   <TableRow key={order._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                    {/* ... other cells ... */}
                     <TableCell className="text-center">
                       <Checkbox 
                         checked={selectedOrders.includes(order._id)}
@@ -260,7 +277,7 @@ const AdminOrders = () => {
                           variant="ghost" 
                           size="icon"
                           className="size-8 text-slate-400 hover:text-purple-600"
-                          onClick={() => {}}
+                          onClick={() => handleViewOrder(order)}
                         >
                           <span className="material-symbols-outlined text-[18px]">visibility</span>
                         </Button>
@@ -282,6 +299,7 @@ const AdminOrders = () => {
         </div>
 
         {/* Footer / Pagination Section */}
+        {/* ... existing pagination code ... */}
         <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
           <div className="text-sm text-slate-500">
             Đã chọn {selectedOrders.length} trong {paginatedOrders.length} hàng.
@@ -349,6 +367,83 @@ const AdminOrders = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Chi tiết đơn hàng #{selectedOrder?._id.slice(-6).toUpperCase()}</DialogTitle>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-slate-500">Khách hàng</h4>
+                  <div className="font-semibold text-slate-900">{selectedOrder.userId?.username || "Guest"}</div>
+                  <div className="text-sm text-slate-500">{selectedOrder.userId?.email || "N/A"}</div>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-slate-500">Thời gian đặt</h4>
+                  <div className="font-semibold text-slate-900">{new Date(selectedOrder.orderDate).toLocaleString('vi-VN')}</div>
+                </div>
+              </div>
+
+              <div className="space-y-1 border-t pt-4">
+                <h4 className="text-sm font-medium text-slate-500">Dịch vụ</h4>
+                <div className="font-semibold text-purple-600">{selectedOrder.service?.name}</div>
+                <div className="text-sm text-slate-600">
+                  {selectedOrder.service?.platform} - {selectedOrder.service?.category}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-slate-500">Số lượng</h4>
+                  <div className="font-semibold text-slate-900">{selectedOrder.quantity.toLocaleString()}</div>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-slate-500">Tổng tiền</h4>
+                  <div className="font-semibold text-red-600 text-lg">{selectedOrder.totalPrice.toLocaleString()} ₫</div>
+                </div>
+              </div>
+
+              <div className="space-y-1 border-t pt-4">
+                <h4 className="text-sm font-medium text-slate-500">Link cần chạy</h4>
+                <div className="p-2 bg-slate-50 rounded border text-sm break-all font-mono text-slate-600">
+                  {selectedOrder.link || "Không có link"}
+                </div>
+              </div>
+
+              {selectedOrder.note && (
+                <div className="space-y-1 border-t pt-4">
+                  <h4 className="text-sm font-medium text-slate-500">Ghi chú</h4>
+                  <p className="text-sm text-slate-700 italic">"{selectedOrder.note}"</p>
+                </div>
+              )}
+
+              {selectedOrder.details && Object.keys(selectedOrder.details).length > 0 && (
+                 <div className="space-y-1 border-t pt-4">
+                  <h4 className="text-sm font-medium text-slate-500">Thông tin thêm</h4>
+                  <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded text-sm">
+                    {Object.entries(selectedOrder.details).map(([key, value]) => (
+                      <div key={key} className="flex flex-col">
+                        <span className="text-xs text-slate-500 capitalize">
+                          {key === 'username' ? 'Tài khoản' :
+                           key === 'password' ? 'Mật khẩu' :
+                           key === 'twoFaCode' ? 'Mã 2FA' :
+                           key === 'contactInfo' ? 'Liên hệ' :
+                           key}
+                        </span>
+                        <span className="font-medium text-slate-900 break-all">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

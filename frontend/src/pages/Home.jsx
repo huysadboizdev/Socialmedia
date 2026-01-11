@@ -1,11 +1,38 @@
 import AppLayout from "@/components/layout/AppLayout";
-import NotificationModal from "@/components/common/NotificationModal";import sotienGif from "@/assets/sotien.gif";
+import NotificationModal from "@/components/common/NotificationModal";
+import sotienGif from "@/assets/sotien.gif";
 import tongnapGif from "@/assets/tongnap.gif";
 import napthangGif from "@/assets/napthang.gif";
 import capbacGif from "@/assets/capbac.gif";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
+const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function Home() {
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        
+        const res = await axios.get(`${API_URL}/api/user/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (res.data.success) {
+          setUserData(res.data.user);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   return (
     <div className="flex-1 min-h-full">
       <div className="w-full p-4 md:p-6 space-y-6">
@@ -22,7 +49,9 @@ export default function Home() {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">0</div>
+              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">
+                {(userData?.balance || 0).toLocaleString('vi-VN')}
+              </div>
               <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Số dư</div>
             </div>
           </div>
