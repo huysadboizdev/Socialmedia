@@ -49,6 +49,7 @@ export default function Header({ onMenu }) {
     "/profile": "Thông Tin Cá Nhân",
     "/attendance": "Điểm Danh Hàng Ngày",
     "/daily-task": "Nhiệm vụ Hàng Ngày",
+    "/deposit": "Nạp Tiền Giao Dịch",
     "/history": "Lịch Sử Giao Dịch",
     "/all-orders": "Tất cả tiến trình",
     "/service/facebook-like": "Like Bài Viết",

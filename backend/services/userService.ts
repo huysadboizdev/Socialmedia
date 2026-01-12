@@ -266,14 +266,14 @@ export const handleService = async (userId: string, { action, serviceId, quantit
 /**
  * Request money deposit
  */
-export const depositRequest = async (userId: string, amount: number) => {
+export const depositRequest = async (userId: string, amount: number, content?: string) => {
     if (amount <= 0) return { success: false, message: 'Invalid amount' }
 
     await transactionModel.create({ 
         userId, 
         amount, 
         type: 'deposit',
-        description: 'Yêu cầu nạp tiền',
+        description: content ? `Nạp tiền: ${content}` : 'Yêu cầu nạp tiền',
         balanceType: 'profile',
         status: 'pending'
     })

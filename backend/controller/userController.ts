@@ -82,8 +82,8 @@ export const handleUserService = async (req: Request, res: Response) => {
 // deposit money
 export const requestDeposit = async (req: Request, res: Response) => {
   try {
-    const { userId, amount } = req.body as { userId: string, amount: any }
-    const result = await userService.depositRequest(userId, Number(amount))
+    const { userId, amount, content } = req.body as { userId: string, amount: any, content?: string }
+    const result = await userService.depositRequest(userId, Number(amount), content)
     res.json(result)
   } catch (err: unknown) {
     res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })

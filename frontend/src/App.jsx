@@ -11,6 +11,7 @@ const Home = lazy(() => import("./pages/Home"))
 const Profile = lazy(() => import("./pages/Profile"))
 const Attendance = lazy(() => import("./pages/Attendance"))
 const DailyTask = lazy(() => import("./pages/DailyTask"))
+const Deposit = lazy(() => import("./pages/Deposit"))
 const TransactionHistory = lazy(() => import("./pages/TransactionHistory"))
 const AllOrders = lazy(() => import("./pages/AllOrders"))
 const FacebookLike = lazy(() => import("./pages/facebook/FacebookLike"));
@@ -71,6 +72,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/daily-task" element={<DailyTask />} />
+            <Route path="/deposit" element={<Deposit />} />
             <Route path="/history" element={<TransactionHistory />} />
             <Route path="/all-orders" element={<AllOrders />} />
             <Route path="/service/facebook-like" element={<FacebookLike />} />
