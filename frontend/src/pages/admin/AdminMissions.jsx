@@ -31,7 +31,7 @@ const AdminMissions = () => {
     const [filterType, setFilterType] = useState('All');
     const [selectedMissions, setSelectedMissions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(20);
+    const [pageSize, setPageSize] = useState(10);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -308,9 +308,10 @@ const AdminMissions = () => {
                             <span className="text-sm text-slate-500">Tổng: {filteredMissions.length}</span>
                             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
                                 <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
-                                    <SelectValue placeholder="20" />
+                                    <SelectValue placeholder="10" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="10">10</SelectItem>
                                     <SelectItem value="20">20</SelectItem>
                                     <SelectItem value="50">50</SelectItem>
                                     <SelectItem value="100">100</SelectItem>

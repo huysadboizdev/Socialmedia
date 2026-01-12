@@ -68,6 +68,10 @@ export default function Header({ onMenu }) {
     "/admin/users": "Quản Lý Người Dùng",
     "/admin/services": "Quản Lý Dịch Vụ",
     "/admin/orders": "Quản Lý Đơn Hàng",
+    "/admin/missions": "Quản Lý Nhiệm Vụ",
+    "/admin/mission-requests": "Duyệt Nhiệm Vụ",
+    "/admin/withdrawals": "Duyệt Rút Tiền",
+    "/admin/settings": "Cài Đặt Hệ Thống",
   }
 
   const currentPage = routeMap[location.pathname] || ""

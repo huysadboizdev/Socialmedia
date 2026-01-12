@@ -290,10 +290,13 @@ export const fetchDashboardStats = async () => {
     ])
     const monthlyRevenue = monthlyRevenueData.length > 0 ? (monthlyRevenueData[0]?.total ?? 0) : 0
 
-    const userBalances = await userModel.aggregate<AggResult>([
-        { $group: { _id: null, total: { $sum: '$balance' } } }
-    ])
-    const systemBalance = userBalances.length > 0 ? (userBalances[0]?.total ?? 0) : 0
+    // const userBalances = await userModel.aggregate<AggResult>([
+    //     { $group: { _id: null, total: { $sum: '$balance' } } }
+    // ])
+    // const systemBalance = userBalances.length > 0 ? (userBalances[0]?.total ?? 0) : 0
+    
+    // User requested System Balance to match Monthly Revenue
+    const systemBalance = monthlyRevenue
 
     const recentOrders = await orderModel.find()
         .populate('service', 'name platform')
