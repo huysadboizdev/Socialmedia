@@ -18,6 +18,7 @@ import './config/passportGoogle.js'
 
 import userRouter from './routes/userRoute.js'
 import adminRouter from './routes/adminRoute.js'
+import paymentRouter from './routes/paymentRoute.js'
 import googleRouter from './routes/authGoogle.js'
 
 const app = express()
@@ -50,6 +51,7 @@ app.use('/', googleRouter)
 // API routes
 app.use('/api/user', userRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/payment', paymentRouter)
 
 const PORT = process.env.PORT ?? 4000
 
