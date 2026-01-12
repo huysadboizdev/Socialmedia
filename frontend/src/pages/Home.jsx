@@ -11,6 +11,25 @@ const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function Home() {
   const [userData, setUserData] = useState(null);
+  const [currentTime, setCurrentTime] = useState("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      setCurrentTime(`${year}-${month}-${day} ${hours}:${minutes}:${seconds}`);
+    };
+
+    updateTime(); // Initial call
+    const timer = setInterval(updateTime, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -95,7 +114,7 @@ export default function Home() {
             
             {/* Blue Box 1 */}
             <div className="bg-cyan-400 dark:bg-cyan-900/40 rounded-xl p-5 text-white dark:text-cyan-100 shadow-sm hover:shadow-md transition-all border border-transparent dark:border-cyan-800/50">
-              <div className="text-xs font-semibold mb-3 opacity-90 dark:text-cyan-400">Admin 2025-12-02 12:28:09</div>
+              <div className="text-xs font-semibold mb-3 opacity-90 dark:text-cyan-400">Admin {currentTime}</div>
               <div className="space-y-4 text-sm font-medium">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-red-600 dark:text-red-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">touch_app</span>
@@ -106,35 +125,19 @@ export default function Home() {
                   <span>Nhiệm vụ hằng ngày truy cập: <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">Tại Đây</a></span>
                 </div>
                  <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-orange-600 dark:text-orange-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">emoji_events</span>
-                  <span>Đua top nạp ngày truy cập : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">Tại Đây</a></span>
-                </div>
-                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-pink-600 dark:text-pink-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">redeem</span>
-                  <span>Tặng bạn 333k truy cập : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">Tại Đây</a></span>
-                </div>
-                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">military_tech</span>
-                  <span>Cảm Ơn Bạn Đã Chọn : <span className="text-purple-700 dark:text-purple-300 font-bold">Sub6Sao.Com</span></span>
+                  <span>Cảm Ơn Bạn Đã Chọn : <span className="text-purple-700 dark:text-purple-300 font-bold">HUYTICHXANH</span></span>
                 </div>
               </div>
             </div>
 
             {/* Blue Box 2 */}
             <div className="bg-cyan-400 dark:bg-cyan-900/40 rounded-xl p-5 text-white dark:text-cyan-100 shadow-sm hover:shadow-md transition-all border border-transparent dark:border-cyan-800/50">
-              <div className="text-xs font-semibold mb-3 opacity-90 dark:text-cyan-400">Admin 2025-12-02 11:31:20</div>
+              <div className="text-xs font-semibold mb-3 opacity-90 dark:text-cyan-400">Admin {currentTime}</div>
               <div className="space-y-4 text-sm font-medium">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">support_agent</span>
-                  <span>Admin Hỗ Trợ Qua ZaLo : <span className="text-purple-700 dark:text-purple-300 font-bold">0383345622</span></span>
-                </div>
-                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sky-600 dark:text-sky-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">campaign</span>
-                  <span>Kênh thông báo khuyến mãi : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
-                </div>
-                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">code</span>
-                  <span>Tạo web riêng + tài liệu API : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
+                  <span>Admin Hỗ Trợ Qua ZaLo : <span className="text-purple-700 dark:text-purple-300 font-bold">0763076124</span></span>
                 </div>
                  <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-orange-500 dark:text-orange-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">warning</span>
@@ -157,7 +160,7 @@ export default function Home() {
               />
               
               <div className="space-y-2">
-                <h4 className="font-bold text-gray-800 dark:text-slate-200">Chào Mừng Bạn Đến Với <span className="text-purple-600 dark:text-purple-400">Sub6Sao.Com</span></h4>
+                <h4 className="font-bold text-gray-800 dark:text-slate-200">Chào Mừng Bạn Đến Với <span className="text-purple-600 dark:text-purple-400">HUYTICHXANH</span></h4>
                 <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
                   Chúng Tôi Chuyên Cung Cấp - Dịch Vụ Mạng Xã Hội Rẻ Nhất Việt Nam
                 </p>
@@ -169,7 +172,7 @@ export default function Home() {
               <div className="w-full text-left pt-4 mt-2 border-t border-dashed dark:border-slate-800">
                 <div className="text-xs text-gray-400 dark:text-slate-500 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">schedule</span>
-                  2025-04-15 12:35:11
+                  {currentTime}
                 </div>
               </div>
             </div>
