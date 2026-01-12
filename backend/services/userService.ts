@@ -1,4 +1,4 @@
-import { Types } from 'mongoose'
+import mongoose, { Types } from 'mongoose'
 import fs from 'fs'
 import { v2 as cloudinary } from 'cloudinary'
 import bcrypt from 'bcrypt'
@@ -491,6 +491,38 @@ export const acceptMission = async (userId: string, missionId: string) => {
 }
 
 /**
+ * Record a click on a mission link
+ */
+export const recordMissionClick = async (userId: string, missionId: string) => {
+    const mission = await missionModel.findById(missionId);
+    if (!mission || !mission.isActive) {
+        return { success: false, message: 'Nhiệm vụ không tồn tại' };
+    }
+
+    const uId = new Types.ObjectId(userId);
+    const mId = new Types.ObjectId(missionId);
+
+    console.log(`[CLICK_TRACKING] Processing for User: ${userId}, Mission: ${missionId}`);
+
+    const submission = await submissionModel.findOne({ userId: uId, missionId: mId });
+    if (!submission) {
+        console.log(`[CLICK_TRACKING] Creating new 'accepted' submission for User: ${userId}`);
+        await submissionModel.create({
+            userId: uId,
+            missionId: mId,
+            status: 'accepted',
+            isClicked: true
+        });
+    } else {
+        console.log(`[CLICK_TRACKING] Updating existing submission (Status: ${submission.status}) to isClicked: true for User: ${userId}`);
+        submission.isClicked = true;
+        await submission.save();
+    }
+
+    return { success: true };
+}
+
+/**
  * Submit mission proof
  */
 export const submitMissionProof = async (userId: string, missionId: string, imageProof?: Express.Multer.File) => {
@@ -507,11 +539,13 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
         return { success: false, message: 'Nhiệm vụ không tồn tại hoặc đã hết hạn' }
     }
 
-    // Check if already submitted (pending or approved)
-    // We allow finding 'accepted' or 'rejected' here to update them
+    const uId = new Types.ObjectId(userId);
+    const mId = new Types.ObjectId(missionId);
+
+    // Check submission status
     const existingSubmission = await submissionModel.findOne({ 
-        userId, 
-        missionId
+        userId: uId, 
+        missionId: mId
     });
 
     // If it's pending or approved, block re-submission
@@ -522,44 +556,50 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
         return { success: false, message: 'Bạn đã nộp nhiệm vụ này rồi, vui lòng chờ duyệt' }
     }
 
-    try {
-        console.log("Uploading proof for mission:", mission.title);
-
-        // Check for Cloudinary config presence
-        const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? process.env.CLOUDINARY_NAME;
-        const apiKey = process.env.CLOUDINARY_API_KEY;
-        const apiSecret = process.env.CLOUDINARY_API_SECRET ?? process.env.CLOUDINARY_SECRET_KEY;
-
-        if (!cloudName || !apiKey || !apiSecret) {
-             throw new Error("Missing Cloudinary configuration");
+    // AUTO-REJECT IF NOT CLICKED
+    if (!existingSubmission || !existingSubmission.isClicked) {
+        if (fs.existsSync(imageProof.path)) {
+            try { fs.unlinkSync(imageProof.path) } catch (_error) { void _error }
         }
+        return { 
+            success: false, 
+            message: 'Bạn chưa click vào nút "Thực hiện" nhiệm vụ này! Vui lòng click vào link trước khi gửi bằng chứng.' 
+        };
+    }
+
+    try {
+        console.log(`[MISSION_SUBMIT] Processing proof for Mission: ${mission.title} by User: ${userId}`);
 
         // Upload to Cloudinary
         const upload = await cloudinary.uploader.upload(imageProof.path, {
             folder: 'mission_proofs'
         });
 
-        if (existingSubmission) {
-            // Update existing record (accepted -> pending or rejected -> pending)
-            existingSubmission.imageProof = upload.secure_url;
-            existingSubmission.status = 'pending';
-            existingSubmission.adminNote = undefined;
-            await existingSubmission.save();
-        } else {
-            // Fallback: create new if for some reason acceptance didn't happen (or direct submission allowance)
-            await submissionModel.create({
-                userId,
-                missionId,
-                imageProof: upload.secure_url,
-                status: 'pending'
-            });
-        }
+        // Update submission with proof and set to pending first for trace
+        existingSubmission.imageProof = upload.secure_url;
+        existingSubmission.status = 'pending';
+        await existingSubmission.save();
 
-        return { success: true, message: 'Nộp nhiệm vụ thành công! Vui lòng chờ Admin duyệt trong 24h.' }
+        // AUTO-APPROVE LOGIC (Bypassing manual admin for clicked missions)
+        // Note: Using a small delay or direct call to approval logic
+        const { approveUserSubmission } = await import('./adminService.js');
+        const approveResult = await approveUserSubmission(existingSubmission._id.toString());
+        
+        if (approveResult.success) {
+            return { 
+                success: true, 
+                message: 'Nhiệm vụ đã được tự động duyệt thành công! Bạn đã nhận được phần thưởng.' 
+            };
+        } else {
+            return { 
+                success: true, 
+                message: 'Nộp nhiệm vụ thành công! Vui lòng chờ Admin duyệt.' 
+            };
+        }
 
     } catch (error: unknown) {
         console.error("Mission submission error:", error);
-        return { success: false, message: 'Lỗi tải ảnh lên: ' + (error instanceof Error ? error.message : String(error)) }
+        return { success: false, message: 'Lỗi nộp nhiệm vụ: ' + (error instanceof Error ? error.message : String(error)) }
     } finally {
         // Cleanup local file
         if (fs.existsSync(imageProof.path)) {

@@ -65,6 +65,14 @@ export default function AdminSidebar({ onClose }) {
           onClick={handleItemClick}
         />
 
+        <NavItem 
+          label="Nạp Tiền" 
+          to="/admin/deposits" 
+          icon="account_balance_wallet" 
+          active={location.pathname === "/admin/deposits"} 
+          onClick={handleItemClick}
+        />
+
          <NavItem 
           label="Nhiệm Vụ" 
           to="/admin/missions" 

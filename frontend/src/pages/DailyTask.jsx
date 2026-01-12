@@ -11,6 +11,9 @@ const DailyTask = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [focusedMissionId, setFocusedMissionId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Stats grid data
   const stats = [
@@ -35,6 +38,10 @@ const DailyTask = () => {
   useEffect(() => {
     fetchMissions();
     fetchUserData();
+    const savedActiveId = localStorage.getItem('activeMissionId');
+    if (savedActiveId) {
+        setFocusedMissionId(savedActiveId);
+    }
   }, []);
 
   const fetchUserData = async () => {
@@ -68,8 +75,26 @@ const DailyTask = () => {
     }
   };
 
-  const handleLinkClick = (link) => {
-      window.open(link, '_blank');
+  const handleLinkClick = async (mission) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/click`, 
+        { missionId: mission._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (res.data.success) {
+          window.open(mission.link, '_blank');
+          setFocusedMissionId(mission._id);
+          localStorage.setItem('activeMissionId', mission._id);
+          fetchMissions();
+      } else {
+          toast.error(res.data.message || 'Lỗi khi ghi nhận click. Vui lòng thử lại.');
+      }
+    } catch (error) {
+      console.error("Error recording click:", error);
+      toast.error('Có lỗi xảy ra khi thực hiện nhiệm vụ.');
+    }
   };
 
   const handleSubmitProof = async (missionId, file) => {
@@ -91,6 +116,7 @@ const DailyTask = () => {
 
           if (res.data.success) {
               toast.success(res.data.message);
+              clearFocus();
               fetchMissions(); // Refresh list to show new status
           } else {
               toast.error(res.data.message);
@@ -167,9 +193,27 @@ const DailyTask = () => {
   };
  
   // Filter Logic
-  const filteredMissions = activeTab === 'list' 
+  const allFilteredMissions = activeTab === 'list' 
     ? missions.filter(m => m.status === 'available')
     : missions.filter(m => m.status !== 'available');
+
+  const activeMission = missions.find(m => m._id === focusedMissionId);
+
+  // Focus View Logic
+  const filteredMissions = focusedMissionId 
+    ? (activeMission ? [activeMission] : allFilteredMissions)
+    : allFilteredMissions;
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredMissions.length / itemsPerPage);
+  const paginatedMissions = focusedMissionId 
+    ? filteredMissions 
+    : filteredMissions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const clearFocus = () => {
+    setFocusedMissionId(null);
+    localStorage.removeItem('activeMissionId');
+  };
 
   const handleAcceptMission = async (missionId) => {
       try {
@@ -215,7 +259,11 @@ const DailyTask = () => {
       <div className="space-y-6">
         <div className="flex flex-wrap gap-4">
           <button
-            onClick={() => setActiveTab('list')}
+            onClick={() => {
+                setActiveTab('list');
+                setCurrentPage(1);
+                clearFocus();
+            }}
             className={`px-8 py-3 rounded-full font-bold transition-all border-2 ${
               activeTab === 'list'
                 ? 'bg-[#6610f2] border-[#6610f2] text-white shadow-lg shadow-purple-500/30'
@@ -225,7 +273,11 @@ const DailyTask = () => {
             Danh sách nhiệm vụ
           </button>
           <button
-            onClick={() => setActiveTab('received')}
+            onClick={() => {
+                setActiveTab('received');
+                setCurrentPage(1);
+                clearFocus();
+            }}
             className={`px-8 py-3 rounded-full font-bold transition-all border-2 ${
               activeTab === 'received'
                 ? 'bg-[#6610f2] border-[#6610f2] text-white shadow-lg shadow-purple-500/30'
@@ -238,16 +290,39 @@ const DailyTask = () => {
 
         {/* Mission List */}
         <div className="space-y-4">
+            {focusedMissionId && (
+                <div className="flex justify-between items-center mb-4">
+                    <button 
+                        onClick={clearFocus}
+                        className="flex items-center gap-2 text-purple-600 font-bold hover:underline"
+                    >
+                        <span className="material-symbols-outlined">arrow_back</span>
+                        Quay lại danh sách
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-black animate-pulse uppercase tracking-widest border border-red-200">
+                        <span className="size-2 bg-red-600 rounded-full"></span>
+                        Đang thực hiện
+                    </div>
+                </div>
+            )}
+
             {loading ? (
                 <div className="text-center py-10 text-slate-500">Đang tải nhiệm vụ...</div>
-            ) : filteredMissions.length === 0 ? (
+            ) : paginatedMissions.length === 0 ? (
                 <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
                     <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">assignment_late</span>
                     <p className="text-slate-500 dark:text-slate-400 font-medium">Hiện không có nhiệm vụ nào</p>
                 </div>
             ) : (
-                filteredMissions.map((mission) => (
-                    <div key={mission._id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center gap-6">
+                paginatedMissions.map((mission) => (
+                    <div 
+                        key={mission._id} 
+                        className={`bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border flex flex-col md:flex-row items-center gap-6 transition-all ${
+                            focusedMissionId === mission._id 
+                            ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] ring-2 ring-red-500/20' 
+                            : 'border-slate-100 dark:border-slate-800'
+                        }`}
+                    >
                         <div className={`shrink-0 size-16 rounded-2xl flex items-center justify-center ${
                              mission.type === 'like' ? 'bg-blue-50 text-blue-600' :
                              mission.type === 'follow' ? 'bg-pink-50 text-pink-600' :
@@ -268,9 +343,11 @@ const DailyTask = () => {
                             {/* Hide Link for Available missions */}
                             {mission.status !== 'available' && (
                                 <a 
-                                    href={mission.link} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
+                                    href="#"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleLinkClick(mission);
+                                    }}
                                     className="text-xs text-blue-500 hover:underline truncate max-w-[200px] inline-block"
                                 >
                                     Link nhiệm vụ
@@ -294,7 +371,7 @@ const DailyTask = () => {
                             {(mission.status === 'accepted' || mission.status === 'rejected') && (
                                 <>
                                     <button 
-                                        onClick={() => handleLinkClick(mission.link)}
+                                        onClick={() => handleLinkClick(mission)}
                                         className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
                                     >
                                         <span className="material-symbols-outlined text-[18px]">open_in_new</span>
@@ -348,6 +425,41 @@ const DailyTask = () => {
                         </div>
                     </div>
                 ))
+            )}
+
+            {/* Pagination Controls */}
+            {!focusedMissionId && totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-6">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-30 transition-all hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                        <span className="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    
+                    {[...Array(totalPages)].map((_, i) => (
+                        <button
+                            key={i + 1}
+                            onClick={() => setCurrentPage(i + 1)}
+                            className={`size-10 rounded-lg border font-bold transition-all ${
+                                currentPage === i + 1
+                                    ? 'bg-[#6610f2] border-[#6610f2] text-white shadow-md'
+                                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            }`}
+                        >
+                            {i + 1}
+                        </button>
+                    ))}
+
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-30 transition-all hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                        <span className="material-symbols-outlined">chevron_right</span>
+                    </button>
+                </div>
             )}
         </div>
       </div>

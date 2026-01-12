@@ -1,9 +1,10 @@
 import Service from '../models/serviceModel.js'
-import userModel from '../models/userModel.js'
+import userModel, { type IUser } from '../models/userModel.js'
 import transactionModel from '../models/transactionModel.js'
 import orderModel, { type OrderStatus } from '../models/orderModel.js'
 import missionModel from '../models/missionModel.js'
 import submissionModel from '../models/submissionModel.js'
+import type { UpdateQuery, Types } from 'mongoose'
 
 export interface AdminLoginParams {
   email?: string;
@@ -39,6 +40,42 @@ export interface MissionParams {
 export interface UpdateMissionParams extends Partial<MissionParams> {
   missionId: string;
   isActive?: boolean;
+}
+
+/**
+ * Helper to update user deposit statistics
+ * Updates both total and monthly deposit values.
+ */
+export const updateUserDepositStats = async (userId: string | Types.ObjectId, amount: number) => {
+    if (amount <= 0) return;
+    
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
+    const monthId = currentYear * 100 + currentMonth; // e.g. 202600 for Jan 2026
+
+    const user = await userModel.findById(userId);
+    if (!user) return;
+
+    const update: UpdateQuery<IUser> = {
+        $inc: { totalDeposit: amount }
+    };
+
+    if (user.lastDepositMonth !== monthId) {
+        // Reset monthly stats for a new month
+        update.$set = { 
+            monthlyDeposit: amount,
+            lastDepositMonth: monthId
+        };
+    } else {
+        // Increment monthly stats for the current month
+        update.$inc = { 
+            totalDeposit: amount,
+            monthlyDeposit: amount 
+        };
+    }
+
+    await userModel.findByIdAndUpdate(userId, update);
 }
 
 /**
@@ -143,6 +180,9 @@ export const approveUserDeposit = async (transactionId: string) => {
         transaction.balanceType = 'profile'
         transaction.description = 'Nạp tiền vào tài khoản'
         await transaction.save()
+
+        // Update user deposit stats
+        await updateUserDepositStats(transaction.userId, transaction.amount)
     }
 
     return { success: true, message: 'Deposit successful' }
@@ -341,6 +381,11 @@ export const adjustUserBalance = async (userId: string, amount: number) => {
     })
     await transaction.save()
 
+    // Update deposit stats if adding money
+    if (amount > 0) {
+        await updateUserDepositStats(userId, amount)
+    }
+
     return { 
         success: true, 
         message: `Successfully adjusted balance by ${amount.toLocaleString()}₫`,
@@ -441,6 +486,9 @@ export const approveUserSubmission = async (submissionId: string) => {
             status: 'approved',
             createdAt: new Date()
         })
+
+        // Update deposit stats for mission reward
+        await updateUserDepositStats(user._id, mission.reward || 0)
     }
 
     return { success: true, message: 'Mission approved and reward sent' }
@@ -537,4 +585,19 @@ export const rejectWithdrawalRequest = async (transactionId: string) => {
     }
 
     return { success: true, message: 'Withdrawal rejected and refunded' }
+}
+
+/**
+ * Fetch all deposit transactions
+ */
+export const fetchAllDeposits = async () => {
+    const deposits = await transactionModel.find({ 
+        type: 'deposit' 
+    }).populate({
+        path: 'userId',
+        model: 'user',
+        select: 'username fullName email'
+    }).sort({ createdAt: -1 })
+    
+    return { success: true, deposits }
 }

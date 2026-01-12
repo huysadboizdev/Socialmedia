@@ -3,9 +3,7 @@ import * as userService from '../services/userService.js'
 import loginService, { type LoginParams } from '../services/auth/login.js'
 import registerService, { type RegisterParams } from '../services/auth/register.js'
 
-interface AuthRequest extends Request {
-  authUserId?: string;
-}
+// interface AuthRequest is now handled by types/express.d.ts
 
 // register user
 export const registerUser = async (req: Request, res: Response) => {
@@ -28,7 +26,7 @@ export const login = async (req: Request, res: Response) => {
 }
 
 // get info user
-export const getUser = async (req: AuthRequest, res: Response) => {
+export const getUser = async (req: Request, res: Response) => {
   try {
     const userId = req.authUserId ?? (req.body as { userId: string }).userId
     const result = await userService.getInfo(userId)
@@ -39,7 +37,7 @@ export const getUser = async (req: AuthRequest, res: Response) => {
 }
 
 // update profile
-export const updateProfile = async (req: AuthRequest, res: Response) => {
+export const updateProfile = async (req: Request, res: Response) => {
   try {
     console.log("Update Profile Request:");
     console.log("Headers:", req.headers);
@@ -62,36 +60,36 @@ export const updatePassword = async (req: Request, res: Response) => {
   try {
     const { userId, oldPassword, newPassword1, newPassword2 } = req.body as { userId: string, oldPassword?: string, newPassword1?: string, newPassword2?: string }
     const result = await userService.changePassword(userId, { oldPassword, newPassword1, newPassword2 })
-    res.json(result)
+    return res.json(result)
   } catch (err: unknown) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
   }
 }
 
 // service & order
 export const handleUserService = async (req: Request, res: Response) => {
   try {
-    const { userId, action, serviceId, quantity, link, note, details } = req.body as { userId: string, action: string, serviceId: string, quantity: any, link?: string, note?: string, details?: Record<string, unknown> }
+    const { userId, action, serviceId, quantity, link, note, details } = req.body as { userId: string, action: string, serviceId: string, quantity: string | number, link?: string, note?: string, details?: Record<string, unknown> }
     const result = await userService.handleService(userId, { action, serviceId, quantity: Number(quantity), link, note, details })
-    res.json(result)
+    return res.json(result)
   } catch (err: unknown) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
   }
 }
 
 // deposit money
 export const requestDeposit = async (req: Request, res: Response) => {
   try {
-    const { userId, amount, content } = req.body as { userId: string, amount: any, content?: string }
+    const { userId, amount, content } = req.body as { userId: string, amount: string | number, content?: string }
     const result = await userService.depositRequest(userId, Number(amount), content)
-    res.json(result)
+    return res.json(result)
   } catch (err: unknown) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
   }
 }
 
 // get active missions
-export const getMissions = async (req: AuthRequest, res: Response) => {
+export const getMissions = async (req: Request, res: Response) => {
   try {
     const userId = req.authUserId
     if (!userId) {
@@ -137,9 +135,9 @@ export const attendance = async (req: Request, res: Response) => {
 }
 
 // submit mission
-export const submitMission = async (req: AuthRequest, res: Response) => {
+export const submitMission = async (req: Request, res: Response) => {
     try {
-        const userId = req.authUserId
+        const userId = req.authUserId ?? (req.body as { userId: string }).userId;
         if (!userId) {
           return res.status(403).json({ success: false, message: 'Unauthorized' })
         }
@@ -154,11 +152,11 @@ export const submitMission = async (req: AuthRequest, res: Response) => {
 }
 
 // accept mission
-export const acceptMission = async (req: AuthRequest, res: Response) => {
+export const acceptMission = async (req: Request, res: Response) => {
     try {
-        const userId = req.authUserId
+        const userId = req.authUserId ?? (req.body as { userId: string }).userId;
         if (!userId) {
-          return res.status(403).json({ success: false, message: 'Unauthorized' })
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const { missionId } = req.body as { missionId: string }
         
@@ -170,14 +168,14 @@ export const acceptMission = async (req: AuthRequest, res: Response) => {
 }
 
 // withdraw mission balance
-export const withdrawMissionBalance = async (req: AuthRequest, res: Response) => {
+export const withdrawMissionBalance = async (req: Request, res: Response) => {
     try {
-        const userId = req.authUserId
+        const userId = req.authUserId ?? (req.body as { userId: string }).userId;
         if (!userId) {
-            return res.status(403).json({ success: false, message: 'Unauthorized' })
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const { amount, method, bankName, bankAccount } = req.body as { 
-            amount: any; 
+            amount: string | number; 
             method?: 'web' | 'bank';
             bankName?: string;
             bankAccount?: string;
@@ -197,7 +195,7 @@ export const withdrawMissionBalance = async (req: AuthRequest, res: Response) =>
 }
 
 // get transactions
-export const getTransactionHistory = async (req: AuthRequest, res: Response) => {
+export const getTransactionHistory = async (req: Request, res: Response) => {
     try {
         const userId = req.authUserId
         if (!userId) {
@@ -212,3 +210,19 @@ export const getTransactionHistory = async (req: AuthRequest, res: Response) => 
     }
 }
 
+
+export const clickMission = async (req: Request, res: Response) => {
+    try {
+        const userId = req.authUserId ?? (req.body as { userId: string }).userId;
+        const { missionId } = req.body as { missionId: string };
+
+        if (!userId || !missionId) {
+            return res.status(400).json({ success: false, message: 'Thiếu thông tin người dùng hoặc nhiệm vụ' });
+        }
+
+        const result = await userService.recordMissionClick(userId, missionId);
+        return res.json(result);
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : 'Internal Server Error' });
+    }
+}

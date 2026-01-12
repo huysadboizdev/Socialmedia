@@ -258,3 +258,12 @@ export const runBalanceFix = async (_req: Request, res: Response) => {
         return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
     }
 }
+
+export const getAllDeposits = async (_req: Request, res: Response) => {
+    try {
+        const result = await adminService.fetchAllDeposits()
+        return res.json(result)
+    } catch (error: unknown) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}

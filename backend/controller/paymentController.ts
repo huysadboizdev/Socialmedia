@@ -106,6 +106,10 @@ export const handleWebhook = async (req: Request, res: Response) => {
                 user.balance = (user.balance || 0) + amount;
                 await user.save();
                 
+                // Update Deposit Stats
+                const { updateUserDepositStats } = await import('../services/adminService.js');
+                await updateUserDepositStats(user._id, amount);
+                
                 // Create a generic "Payment Received" record if strictly separating log vs balance?
                 // No, updating the 'deposit' transaction status is the standard way.
 

@@ -166,7 +166,7 @@ const AdminMissions = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-full">
+        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] dark:bg-slate-950 min-h-full transition-colors duration-300">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
@@ -179,7 +179,7 @@ const AdminMissions = () => {
                         setFormData({ title: '', link: '', type: 'like', reward: 0, isActive: true });
                         setIsModalOpen(true);
                     }}
-                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm rounded-lg flex items-center gap-2 h-9 px-4"
+                    className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-sm rounded-lg flex items-center gap-2 h-9 px-4 transition-all"
                 >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Thêm Nhiệm Vụ
@@ -188,11 +188,11 @@ const AdminMissions = () => {
 
             {/* Filters Section */}
             <div className="flex flex-wrap items-center gap-3">
-                <div className="relative w-full max-w-xs">
+                <div className="relative w-full max-w-xs transition-all">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
                     <Input 
                         placeholder="Tìm tên nhiệm vụ..." 
-                        className="pl-9 bg-white border-slate-200 h-9 rounded-lg"
+                        className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-9 rounded-lg dark:text-slate-200 transition-all focus-visible:ring-purple-500/20"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -213,7 +213,7 @@ const AdminMissions = () => {
             </div>
 
             {/* Table Section */}
-            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm transition-all">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -236,15 +236,18 @@ const AdminMissions = () => {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-64 text-center text-slate-500 italic">Đang tải dữ liệu...</TableCell>
+                                    <TableCell colSpan={7} className="h-64 text-center">
+                                         <div className="flex justify-center"><span className="material-symbols-outlined animate-spin text-slate-400 text-4xl">sync</span></div>
+                                         <p className="mt-2 text-slate-500 dark:text-slate-400 italic">Đang tải dữ liệu...</p>
+                                    </TableCell>
                                 </TableRow>
                             ) : paginatedMissions.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-64 text-center text-slate-500 italic">Không tìm thấy nhiệm vụ nào.</TableCell>
+                                    <TableCell colSpan={7} className="h-64 text-center text-slate-500 dark:text-slate-400 italic">Không tìm thấy nhiệm vụ nào.</TableCell>
                                 </TableRow>
                             ) : (
                                 paginatedMissions.map((mission) => (
-                                    <tr key={mission._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 last:border-0">
+                                    <tr key={mission._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/50 last:border-0">
                                         <TableCell className="text-center">
                                             <Checkbox 
                                                 checked={selectedMissions.includes(mission._id)}
@@ -298,16 +301,16 @@ const AdminMissions = () => {
                 </div>
 
                 {/* Pagination Section */}
-                <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
-                    <div className="text-sm text-slate-500">
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 transition-all">
+                    <div className="text-sm text-slate-500 dark:text-slate-500">
                         Đã chọn {selectedMissions.length} trong {paginatedMissions.length} hàng.
                     </div>
                     
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-500">Tổng: {filteredMissions.length}</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-500">Tổng: {filteredMissions.length}</span>
                             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
-                                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
+                                <SelectTrigger className="w-[70px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-8 rounded text-xs dark:text-white transition-all">
                                     <SelectValue placeholder="10" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -320,14 +323,14 @@ const AdminMissions = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+                            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                                 Trang {currentPage}/{totalPages || 1}
                             </span>
                             <div className="flex items-center gap-1">
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
                                 >
@@ -336,7 +339,7 @@ const AdminMissions = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
                                 >
@@ -345,7 +348,7 @@ const AdminMissions = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={currentPage === totalPages || totalPages === 0}
                                 >
@@ -354,7 +357,7 @@ const AdminMissions = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages || totalPages === 0}
                                 >
@@ -388,7 +391,7 @@ const AdminMissions = () => {
                                     value={formData.title} 
                                     onChange={handleInputChange} 
                                     required
-                                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
                                     placeholder="Ví dụ: Like Fanpage A"
                                 />
                             </div>
@@ -400,7 +403,7 @@ const AdminMissions = () => {
                                     value={formData.link} 
                                     onChange={handleInputChange} 
                                     required
-                                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
                                     placeholder="https://facebook.com/..."
                                 />
                             </div>
@@ -411,7 +414,7 @@ const AdminMissions = () => {
                                         value={formData.type} 
                                         onValueChange={(v) => setFormData({...formData, type: v})}
                                     >
-                                        <SelectTrigger className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl">
+                                        <SelectTrigger className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white transition-all">
                                             <SelectValue placeholder="Chọn loại" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -431,7 +434,7 @@ const AdminMissions = () => {
                                         onChange={handleInputChange} 
                                         required
                                         min="0"
-                                        className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
+                                        className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
                                     />
                                 </div>
                             </div>
@@ -441,9 +444,9 @@ const AdminMissions = () => {
                                     id="isActive"
                                     checked={formData.isActive} 
                                     onCheckedChange={(checked) => setFormData({...formData, isActive: !!checked})}
-                                    className="size-5 rounded-md"
+                                    className="size-5 rounded-md dark:border-slate-700"
                                 />
-                                <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer group-hover:text-purple-600 transition-colors">Kích hoạt nhiệm vụ ngay</label>
+                                <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Kích hoạt nhiệm vụ ngay</label>
                             </div>
 
                             <div className="flex gap-3 pt-4">
@@ -451,7 +454,7 @@ const AdminMissions = () => {
                                     type="button" 
                                     variant="outline"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 h-11 border-slate-200 text-slate-600 font-bold rounded-xl"
+                                    className="flex-1 h-11 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-xl dark:bg-slate-900"
                                 >
                                     Hủy
                                 </Button>

@@ -176,7 +176,7 @@ const AdminServices = () => {
   const categories = [...new Set(services.map(s => s.category))];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-full">
+    <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] dark:bg-slate-950 min-h-full transition-colors duration-300">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
@@ -185,7 +185,7 @@ const AdminServices = () => {
         </div>
         <Button 
           onClick={() => handleOpenModal()}
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm rounded-lg flex items-center gap-2 h-9 px-4"
+          className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-sm rounded-lg flex items-center gap-2 h-9 px-4 transition-all"
         >
           <span className="material-symbols-outlined text-sm">add</span>
           Thêm dịch vụ mới
@@ -194,18 +194,18 @@ const AdminServices = () => {
 
       {/* Filters Section */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-xs">
+        <div className="relative w-full max-w-xs transition-all">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
           <Input 
             placeholder="Tìm tên dịch vụ..." 
-            className="pl-9 bg-white border-slate-200 h-9 rounded-lg"
+            className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-9 rounded-lg dark:text-slate-200 transition-all focus-visible:ring-purple-500/20"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         
         <Select value={filterPlatform} onValueChange={setFilterPlatform}>
-          <SelectTrigger className="w-[160px] bg-white border-slate-200 h-9 rounded-lg">
+          <SelectTrigger className="w-[160px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-9 rounded-lg dark:text-slate-200 transition-all">
             <SelectValue placeholder="Nền tảng" />
           </SelectTrigger>
           <SelectContent>
@@ -217,7 +217,7 @@ const AdminServices = () => {
         </Select>
 
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-[180px] bg-white border-slate-200 h-9 rounded-lg">
+          <SelectTrigger className="w-[180px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-9 rounded-lg dark:text-slate-200 transition-all">
             <SelectValue placeholder="Danh mục" />
           </SelectTrigger>
           <SelectContent>
@@ -230,7 +230,7 @@ const AdminServices = () => {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm transition-all">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -267,7 +267,7 @@ const AdminServices = () => {
                 </TableRow>
               ) : (
                 paginatedServices.map((service) => (
-                  <TableRow key={service._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                  <TableRow key={service._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/50 last:border-0">
                     <TableCell className="text-center">
                       <Checkbox 
                         checked={selectedServices.includes(service._id)}
@@ -276,8 +276,8 @@ const AdminServices = () => {
                     </TableCell>
                     <TableCell className="text-center py-4">
                       <div className="flex flex-col items-center">
-                        <span className="text-sm font-bold text-slate-700">{service.name}</span>
-                        <span className="text-[11px] text-slate-500 uppercase font-medium">{service.category}</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{service.name}</span>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-medium">{service.category}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -293,7 +293,7 @@ const AdminServices = () => {
                       <span className="text-sm font-bold text-purple-600">{service.price.toLocaleString()}</span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <span className="text-sm text-slate-600 font-medium">{service.speed}</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">{service.speed}</span>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
@@ -337,16 +337,16 @@ const AdminServices = () => {
         </div>
 
         {/* Pagination Section */}
-        <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
-          <div className="text-sm text-slate-500">
+        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 transition-all">
+          <div className="text-sm text-slate-500 dark:text-slate-500">
             Đã chọn {selectedServices.length} trong {paginatedServices.length} hàng.
           </div>
           
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Tổng: {filteredServices.length}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-500">Tổng: {filteredServices.length}</span>
               <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
-                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
+                <SelectTrigger className="w-[70px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-8 rounded text-xs dark:text-white transition-all">
                   <SelectValue placeholder="10" />
                 </SelectTrigger>
                 <SelectContent>
@@ -359,14 +359,14 @@ const AdminServices = () => {
             </div>
 
             <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                 Trang {currentPage}/{totalPages || 1}
               </span>
               <div className="flex items-center gap-1">
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="size-8 rounded border-slate-200"
+                  className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
                 >
@@ -375,7 +375,7 @@ const AdminServices = () => {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="size-8 rounded border-slate-200"
+                  className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                 >
@@ -384,7 +384,7 @@ const AdminServices = () => {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="size-8 rounded border-slate-200"
+                  className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || totalPages === 0}
                 >
@@ -393,7 +393,7 @@ const AdminServices = () => {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="size-8 rounded border-slate-200"
+                  className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 transition-all font-bold"
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages || totalPages === 0}
                 >
@@ -420,14 +420,14 @@ const AdminServices = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Nền tảng</label>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Nền tảng</label>
                   <Select 
                     value={formData.platform} 
                     onValueChange={(v) => setFormData({...formData, platform: v})}
                   >
-                    <SelectTrigger className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl">
+                    <SelectTrigger className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white transition-all">
                       <SelectValue placeholder="Chọn nền tảng" />
                     </SelectTrigger>
                     <SelectContent>
@@ -438,12 +438,12 @@ const AdminServices = () => {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Danh mục</label>
+                   <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Danh mục</label>
                    <Select 
                     value={formData.category} 
                     onValueChange={(v) => setFormData({...formData, category: v})}
                   >
-                    <SelectTrigger className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl">
+                    <SelectTrigger className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white transition-all">
                       <SelectValue placeholder="Chọn danh mục" />
                     </SelectTrigger>
                     <SelectContent>
@@ -457,11 +457,11 @@ const AdminServices = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tên dịch vụ / Máy chủ</label>
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Tên dịch vụ / Máy chủ</label>
                 <Input 
                   required
                   placeholder="VD: Server 1 (Like Việt)"
-                  className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                 />
@@ -469,22 +469,22 @@ const AdminServices = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Giá tiền (đ)</label>
+                  <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Giá tiền (đ)</label>
                   <Input 
                     type="number"
                     required
                     placeholder="25"
-                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tốc độ chạy</label>
+                  <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Tốc độ chạy</label>
                   <Input 
                     required
                     placeholder="VD: Siêu nhanh, 24h..."
-                    className="w-full bg-slate-50 border-slate-200 h-10 rounded-xl"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
                     value={formData.speed}
                     onChange={(e) => setFormData({...formData, speed: e.target.value})}
                   />
@@ -492,11 +492,11 @@ const AdminServices = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Mô tả chi tiết</label>
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Mô tả chi tiết</label>
                 <textarea 
                   rows="3"
                   placeholder="Nhập mô tả về dịch vụ..."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none transition-all"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none transition-all"
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                 ></textarea>
@@ -508,9 +508,9 @@ const AdminServices = () => {
                     id="isActive"
                     checked={formData.isActive}
                     onCheckedChange={(checked) => setFormData({...formData, isActive: !!checked})}
-                    className="size-5 rounded-md"
+                    className="size-5 rounded-md dark:border-slate-700"
                   />
-                  <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 cursor-pointer group-hover:text-purple-600 transition-colors">Hiển thị dịch vụ</label>
+                  <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer group-hover:text-purple-600 transition-colors">Hiển thị dịch vụ</label>
                 </div>
                 
                 <div className="flex items-center gap-2.5 cursor-pointer group">
@@ -518,9 +518,9 @@ const AdminServices = () => {
                     id="isMaintenance"
                     checked={formData.isMaintenance}
                     onCheckedChange={(checked) => setFormData({...formData, isMaintenance: !!checked})}
-                    className="size-5 rounded-md data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                    className="size-5 rounded-md dark:border-slate-700 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                   />
-                  <label htmlFor="isMaintenance" className="text-sm font-semibold text-slate-700 cursor-pointer group-hover:text-orange-600 transition-colors">Bảo trì</label>
+                  <label htmlFor="isMaintenance" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer group-hover:text-orange-600 transition-colors">Bảo trì</label>
                 </div>
               </div>
 
@@ -529,7 +529,7 @@ const AdminServices = () => {
                   type="button" 
                   variant="outline"
                   onClick={handleCloseModal}
-                  className="flex-1 h-11 border-slate-200 text-slate-600 font-bold rounded-xl"
+                  className="flex-1 h-11 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-xl dark:bg-slate-900"
                 >
                   Đóng
                 </Button>

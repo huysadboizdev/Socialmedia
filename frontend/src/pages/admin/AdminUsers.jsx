@@ -89,7 +89,7 @@ const AdminUsers = () => {
   );
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 min-h-full transition-colors duration-300 bg-[#f8f9fa] dark:bg-slate-950">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight text-center md:text-left">Quản Lý Người Dùng</h1>
@@ -118,12 +118,14 @@ const AdminUsers = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-6 py-4">Thành viên</th>
-                  <th className="px-6 py-4">Số dư</th>
-                  <th className="px-6 py-4">Ngày tham gia</th>
-                  <th className="px-6 py-4">Trạng thái</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
+                <tr className="bg-[#990033] hover:bg-[#990033] border-0">
+                  <th className="px-6 py-4 text-white font-bold h-11">Thành viên</th>
+                  <th className="px-6 py-4 text-white font-bold h-11 border-l border-white/20">Số dư</th>
+                  <th className="px-6 py-4 text-white font-bold h-11 border-l border-white/20">Ngày tham gia</th>
+                  <th className="px-6 py-4 text-white font-bold h-11 border-l border-white/20">Trạng thái</th>
+                  <th className="px-6 py-4 text-white font-bold h-11 border-l border-white/20">Tổng Nạp</th>
+                  <th className="px-6 py-4 text-white font-bold h-11 border-l border-white/20">Nạp Tháng</th>
+                  <th className="px-6 py-4 text-white font-bold h-11 border-l border-white/20 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
@@ -168,6 +170,16 @@ const AdminUsers = () => {
                             : 'bg-green-500/10 text-green-500 border border-green-500/20'
                         }`}>
                           {user.isBlocked ? 'Bị Khóa' : 'Hoạt Động'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-green-600">
+                          {user.totalDeposit?.toLocaleString() || 0}đ
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                         <span className="font-bold text-blue-600">
+                          {user.monthlyDeposit?.toLocaleString() || 0}đ
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">

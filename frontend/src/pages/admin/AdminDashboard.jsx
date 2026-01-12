@@ -40,7 +40,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 min-h-full transition-colors duration-300 bg-[#f8f9fa] dark:bg-slate-950">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Trang Quản Trị</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">Chào mừng quay trở lại, đây là tổng quan hệ thống của bạn.</p>
