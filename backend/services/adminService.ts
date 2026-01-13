@@ -120,7 +120,7 @@ export const updateUserAccount = async ({ userId, username, fullName, email, isB
     // Handle balance update
     if (balance !== undefined && balance !== user.balance) {
         const oldBalance = user.balance || 0
-        const newBalance = Number(balance)
+        const newBalance = balance
         const amount = newBalance - oldBalance
         
         user.balance = newBalance
@@ -309,7 +309,7 @@ const validateMissionLink = (link: string): boolean => {
  * Create a new mission
  */
 export const createMission = async ({ title, link, type, reward }: MissionParams) => {
-    if (!title || !link || !type) {
+    if (!title || !link) {
         return { success: false, message: 'Vui lòng điền đầy đủ thông tin' }
     }
 
@@ -402,7 +402,7 @@ export const fetchDashboardStats = async () => {
     interface DailyTrendAgg {
         _id: string;
         count: number;
-        uniques: any[];
+        uniques: Types.ObjectId[];
     }
 
     const dailyTrends = await orderModel.aggregate<DailyTrendAgg>([

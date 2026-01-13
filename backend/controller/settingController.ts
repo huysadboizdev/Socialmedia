@@ -12,6 +12,7 @@ export const getAnnouncement = async (_req: Request, res: Response) => {
 
 export const updateAnnouncement = async (req: Request, res: Response) => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const { value } = req.body as { value: any };
     const result = await settingService.updateSetting('announcement', value, 'Startup announcement popup content');
     return res.json(result);

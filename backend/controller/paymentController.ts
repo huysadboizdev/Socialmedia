@@ -20,18 +20,26 @@ export const handleWebhook = async (req: Request, res: Response) => {
         // SePay/Casso usually send a list of transactions
         // Structure might be { transactions: [...] } or just [...]
         let transactions: WebhookTransaction[] = [];
+        
+        // Define a loose type for incoming body to avoid any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const body = req.body;
 
-        if (req.body.transactions && Array.isArray(req.body.transactions)) {
-            transactions = req.body.transactions;
-        } else if (Array.isArray(req.body)) {
-            transactions = req.body; // Some send direct array
-        } else if (req.body.amount && req.body.description) {
-            transactions = [req.body]; // Single object
+        if (body.transactions && Array.isArray(body.transactions)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            transactions = body.transactions;
+        } else if (Array.isArray(body)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+            transactions = body as any; // Some send direct array
+        } else if (body.amount && body.description) {
+            transactions = [body]; // Single object
         } else {
             // Unknown format, define generic extraction if possible or return error
             // checks for specific 'data' field used by some others
-            if (req.body.data && Array.isArray(req.body.data)) {
-                 transactions = req.body.data;
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            if (body.data && Array.isArray(body.data)) {
+                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                 transactions = body.data;
             }
         }
 
@@ -51,11 +59,12 @@ export const handleWebhook = async (req: Request, res: Response) => {
             stats.processed++;
             try {
                 const { amount, description } = tx;
-                const content = description || "";
+                const content: string = description;
                 
                 // 3. Extract logic: Find "HUYTICHXANH" + digits
                 // RegEx: /HUYTICHXANH\d+/i
-                const match = content.match(/HUYTICHXANH\d+/i);
+                const regex = /HUYTICHXANH\d+/i;
+                const match = regex.exec(content);
                 
                 if (!match) {
                     // Not a relevant transaction for us
@@ -92,7 +101,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
                 // 6. Approve & Add Balance
                 const user = await userModel.findById(transaction.userId);
                 if (!user) {
-                     console.error(`User not found for tx ${transaction._id}`);
+                     console.error(`User not found for tx ${String(transaction._id)}`);
                      continue;
                 }
 

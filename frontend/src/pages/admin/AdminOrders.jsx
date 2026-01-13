@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -232,11 +232,7 @@ const AdminOrders = () => {
                 </TableRow>
               ) : (
                 paginatedOrders.map((order) => (
-
                   <TableRow key={order._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/50 last:border-0">
-
-                  <TableRow key={order._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
-
                     {/* ... other cells ... */}
                     <TableCell className="text-center">
                       <Checkbox 
@@ -304,12 +300,8 @@ const AdminOrders = () => {
 
         {/* Footer / Pagination Section */}
         {/* ... existing pagination code ... */}
-
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 transition-all">
           <div className="text-sm text-slate-500 dark:text-slate-500">
-
-        <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
-          <div className="text-sm text-slate-500">
             Đã chọn {selectedOrders.length} trong {paginatedOrders.length} hàng.
           </div>
           
@@ -377,7 +369,6 @@ const AdminOrders = () => {
       </div>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-
         <DialogContent className="max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-0 overflow-hidden rounded-2xl shadow-2xl">
           <DialogHeader className="p-6 bg-[#990033] text-white">
             <div className="flex items-center justify-between">
@@ -433,70 +424,21 @@ const AdminOrders = () => {
                     Link cần chạy
                 </h4>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 text-sm break-all font-mono text-blue-600 dark:text-blue-400 font-bold">
-
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Chi tiết đơn hàng #{selectedOrder?._id.slice(-6).toUpperCase()}</DialogTitle>
-          </DialogHeader>
-          
-          {selectedOrder && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-slate-500">Khách hàng</h4>
-                  <div className="font-semibold text-slate-900">{selectedOrder.userId?.username || "Guest"}</div>
-                  <div className="text-sm text-slate-500">{selectedOrder.userId?.email || "N/A"}</div>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-slate-500">Thời gian đặt</h4>
-                  <div className="font-semibold text-slate-900">{new Date(selectedOrder.orderDate).toLocaleString('vi-VN')}</div>
-                </div>
-              </div>
-
-              <div className="space-y-1 border-t pt-4">
-                <h4 className="text-sm font-medium text-slate-500">Dịch vụ</h4>
-                <div className="font-semibold text-purple-600">{selectedOrder.service?.name}</div>
-                <div className="text-sm text-slate-600">
-                  {selectedOrder.service?.platform} - {selectedOrder.service?.category}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-slate-500">Số lượng</h4>
-                  <div className="font-semibold text-slate-900">{selectedOrder.quantity.toLocaleString()}</div>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-slate-500">Tổng tiền</h4>
-                  <div className="font-semibold text-red-600 text-lg">{selectedOrder.totalPrice.toLocaleString()} ₫</div>
-                </div>
-              </div>
-
-              <div className="space-y-1 border-t pt-4">
-                <h4 className="text-sm font-medium text-slate-500">Link cần chạy</h4>
-                <div className="p-2 bg-slate-50 rounded border text-sm break-all font-mono text-slate-600">
-
                   {selectedOrder.link || "Không có link"}
                 </div>
               </div>
 
               {selectedOrder.note && (
-
                 <div className="space-y-3 p-4 bg-amber-50/30 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
                   <h4 className="text-xs font-black text-amber-600/70 dark:text-amber-500/70 uppercase tracking-widest flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px]">sticky_note_2</span>
                       Ghi chú từ khách
                   </h4>
-
-                <div className="space-y-1 border-t pt-4">
-                  <h4 className="text-sm font-medium text-slate-500">Ghi chú</h4>
-                  <p className="text-sm text-slate-700 italic">"{selectedOrder.note}"</p>
-
+                  <p className="text-sm text-slate-700 dark:text-slate-300 italic font-medium">"{selectedOrder.note}"</p>
                 </div>
               )}
 
               {selectedOrder.details && Object.keys(selectedOrder.details).length > 0 && (
-
                  <div className="space-y-4">
                   <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px]">description</span>
@@ -506,25 +448,13 @@ const AdminOrders = () => {
                     {Object.entries(selectedOrder.details).map(([key, value]) => (
                       <div key={key} className="flex flex-col p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-xs">
                         <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
-
-                 <div className="space-y-1 border-t pt-4">
-                  <h4 className="text-sm font-medium text-slate-500">Thông tin thêm</h4>
-                  <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded text-sm">
-                    {Object.entries(selectedOrder.details).map(([key, value]) => (
-                      <div key={key} className="flex flex-col">
-                        <span className="text-xs text-slate-500 capitalize">
-
                           {key === 'username' ? 'Tài khoản' :
                            key === 'password' ? 'Mật khẩu' :
                            key === 'twoFaCode' ? 'Mã 2FA' :
                            key === 'contactInfo' ? 'Liên hệ' :
                            key}
                         </span>
-
                         <span className="font-bold text-slate-700 dark:text-slate-200 break-all text-sm mt-0.5">{String(value)}</span>
-
-                        <span className="font-medium text-slate-900 break-all">{String(value)}</span>
-
                       </div>
                     ))}
                   </div>
