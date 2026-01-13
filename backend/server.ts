@@ -7,6 +7,11 @@ import passport from 'passport'
 
 import connectDB from './config/mongodb.js'
 import connectCloudinary from './config/cloudinary.js'
+import fs from 'fs'
+
+if (!fs.existsSync('./uploads')) {
+  fs.mkdirSync('./uploads')
+}
 
 // load GoogleStrategy (passport.use)
 import './config/passportGoogle.js'
@@ -54,6 +59,7 @@ const PORT = process.env.PORT ?? 4000
 await connectDB()
 await connectCloudinary()
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+server.setTimeout(300000);

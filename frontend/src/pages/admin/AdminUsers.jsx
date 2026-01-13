@@ -83,6 +83,56 @@ const AdminUsers = () => {
     }
   };
 
+  const [editingUser, setEditingUser] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    username: '',
+    fullName: '',
+    email: '',
+    isBlocked: false,
+    balance: 0
+  });
+
+  const handleEditClick = (user) => {
+    setEditingUser(user);
+    setEditForm({
+      username: user.username || '',
+      fullName: user.fullName || '',
+      email: user.email || '',
+      isBlocked: user.isBlocked || false,
+      balance: user.balance || 0
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API_URL}/api/admin/edit-user`, {
+        userId: editingUser._id,
+        ...editForm
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success) {
+        toast.success("Cập nhật thông tin thành công");
+        setUsers(users.map(user => 
+          user._id === editingUser._id ? { ...user, ...editForm } : user
+        ));
+        setShowEditModal(false);
+        setEditingUser(null);
+      } else {
+        toast.error(res.data.message || "Cập nhật thất bại");
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast.error("Lỗi khi cập nhật thông tin");
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -194,7 +244,7 @@ const AdminUsers = () => {
                            <button 
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-500 transition-all"
                             title="Chỉnh sửa"
-                            onClick={() => toast.info("Tính năng chỉnh sửa đang phát triển")}
+                            onClick={() => handleEditClick(user)}
                           >
                             <span className="material-symbols-outlined text-[18px]">edit</span>
                           </button>
@@ -222,6 +272,104 @@ const AdminUsers = () => {
           </div>
         )}
       </div>
+
+      {/* Edit User Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Chỉnh sửa người dùng</h3>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                  className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Họ tên
+                </label>
+                <input
+                  type="text"
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm({...editForm, fullName: e.target.value})}
+                  className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Email
+                </label>
+                <input
+                  type="text"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                  className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Số dư (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  value={editForm.balance}
+                  onChange={(e) => setEditForm({...editForm, balance: Number(e.target.value)})}
+                  className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Trạng thái khóa</span>
+                <button
+                  onClick={() => setEditForm({...editForm, isBlocked: !editForm.isBlocked})}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                    editForm.isBlocked ? 'bg-red-500' : 'bg-slate-200 dark:bg-slate-600'
+                  }`}
+                >
+                  <span
+                    className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${
+                      editForm.isBlocked ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50/50 dark:bg-slate-800/50">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02]"
+              >
+                Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

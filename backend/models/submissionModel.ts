@@ -10,7 +10,6 @@ const submissionSchema = new Schema({
     enum: ['accepted', 'pending', 'approved', 'rejected'], 
     default: 'pending' 
   },
-  isClicked: { type: Boolean, default: false },
   adminNote: { type: String }
 }, { timestamps: true });
 

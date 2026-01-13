@@ -29,6 +29,15 @@ export const getAllUser = async (_req: Request, res: Response) => {
     }
 }
 
+export const editUser = async (req: Request, res: Response) => {
+    try {
+        const result = await adminService.updateUserAccount(req.body as adminService.UpdateUserParams)
+        return res.json(result)
+    } catch (error: unknown) {
+        return res.status(400).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
 export const login_user = async (req: Request, res: Response) => {
     try {
         const result = await adminService.adminAuthUser(req.body as { email?: string })

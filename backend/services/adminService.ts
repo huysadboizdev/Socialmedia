@@ -96,6 +96,53 @@ export const deleteUserAccount = async (userId: string) => {
     return { success: true, message: 'User deleted successfully' }
 }
 
+export interface UpdateUserParams {
+    userId: string;
+    username?: string;
+    fullName?: string;
+    email?: string;
+    isBlocked?: boolean;
+    balance?: number;
+}
+
+/**
+ * Update user details
+ */
+export const updateUserAccount = async ({ userId, username, fullName, email, isBlocked, balance }: UpdateUserParams) => {
+    const user = await userModel.findById(userId)
+    if (!user) return { success: false, message: 'User not found' }
+
+    if (username) user.username = username
+    if (fullName) user.fullName = fullName
+    if (email) user.email = email
+    if (isBlocked !== undefined) user.isBlocked = isBlocked
+    
+    // Handle balance update
+    if (balance !== undefined && balance !== user.balance) {
+        const oldBalance = user.balance || 0
+        const newBalance = Number(balance)
+        const amount = newBalance - oldBalance
+        
+        user.balance = newBalance
+        
+        // Log transaction
+        await transactionModel.create({
+            userId: user._id,
+            amount: amount,
+            type: 'adjustment',
+            description: 'Admin chỉnh sửa thông tin số dư',
+            oldBalance: oldBalance,
+            newBalance: newBalance,
+            balanceType: 'profile',
+            status: 'approved',
+            createdAt: new Date()
+        })
+    }
+
+    await user.save()
+    return { success: true, message: 'User updated successfully', user }
+}
+
 /**
  * Get all users
  */
