@@ -7,7 +7,7 @@ const storage = multer.diskStorage({
     filename: function(_req, file, callback){
         // Sanitize filename: remove special chars, replace spaces, add timestamp
         const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-        callback(null, Date.now() + '-' + sanitizedName)
+        callback(null, Date.now().toString() + '-' + sanitizedName)
     }
 })
 

@@ -172,7 +172,7 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
 
 export const adjustBalance = async (req: Request, res: Response) => {
     try {
-        const { userId, amount } = req.body as { userId: string, amount: any }
+        const { userId, amount } = req.body as { userId: string, amount: string | number }
         if (!userId) {
             return res.status(400).json({ success: false, message: 'User ID is required' })
         }

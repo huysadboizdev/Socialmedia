@@ -1,4 +1,4 @@
-import mongoose, { Types } from 'mongoose'
+import { Types } from 'mongoose'
 import fs from 'fs'
 import { v2 as cloudinary } from 'cloudinary'
 import bcrypt from 'bcrypt'
