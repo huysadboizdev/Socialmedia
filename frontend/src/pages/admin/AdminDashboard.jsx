@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Overview from './components/Overview';
+import RecentSales from './components/RecentSales';
+import Analytics from './components/Analytics';
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -10,6 +22,7 @@ const AdminDashboard = () => {
     systemBalance: 0
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState(null);
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
   useEffect(() => {
@@ -20,8 +33,14 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data.success) {
-          setStatsData(res.data.stats);
-          setRecentOrders(res.data.recentOrders);
+          setStatsData({
+            totalUsers: res.data.stats?.totalUsers || 0,
+            todayOrders: res.data.stats?.todayOrders || 0,
+            monthlyRevenue: res.data.stats?.monthlyRevenue || 0,
+            systemBalance: res.data.stats?.systemBalance || 0
+          });
+          setRecentOrders(res.data.recentOrders || []);
+          setAnalyticsData(res.data.analytics || null);
         }
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
@@ -32,104 +51,154 @@ const AdminDashboard = () => {
     fetchStats();
   }, [API_URL]);
 
-  const stats = [
-    { label: "Tổng Thành Viên", value: statsData.totalUsers.toLocaleString(), icon: "group", color: "bg-blue-500/10 text-blue-500" },
-    { label: "Đơn Hàng Hôm Nay", value: statsData.todayOrders.toLocaleString(), icon: "shopping_cart", color: "bg-green-500/10 text-green-500" },
-    { label: "Doanh Thu Tháng", value: `${statsData.monthlyRevenue.toLocaleString()} ₫`, icon: "payments", color: "bg-purple-500/10 text-purple-500" },
-    { label: "Số Dư Hệ Thống", value: `${statsData.systemBalance.toLocaleString()} ₫`, icon: "account_balance", color: "bg-orange-500/10 text-orange-500" },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-lg font-medium text-slate-500 animate-pulse">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Trang Quản Trị</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Chào mừng quay trở lại, đây là tổng quan hệ thống của bạn.</p>
+    <div className='flex-1 space-y-4 p-4 md:p-8 pt-6 transition-colors duration-300 bg-[#f8f9fa] dark:bg-slate-950'>
+      <div className='flex items-center justify-between space-y-2'>
+        <h2 className='text-3xl font-bold tracking-tight'>Dashboard</h2>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-all hover:border-slate-200 dark:hover:border-slate-700">
-            <div className={`size-14 rounded-xl flex items-center justify-center ${stat.color}`}>
-              <span className="material-symbols-outlined text-3xl">{stat.icon}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">{stat.label}</span>
-              <span className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">{stat.value}</span>
-            </div>
+      <Tabs defaultValue='overview' className='space-y-4'>
+        <TabsList>
+          <TabsTrigger value='overview'>Overview</TabsTrigger>
+          <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+        </TabsList>
+        <TabsContent value='analytics' className='space-y-4'>
+          <Analytics data={analyticsData} />
+        </TabsContent>
+        <TabsContent value='overview' className='space-y-4'>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium'>
+                  Tổng Doanh Thu
+                </CardTitle>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth='2'
+                  className='h-4 w-4 text-muted-foreground'
+                >
+                  <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold'>{(statsData.monthlyRevenue || 0).toLocaleString()} ₫</div>
+                <p className='text-xs text-muted-foreground'>
+                  +20.1% so với tháng trước
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium'>
+                  Thành Viên
+                </CardTitle>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth='2'
+                  className='h-4 w-4 text-muted-foreground'
+                >
+                  <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
+                  <circle cx='9' cy='7' r='4' />
+                  <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold'>+{(statsData.totalUsers || 0).toLocaleString()}</div>
+                <p className='text-xs text-muted-foreground'>
+                  +180.1% so với tháng trước
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium'>Đơn Hàng</CardTitle>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth='2'
+                  className='h-4 w-4 text-muted-foreground'
+                >
+                  <rect width='20' height='14' x='2' y='5' rx='2' />
+                  <path d='M2 10h20' />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold'>+{(statsData.todayOrders || 0).toLocaleString()}</div>
+                <p className='text-xs text-muted-foreground'>
+                  +19% so với hôm qua
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium'>
+                  Số Dư Hệ Thống
+                </CardTitle>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth='2'
+                  className='h-4 w-4 text-muted-foreground'
+                >
+                  <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold'>{(statsData.systemBalance || 0).toLocaleString()} ₫</div>
+                <p className='text-xs text-muted-foreground'>
+                  +201 kể từ giờ trước
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 min-h-[400px]">
-             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Đơn Hàng Gần Đây</h3>
-             {loading ? (
-                <div className="flex flex-col items-center justify-center h-[300px] text-slate-400 dark:text-slate-500">
-                    <span className="material-symbols-outlined text-6xl animate-spin opacity-20">sync</span>
-                    <p className="mt-4 font-medium opacity-50">Đang tải dữ liệu...</p>
-                </div>
-             ) : recentOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-[300px] text-slate-400 dark:text-slate-500">
-                    <span className="material-symbols-outlined text-6xl opacity-20">history</span>
-                    <p className="mt-4 font-medium opacity-50">Chưa có đơn hàng nào.</p>
-                </div>
-             ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="text-slate-400 dark:text-slate-500 text-xs uppercase font-bold border-b border-slate-100 dark:border-slate-800">
-                                <th className="pb-4">Người dùng</th>
-                                <th className="pb-4">Dịch vụ</th>
-                                <th className="pb-4">Số lượng</th>
-                                <th className="pb-4">Tổng tiền</th>
-                                <th className="pb-4">Trạng thái</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-sm">
-                            {recentOrders.map((order, i) => (
-                                <tr key={i} className="border-b border-slate-50 dark:border-slate-800/50 last:border-0">
-                                    <td className="py-4 font-medium text-slate-700 dark:text-slate-200">{order.userId?.username || 'N/A'}</td>
-                                    <td className="py-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-700 dark:text-slate-200">{order.service?.name}</span>
-                                            <span className="text-xs text-slate-400 uppercase">{order.service?.platform}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-4 text-slate-600 dark:text-slate-400">{order.quantity.toLocaleString()}</td>
-                                    <td className="py-4 font-bold text-slate-700 dark:text-slate-200">{order.totalPrice.toLocaleString()} ₫</td>
-                                    <td className="py-4">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                            order.status === 'Completed' ? 'bg-green-500/10 text-green-500' :
-                                            order.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-500' :
-                                            order.status === 'In Progress' ? 'bg-blue-500/10 text-blue-500' :
-                                            'bg-red-500/10 text-red-500'
-                                        }`}>
-                                            {order.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-             )}
-         </div>
-
-         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6">
-             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Hoạt Động Hệ Thống</h3>
-             <div className="space-y-6">
-                 {[1,2,3,4].map(i => (
-                     <div key={i} className="flex gap-4 border-l-2 border-slate-100 dark:border-slate-800 pl-6 relative">
-                         <div className="absolute -left-[5px] top-1 size-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
-                         <div className="flex flex-col gap-1">
-                             <span className="text-xs text-slate-400 dark:text-slate-500 font-medium tracking-tight">10 phút trước</span>
-                             <p className="text-sm text-slate-700 dark:text-slate-200 font-medium">Bản tin hệ thống {i}</p>
-                         </div>
-                     </div>
-                 ))}
-             </div>
-         </div>
-      </div>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-7'>
+            <Card className='col-span-4'>
+              <CardHeader>
+                <CardTitle>Tổng Quan</CardTitle>
+              </CardHeader>
+              <CardContent className='pl-2'>
+                <Overview />
+              </CardContent>
+            </Card>
+            <Card className='col-span-3'>
+              <CardHeader>
+                <CardTitle>Đơn Hàng Gần Đây</CardTitle>
+                <CardDescription>
+                  Hệ thống có {recentOrders.length} đơn hàng mới trong hôm nay.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RecentSales orders={recentOrders} />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

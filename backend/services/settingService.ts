@@ -2,10 +2,10 @@ import settingModel from '../models/settingModel.js';
 
 export const getSetting = async (key: string) => {
   const setting = await settingModel.findOne({ key });
-  return setting ? setting.value : null;
+  return setting ? (setting.value as unknown) : null;
 };
 
-export const updateSetting = async (key: string, value: any, description?: string) => {
+export const updateSetting = async (key: string, value: unknown, description?: string) => {
   const setting = await settingModel.findOneAndUpdate(
     { key },
     { value, description },

@@ -10,8 +10,8 @@ const submissionSchema = new Schema({
     enum: ['accepted', 'pending', 'approved', 'rejected'], 
     default: 'pending' 
   },
-  adminNote: { type: String },
-  hasClickedLink: { type: Boolean, default: false }
+  isClicked: { type: Boolean, default: false },
+  adminNote: { type: String }
 }, { timestamps: true });
 
 // Ensure unique submission per mission per user (can change if re-submission allowed after rejection)

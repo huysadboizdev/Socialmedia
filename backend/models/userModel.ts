@@ -17,6 +17,9 @@ const userSchema = new Schema(
     image: { type: String },
     isBlocked: { type: Boolean, default: false },
     completedMissions: [{ type: Schema.Types.ObjectId, ref: 'mission' }],
+    totalDeposit: { type: Number, default: 0 },
+    monthlyDeposit: { type: Number, default: 0 },
+    lastDepositMonth: { type: Number, default: null },
     attendance: {
       lastDate: { type: Date, default: null },
       streak: { type: Number, default: 0 }

@@ -175,7 +175,7 @@ const AdminMissionRequests = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-full">
+        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] dark:bg-slate-950 min-h-full transition-colors duration-300">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
@@ -184,16 +184,16 @@ const AdminMissionRequests = () => {
                 </div>
                 
                 {/* Tab Switcher */}
-                <div className="flex p-0.5 bg-slate-200/50 dark:bg-slate-800 rounded-lg border border-slate-200/60 w-fit">
+                <div className="flex p-0.5 bg-slate-200/50 dark:bg-slate-800 rounded-lg border border-slate-200/60 dark:border-slate-700 w-fit transition-all">
                     <button 
                         onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
-                        className={`px-4 py-1.5 rounded-md text-[13px] font-bold transition-all ${activeTab === 'pending' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-4 py-1.5 rounded-md text-[13px] font-bold transition-all ${activeTab === 'pending' ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Chờ duyệt ({requests.length})
                     </button>
                     <button 
                         onClick={() => { setActiveTab('history'); setCurrentPage(1); }}
-                        className={`px-4 py-1.5 rounded-md text-[13px] font-bold transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-4 py-1.5 rounded-md text-[13px] font-bold transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Lịch sử ({history.length})
                     </button>
@@ -201,7 +201,7 @@ const AdminMissionRequests = () => {
             </div>
 
             {/* Table Section */}
-            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm transition-all">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -242,7 +242,7 @@ const AdminMissionRequests = () => {
                                 </TableRow>
                             ) : (
                                 paginatedData.map((req) => (
-                                    <TableRow key={req._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                                    <TableRow key={req._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/50 last:border-0">
                                         <TableCell className="text-center">
                                             <Checkbox 
                                                 checked={selectedRequests.includes(req._id)}
@@ -252,7 +252,7 @@ const AdminMissionRequests = () => {
                                         <TableCell className="text-center">
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-slate-700 dark:text-slate-200">{req.userId?.username}</span>
-                                                <span className="text-[11px] text-slate-400">{req.userId?.fullName}</span>
+                                                <span className="text-[11px] text-slate-400 dark:text-slate-500">{req.userId?.fullName}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-center">
@@ -279,7 +279,7 @@ const AdminMissionRequests = () => {
                                                 </div>
                                             </button>
                                         </TableCell>
-                                        <TableCell className="text-center text-[11px] text-slate-500">
+                                        <TableCell className="text-center text-[11px] text-slate-500 dark:text-slate-500">
                                             {new Date(req.createdAt).toLocaleString('vi-VN')}
                                         </TableCell>
                                         <TableCell className="text-center">
@@ -289,7 +289,7 @@ const AdminMissionRequests = () => {
                                                         variant="ghost" 
                                                         size="sm"
                                                         onClick={() => handleApproveClick(req._id)}
-                                                        className="h-8 px-2 text-green-600 hover:bg-green-50 font-bold text-[12px] flex items-center gap-1"
+                                                        className="h-8 px-2 text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 font-bold text-[12px] flex items-center gap-1"
                                                     >
                                                         <span className="material-symbols-outlined text-[16px]">check_circle</span>
                                                         Duyệt
@@ -298,7 +298,7 @@ const AdminMissionRequests = () => {
                                                         variant="ghost" 
                                                         size="sm"
                                                         onClick={() => handleRejectClick(req._id)}
-                                                        className="h-8 px-2 text-red-600 hover:bg-red-50 font-bold text-[12px] flex items-center gap-1"
+                                                        className="h-8 px-2 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold text-[12px] flex items-center gap-1"
                                                     >
                                                         <span className="material-symbols-outlined text-[16px]">cancel</span>
                                                         Từ Chối
@@ -307,12 +307,12 @@ const AdminMissionRequests = () => {
                                             ) : (
                                                 <div className="flex flex-col items-center gap-1">
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                                                        req.status === 'approved' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
+                                                        req.status === 'approved' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-500 border-green-200 dark:border-green-900/30' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 border-red-200 dark:border-red-900/30'
                                                     }`}>
                                                         {req.status === 'approved' ? 'Đã duyệt' : 'Đã từ chối'}
                                                     </span>
                                                     {req.adminNote && (
-                                                        <span className="text-[10px] text-slate-400 italic max-w-[120px] truncate" title={req.adminNote}>
+                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 italic max-w-[120px] truncate" title={req.adminNote}>
                                                             {req.adminNote}
                                                         </span>
                                                     )}
@@ -327,16 +327,16 @@ const AdminMissionRequests = () => {
                 </div>
 
                 {/* Pagination Section */}
-                <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
-                    <div className="text-sm text-slate-500">
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 transition-all">
+                    <div className="text-sm text-slate-500 dark:text-slate-500">
                         Đã chọn {selectedRequests.length} trong {paginatedData.length} hàng.
                     </div>
                     
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-500">Tổng: {displayData.length}</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-500">Tổng: {displayData.length}</span>
                             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
-                                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
+                                <SelectTrigger className="w-[70px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-8 rounded text-xs dark:text-white transition-all">
                                     <SelectValue placeholder="10" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -349,14 +349,14 @@ const AdminMissionRequests = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+                            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                                 Trang {currentPage}/{totalPages || 1}
                             </span>
                             <div className="flex items-center gap-1">
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
                                 >
@@ -365,7 +365,7 @@ const AdminMissionRequests = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
                                 >
@@ -374,7 +374,7 @@ const AdminMissionRequests = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={currentPage === totalPages || totalPages === 0}
                                 >
@@ -383,7 +383,7 @@ const AdminMissionRequests = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages || totalPages === 0}
                                 >
@@ -398,21 +398,26 @@ const AdminMissionRequests = () => {
             {/* IMAGE PREVIEW MODAL */}
             {viewingImage && (
                 <div 
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300"
                     onClick={() => setViewingImage(null)}
                 >
-                    <div className="relative max-w-2xl w-full max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                    <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
+                        <div className="absolute top-0 right-0 p-4 z-10">
+                            <button 
+                                onClick={() => setViewingImage(null)}
+                                className="text-white/80 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-2 rounded-full backdrop-blur-sm"
+                            >
+                                <span className="material-symbols-outlined text-2xl">close</span>
+                            </button>
+                        </div>
                         <img 
                             src={viewingImage} 
                             alt="Full Proof" 
-                            className="w-full h-full object-contain rounded-lg shadow-2xl"
+                            className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10"
                         />
-                        <button 
-                            onClick={() => setViewingImage(null)}
-                            className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors bg-white/10 p-1 rounded-full"
-                        >
-                            <span className="material-symbols-outlined text-2xl">close</span>
-                        </button>
+                        <div className="mt-4 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/90 text-sm font-medium">
+                            Bằng chứng hoàn thành nhiệm vụ
+                        </div>
                     </div>
                 </div>
             )}

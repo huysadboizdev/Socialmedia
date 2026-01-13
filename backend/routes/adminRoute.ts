@@ -27,6 +27,7 @@ import {
     approveWithdrawal,
     rejectWithdrawal,
     runBalanceFix,
+    getAllDeposits,
     editUser
 } from '../controller/adminController.js'
 import { updateAnnouncement } from '../controller/settingController.js'
@@ -46,6 +47,7 @@ adminRouter.post('/login', login_admin)
 adminRouter.post('/approve', approveDeposit)
 adminRouter.post('/reject', rejectDeposit)
 adminRouter.get('/transactions', getTransactions)
+adminRouter.get('/deposits', getAllDeposits)
 adminRouter.post('/manage-order', handleAdminOrders)
 adminRouter.post('/adjust-balance', adjustBalance)
 

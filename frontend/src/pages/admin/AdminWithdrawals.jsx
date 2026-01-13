@@ -147,7 +147,7 @@ const AdminWithdrawals = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-full">
+        <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] dark:bg-slate-950 min-h-full transition-colors duration-300">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
@@ -173,7 +173,7 @@ const AdminWithdrawals = () => {
             </div>
 
             {/* Table Section */}
-            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm transition-all">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -215,7 +215,7 @@ const AdminWithdrawals = () => {
                                     const final = amount - fee;
                                     
                                     return (
-                                        <TableRow key={req._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                                        <TableRow key={req._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/50 last:border-0">
                                             <TableCell className="text-center">
                                                 <Checkbox 
                                                     checked={selectedRequests.includes(req._id)}
@@ -241,13 +241,13 @@ const AdminWithdrawals = () => {
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <div className="flex flex-col items-center gap-1 text-[11px]">
-                                                    <div className="flex items-center gap-1.5 bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100/50 w-full max-w-[140px]">
-                                                        <span className="material-symbols-outlined text-[14px] text-blue-600">account_balance</span>
-                                                        <span className="font-bold text-slate-700 truncate">{req.withdrawalDetails?.bankName}</span>
+                                                    <div className="flex items-center gap-1.5 bg-blue-50/50 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-100/50 dark:border-blue-900/30 w-full max-w-[140px]">
+                                                        <span className="material-symbols-outlined text-[14px] text-blue-600 dark:text-blue-400">account_balance</span>
+                                                        <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{req.withdrawalDetails?.bankName}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/50 w-full max-w-[140px]">
+                                                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded-lg border border-slate-200/50 dark:border-slate-700/50 w-full max-w-[140px]">
                                                         <span className="material-symbols-outlined text-[14px] text-slate-500">credit_card</span>
-                                                        <span className="font-black text-slate-600 text-[12px]">{req.withdrawalDetails?.bankAccount}</span>
+                                                        <span className="font-black text-slate-600 dark:text-slate-300 text-[12px]">{req.withdrawalDetails?.bankAccount}</span>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -255,7 +255,7 @@ const AdminWithdrawals = () => {
                                                 {req.withdrawalDetails?.qrCode ? (
                                                     <button 
                                                         onClick={() => setViewingQR(req.withdrawalDetails.qrCode)}
-                                                        className="relative group size-10 rounded-lg border border-slate-200 overflow-hidden mx-auto hover:ring-2 hover:ring-purple-500/20 transition-all bg-white p-0.5"
+                                                        className="relative group size-10 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden mx-auto hover:ring-2 hover:ring-purple-500/20 transition-all bg-white dark:bg-slate-800 p-0.5"
                                                     >
                                                         <img src={req.withdrawalDetails.qrCode} alt="QR" className="w-full h-full object-contain" />
                                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -308,16 +308,16 @@ const AdminWithdrawals = () => {
                 </div>
 
                 {/* Pagination Section */}
-                <div className="px-6 py-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50">
-                    <div className="text-sm text-slate-500">
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 transition-all">
+                    <div className="text-sm text-slate-500 dark:text-slate-500">
                         Đã chọn {selectedRequests.length} trong {paginatedData.length} hàng.
                     </div>
                     
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-500">Tổng: {filteredRequests.length}</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-500">Tổng: {filteredRequests.length}</span>
                             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
-                                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
+                                <SelectTrigger className="w-[70px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-8 rounded text-xs dark:text-white transition-all">
                                     <SelectValue placeholder="10" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -328,16 +328,16 @@ const AdminWithdrawals = () => {
                                 </SelectContent>
                             </Select>
                         </div>
-
+ 
                         <div className="flex items-center gap-4">
-                            <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+                            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                                 Trang {currentPage}/{totalPages || 1}
                             </span>
                             <div className="flex items-center gap-1">
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(1)}
                                     disabled={currentPage === 1}
                                 >
@@ -346,7 +346,7 @@ const AdminWithdrawals = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
                                 >
@@ -355,7 +355,7 @@ const AdminWithdrawals = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={currentPage === totalPages || totalPages === 0}
                                 >
@@ -364,7 +364,7 @@ const AdminWithdrawals = () => {
                                 <Button 
                                     variant="outline" 
                                     size="icon" 
-                                    className="size-8 rounded border-slate-200"
+                                    className="size-8 rounded border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={currentPage === totalPages || totalPages === 0}
                                 >
