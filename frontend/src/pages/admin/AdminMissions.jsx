@@ -310,11 +310,7 @@ const AdminMissions = () => {
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-slate-500 dark:text-slate-500">Tổng: {filteredMissions.length}</span>
                             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
-<<<<<<< HEAD
                                 <SelectTrigger className="w-[70px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-8 rounded text-xs dark:text-white transition-all">
-=======
-                                <SelectTrigger className="w-[70px] bg-white border-slate-200 h-8 rounded text-xs">
->>>>>>> main
                                     <SelectValue placeholder="10" />
                                 </SelectTrigger>
                                 <SelectContent>

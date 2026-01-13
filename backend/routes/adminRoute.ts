@@ -27,11 +27,8 @@ import {
     approveWithdrawal,
     rejectWithdrawal,
     runBalanceFix,
-<<<<<<< HEAD
-    getAllDeposits
-=======
+    getAllDeposits,
     editUser
->>>>>>> main
 } from '../controller/adminController.js'
 import { updateAnnouncement } from '../controller/settingController.js'
 

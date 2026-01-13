@@ -12,7 +12,6 @@ import {
   attendance,
   submitMission,
   acceptMission,
-  trackMissionClick,
   withdrawMissionBalance,
   getTransactionHistory,
   clickMission
@@ -37,21 +36,12 @@ userRouter.post('/deposit', authUser, requestDeposit)
 
 // service & order
 userRouter.post('/service', authUser, handleUserService)
-<<<<<<< HEAD
 userRouter.get('/missions', authUser, getMissions)
 userRouter.post('/mission/accept', authUser, acceptMission)
 userRouter.post('/mission/click', authUser, clickMission)
 userRouter.post('/mission/submit', authUser, upload.single('imageProof'), submitMission)
 userRouter.post('/mission/withdraw', authUser, upload.single('qrCode'), withdrawMissionBalance)
 userRouter.get('/missions/completed', authUser, getCompletedMissions)
-=======
-userRouter.get('/missions', authUser, getMissions as any)
-userRouter.post('/mission/accept', authUser, acceptMission as any)
-userRouter.post('/mission/click', authUser, trackMissionClick as any)
-userRouter.post('/mission/submit', authUser, upload.single('imageProof'), submitMission as any)
-userRouter.post('/mission/withdraw', authUser, upload.single('qrCode'), withdrawMissionBalance as any)
-userRouter.get('/missions/completed', authUser, getCompletedMissions as any)
->>>>>>> main
 
 // attendance
 userRouter.post('/attendance', authUser, attendance)

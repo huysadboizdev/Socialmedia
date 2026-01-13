@@ -28,7 +28,7 @@ const DailyTask = () => {
     },
     {
       label: 'Đã Rút',
-      value: '0 đ', // This could be fetched too if backend provides it
+      value: '0 đ', 
       icon: 'account_balance_wallet',
       color: 'bg-purple-50',
       iconColor: 'text-purple-500',
@@ -76,7 +76,6 @@ const DailyTask = () => {
     }
   };
 
-<<<<<<< HEAD
   const handleLinkClick = async (mission) => {
     try {
       const token = localStorage.getItem('token');
@@ -97,18 +96,6 @@ const DailyTask = () => {
       console.error("Error recording click:", error);
       toast.error('Có lỗi xảy ra khi thực hiện nhiệm vụ.');
     }
-=======
-  const handleLinkClick = async (missionId, link) => {
-      window.open(link, '_blank');
-      
-      try {
-          const token = localStorage.getItem('token');
-          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/click`, { missionId }, {
-              headers: { Authorization: `Bearer ${token}` }
-          });
-      } catch (error) {
-          console.error("Track click error", error);
-      }
   };
 
   /* Utility: Compress Image using Canvas */
@@ -139,7 +126,6 @@ const DailyTask = () => {
             };
         };
     });
->>>>>>> main
   };
 
   const handleSubmitProof = async (missionId, file) => {
@@ -243,10 +229,6 @@ const DailyTask = () => {
     }
   };
  
-  // Pagination Logic
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
   // Reset page when switching tabs
   useEffect(() => {
     setCurrentPage(1);
@@ -257,7 +239,6 @@ const DailyTask = () => {
     ? missions.filter(m => m.status === 'available')
     : missions.filter(m => m.status !== 'available');
 
-<<<<<<< HEAD
   const activeMission = missions.find(m => m._id === focusedMissionId);
 
   // Focus View Logic
@@ -275,13 +256,6 @@ const DailyTask = () => {
     setFocusedMissionId(null);
     localStorage.removeItem('activeMissionId');
   };
-=======
-  const totalPages = Math.ceil(filteredMissions.length / itemsPerPage);
-  const currentMissions = filteredMissions.slice(
-      (currentPage - 1) * itemsPerPage,
-      currentPage * itemsPerPage
-  );
->>>>>>> main
 
   const handleAcceptMission = async (missionId) => {
       try {
@@ -382,74 +356,20 @@ const DailyTask = () => {
                     <p className="text-slate-500 dark:text-slate-400 font-medium">Hiện không có nhiệm vụ nào</p>
                 </div>
             ) : (
-<<<<<<< HEAD
-                paginatedMissions.map((mission) => (
-                    <div 
-                        key={mission._id} 
-                        className={`bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border flex flex-col md:flex-row items-center gap-6 transition-all ${
-                            focusedMissionId === mission._id 
-                            ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] ring-2 ring-red-500/20' 
-                            : 'border-slate-100 dark:border-slate-800'
-                        }`}
-                    >
-                        <div className={`shrink-0 size-16 rounded-2xl flex items-center justify-center ${
-                             mission.type === 'like' ? 'bg-blue-50 text-blue-600' :
-                             mission.type === 'follow' ? 'bg-pink-50 text-pink-600' :
-                             'bg-violet-50 text-violet-600'
-                        }`}>
-                            <span className="material-symbols-outlined text-3xl">
-                                {mission.type === 'like' ? 'thumb_up' : mission.type === 'follow' ? 'person_add' : 'share'}
-                            </span>
-                        </div>
-                        
-                        <div className="flex-1 text-center md:text-left space-y-1">
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{mission.title}</h3>
-                            <p className="text-sm font-medium text-slate-500 flex justify-center md:justify-start items-center gap-1">
-                                <span className="material-symbols-outlined text-[16px]">monetization_on</span>
-                                Thưởng: <span className="text-emerald-600 font-bold">+{mission.reward?.toLocaleString()} đ</span>
-                            </p>
-                            
-                            {/* Hide Link for Available missions */}
-                            {mission.status !== 'available' && (
-                                <a 
-                                    href="#"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        handleLinkClick(mission);
-                                    }}
-                                    className="text-xs text-blue-500 hover:underline truncate max-w-[200px] inline-block"
-                                >
-                                    Link nhiệm vụ
-                                </a>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col gap-2 min-w-[140px]">
-                            {/* 1. AVAILABLE -> Show "Nhận nhiệm vụ" */}
-                            {mission.status === 'available' && (
-                                <button 
-                                    onClick={() => handleAcceptMission(mission._id)}
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">add_task</span>
-                                    Nhận nhiệm vụ
-                                </button>
-                            )}
-
-                            {/* 2. ACCEPTED or REJECTED -> Show Submit Actions */}
-                            {(mission.status === 'accepted' || mission.status === 'rejected') && (
-                                <>
-                                    <button 
-                                        onClick={() => handleLinkClick(mission)}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-=======
                 <>
-                    {currentMissions.map((mission) => (
-                        <div key={mission._id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center gap-6">
+                    {paginatedMissions.map((mission) => (
+                        <div 
+                            key={mission._id} 
+                            className={`bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border flex flex-col md:flex-row items-center gap-6 transition-all ${
+                                focusedMissionId === mission._id 
+                                ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] ring-2 ring-red-500/20' 
+                                : 'border-slate-100 dark:border-slate-800'
+                            }`}
+                        >
                             <div className={`shrink-0 size-16 rounded-2xl flex items-center justify-center ${
-                                    mission.type === 'like' ? 'bg-blue-50 text-blue-600' :
-                                    mission.type === 'follow' ? 'bg-pink-50 text-pink-600' :
-                                    'bg-violet-50 text-violet-600'
+                                 mission.type === 'like' ? 'bg-blue-50 text-blue-600' :
+                                 mission.type === 'follow' ? 'bg-pink-50 text-pink-600' :
+                                 'bg-violet-50 text-violet-600'
                             }`}>
                                 <span className="material-symbols-outlined text-3xl">
                                     {mission.type === 'like' ? 'thumb_up' : mission.type === 'follow' ? 'person_add' : 'share'}
@@ -466,12 +386,12 @@ const DailyTask = () => {
                                 {/* Hide Link for Available missions */}
                                 {mission.status !== 'available' && (
                                     <a 
-                                        href={mission.link} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        onClick={() => handleLinkClick(mission._id, mission.link)}
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handleLinkClick(mission);
+                                        }}
                                         className="text-xs text-blue-500 hover:underline truncate max-w-[200px] inline-block"
->>>>>>> main
                                     >
                                         Link nhiệm vụ
                                     </a>
@@ -494,7 +414,7 @@ const DailyTask = () => {
                                 {(mission.status === 'accepted' || mission.status === 'rejected') && (
                                     <>
                                         <button 
-                                            onClick={() => handleLinkClick(mission._id, mission.link)}
+                                            onClick={() => handleLinkClick(mission)}
                                             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
                                         >
                                             <span className="material-symbols-outlined text-[18px]">open_in_new</span>
@@ -550,7 +470,7 @@ const DailyTask = () => {
                     ))}
 
                     {/* Pagination Controls */}
-                    {totalPages > 1 && (
+                    {!focusedMissionId && totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 mt-6">
                             <button
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -567,7 +487,7 @@ const DailyTask = () => {
                                     className={`size-10 flex items-center justify-center rounded-lg font-bold transition-all shadow-sm ${
                                         currentPage === page
                                             ? 'bg-blue-600 text-white shadow-blue-500/30'
-                                            : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-500 hover:bg-slate-50'
+                                             : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-500 hover:bg-slate-50'
                                     }`}
                                 >
                                     {page}
@@ -584,41 +504,6 @@ const DailyTask = () => {
                         </div>
                     )}
                 </>
-            )}
-
-            {/* Pagination Controls */}
-            {!focusedMissionId && totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-6">
-                    <button
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-30 transition-all hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                        <span className="material-symbols-outlined">chevron_left</span>
-                    </button>
-                    
-                    {[...Array(totalPages)].map((_, i) => (
-                        <button
-                            key={i + 1}
-                            onClick={() => setCurrentPage(i + 1)}
-                            className={`size-10 rounded-lg border font-bold transition-all ${
-                                currentPage === i + 1
-                                    ? 'bg-[#6610f2] border-[#6610f2] text-white shadow-md'
-                                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                            }`}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
-
-                    <button
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-30 transition-all hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                        <span className="material-symbols-outlined">chevron_right</span>
-                    </button>
-                </div>
             )}
         </div>
       </div>
