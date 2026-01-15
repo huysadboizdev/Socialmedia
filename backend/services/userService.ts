@@ -2,7 +2,6 @@ import { Types } from 'mongoose'
 import fs from 'fs'
 import { v2 as cloudinary } from 'cloudinary'
 import bcrypt from 'bcrypt'
-
 import userModel, { type IUser } from '../models/userModel.js'
 import missionModel from '../models/missionModel.js'
 import serviceModel from '../models/serviceModel.js'
@@ -458,7 +457,8 @@ export const getAvailableMissions = async (userId: string) => {
             link: mission.link,
             type: mission.type,
             isActive: mission.isActive,
-            status
+            status,
+            clickedAt: submission?.clickedAt
         };
     });
 
@@ -512,11 +512,13 @@ export const recordMissionClick = async (userId: string, missionId: string) => {
             userId: uId,
             missionId: mId,
             status: 'accepted',
-            isClicked: true
+            isClicked: true,
+            clickedAt: new Date()
         });
     } else {
         console.log(`[CLICK_TRACKING] Updating existing submission (Status: ${submission.status}) to isClicked: true for User: ${userId}`);
         submission.isClicked = true;
+        submission.clickedAt = new Date();
         await submission.save();
     }
 
@@ -609,21 +611,59 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
         existingSubmission.adminNote = 'Hệ thống: Đã click link - Tự động duyệt';
         await existingSubmission.save();
 
-        // AUTO-APPROVE LOGIC (Bypassing manual admin for clicked missions)
-        const { approveUserSubmission } = await import('./adminService.js');
-        const approveResult = await approveUserSubmission(existingSubmission._id.toString());
-        
-        if (approveResult.success) {
-            return { 
-                success: true, 
-                message: `Nhiệm vụ được hệ thống duyệt tự động! Bạn nhận được +${mission.reward.toLocaleString()}đ` 
-            };
-        } else {
-            return { 
-                success: true, 
-                message: 'Nộp nhiệm vụ thành công! Vui lòng chờ Admin duyệt.' 
-            };
+        // NEW AUTO VERIFICATION LOGIC (NO AI VISION)
+        let verificationResult;
+        try {
+             const { verifyMissionProof } = await import('./verifyMissionService.js');
+             console.log(`[MISSION_VERIFY] Verifying proof for mission type: ${mission.type}`);
+             // Pass clickedAt if available. explicitly cast to Date if needed or let JS handle it
+             verificationResult = await verifyMissionProof(imageProof.path, mission.type, existingSubmission.clickedAt ?? undefined);
+             console.log(`[MISSION_VERIFY] Result:`, verificationResult);
+        } catch (err) {
+             console.error("[MISSION_VERIFY] failed:", err);
+             verificationResult = { success: false, status: 'pending', reason: 'System Error', imageHash: '' };
         }
+
+        // Save hash if available
+        if (verificationResult.imageHash) {
+            existingSubmission.imageHash = verificationResult.imageHash;
+        }
+
+        if (verificationResult.status === 'approved') {
+             const { approveUserSubmission } = await import('./adminService.js');
+             const approveResult = await approveUserSubmission(existingSubmission._id.toString());
+             
+             if (approveResult.success) {
+                existingSubmission.adminNote = `Auto: ${verificationResult.reason}`;
+                await existingSubmission.save();
+
+                return { 
+                    success: true, 
+                    message: `Nhiệm vụ được duyệt tự động! (+${mission.reward.toLocaleString()}đ)` 
+                };
+             }
+        } 
+        
+        // If rejected
+        if (verificationResult.status === 'rejected') {
+             existingSubmission.status = 'rejected';
+             existingSubmission.adminNote = `Auto Reject: ${verificationResult.reason}`;
+             await existingSubmission.save();
+             
+             return {
+                 success: false,
+                 message: `Từ chối: ${verificationResult.reason}`
+             };
+        }
+
+        // If pending / fallback
+        existingSubmission.adminNote = `Check: ${verificationResult.reason}. Chờ Admin duyệt.`;
+        await existingSubmission.save();
+
+        return { 
+            success: true, 
+            message: 'Nộp thành công! Vui lòng chờ Admin duyệt.' 
+        };
 
     } catch (error: unknown) {
         console.error("Mission submission error:", error);
