@@ -2,6 +2,58 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
+// --- SUB COMPONENTS ---
+
+const MissionTimer = ({ clickedAt, onExpire }) => {
+    // Lazy initialization for state
+    const [timeLeft, setTimeLeft] = useState(() => {
+        if (!clickedAt) return 0;
+        const deadline = new Date(clickedAt).getTime() + 3 * 60 * 1000;
+        return Math.max(0, deadline - Date.now());
+    });
+
+    useEffect(() => {
+        if (!clickedAt) return;
+        
+        const deadline = new Date(clickedAt).getTime() + 3 * 60 * 1000;
+        
+        // Update immediately to sync
+        setTimeLeft(Math.max(0, deadline - Date.now()));
+
+        const timer = setInterval(() => {
+            const remaining = Math.max(0, deadline - Date.now());
+            setTimeLeft(remaining);
+            if (remaining <= 0) {
+                clearInterval(timer);
+                if (onExpire) onExpire();
+            }
+        }, 1000);
+        
+        return () => clearInterval(timer);
+    }, [clickedAt, onExpire]); // Added onExpire dependency
+
+    if (!clickedAt) return null;
+
+    if (!clickedAt) return null;
+
+    const minutes = Math.floor(timeLeft / 60000);
+    const seconds = Math.floor((timeLeft % 60000) / 1000);
+    const isUrgent = minutes === 0 && seconds < 30;
+
+    return (
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border transition-colors duration-300 ${
+            isUrgent 
+            ? 'bg-red-600 text-white animate-bounce' 
+            : 'bg-orange-100 text-orange-600 border-orange-200'
+        }`}>
+            <span className="material-symbols-outlined text-[16px]">timer</span>
+            {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
+
 const DailyTask = () => {
   const [activeTab, setActiveTab] = useState('list');
   const [withdrawalType, setWithdrawalType] = useState('web');
@@ -10,6 +62,7 @@ const DailyTask = () => {
   const [missions, setMissions] = useState([]);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [focusedMissionId, setFocusedMissionId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,7 +141,7 @@ const DailyTask = () => {
           window.open(mission.link, '_blank');
           setFocusedMissionId(mission._id);
           localStorage.setItem('activeMissionId', mission._id);
-          fetchMissions();
+          fetchMissions(); // Refresh to get the clickedAt timestamp
       } else {
           toast.error(res.data.message || 'Lỗi khi ghi nhận click. Vui lòng thử lại.');
       }
@@ -332,21 +385,31 @@ const DailyTask = () => {
 
         {/* Mission List */}
         <div className="space-y-4">
-            {focusedMissionId && (
-                <div className="flex justify-between items-center mb-4">
-                    <button 
-                        onClick={clearFocus}
-                        className="flex items-center gap-2 text-purple-600 font-bold hover:underline"
-                    >
-                        <span className="material-symbols-outlined">arrow_back</span>
-                        Quay lại danh sách
-                    </button>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-black animate-pulse uppercase tracking-widest border border-red-200">
-                        <span className="size-2 bg-red-600 rounded-full"></span>
-                        Đang thực hiện
-                    </div>
-                </div>
-            )}
+             {focusedMissionId && (
+                 <div className="flex justify-between items-center mb-4">
+                     <button 
+                         onClick={clearFocus}
+                         className="flex items-center gap-2 text-purple-600 font-bold hover:underline"
+                     >
+                         <span className="material-symbols-outlined">arrow_back</span>
+                         Quay lại danh sách
+                     </button>
+                     <div className="flex items-center gap-2">
+                         {/* TIMER COMPONENT */}
+                         <MissionTimer 
+                            clickedAt={activeMission?.clickedAt} 
+                            onExpire={() => {
+                                setShowTimeoutModal(true);
+                            }} 
+                         />
+                         
+                         <div className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-black animate-pulse uppercase tracking-widest border border-red-200">
+                             <span className="size-2 bg-red-600 rounded-full"></span>
+                             Đang thực hiện
+                         </div>
+                     </div>
+                 </div>
+             )}
 
             {loading ? (
                 <div className="text-center py-10 text-slate-500">Đang tải nhiệm vụ...</div>
@@ -357,7 +420,11 @@ const DailyTask = () => {
                 </div>
             ) : (
                 <>
-                    {paginatedMissions.map((mission) => (
+                    {paginatedMissions.map((mission) => {
+                        const isExpired = mission.clickedAt && mission.status !== 'approved' && mission.status !== 'pending' && 
+                             (Date.now() - new Date(mission.clickedAt).getTime() > 3 * 60 * 1000);
+
+                        return (
                         <div 
                             key={mission._id} 
                             className={`bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border flex flex-col md:flex-row items-center gap-6 transition-all ${
@@ -384,7 +451,7 @@ const DailyTask = () => {
                                 </p>
                                 
                                 {/* Hide Link for Available missions */}
-                                {mission.status !== 'available' && (
+                                {mission.status !== 'available' && !isExpired && (
                                     <a 
                                         href="#"
                                         onClick={(e) => {
@@ -399,8 +466,16 @@ const DailyTask = () => {
                             </div>
 
                             <div className="flex flex-col gap-2 min-w-[140px]">
-                                {/* 1. AVAILABLE -> Show "Nhận nhiệm vụ" */}
-                                {mission.status === 'available' && (
+                                {/* 1. EXPIRED -> Show "Thất bại" */}
+                                {isExpired && (
+                                     <div className="px-4 py-2 bg-red-50 text-red-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-red-200">
+                                        <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                        Thất bại
+                                    </div>
+                                )}
+
+                                {/* 2. AVAILABLE -> Show "Nhận nhiệm vụ" */}
+                                {!isExpired && mission.status === 'available' && (
                                     <button 
                                         onClick={() => handleAcceptMission(mission._id)}
                                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
@@ -410,8 +485,8 @@ const DailyTask = () => {
                                     </button>
                                 )}
 
-                                {/* 2. ACCEPTED or REJECTED -> Show Submit Actions */}
-                                {(mission.status === 'accepted' || mission.status === 'rejected') && (
+                                {/* 3. ACCEPTED or REJECTED -> Show Submit Actions (If NOT Expired) */}
+                                {!isExpired && (mission.status === 'accepted' || mission.status === 'rejected') && (
                                     <>
                                         <button 
                                             onClick={() => handleLinkClick(mission)}
@@ -445,21 +520,21 @@ const DailyTask = () => {
                                     </>
                                 )}
 
-                                {mission.status === 'pending' && (
+                                {!isExpired && mission.status === 'pending' && (
                                     <div className="px-4 py-2 bg-yellow-50 text-yellow-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-yellow-200">
                                         <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
                                         Chờ duyệt 24h
                                     </div>
                                 )}
 
-                                    {mission.status === 'approved' && (
+                                {mission.status === 'approved' && (
                                     <div className="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-green-200">
                                         <span className="material-symbols-outlined text-[18px]">check_circle</span>
                                         Đã hoàn thành
                                     </div>
                                 )}
 
-                                {mission.status === 'rejected' && (
+                                {!isExpired && mission.status === 'rejected' && (
                                     <div className="text-xs text-center text-red-500 font-bold mb-1">
                                         Bị từ chối. Hãy nộp lại!
                                     </div>
@@ -467,7 +542,8 @@ const DailyTask = () => {
                                 
                             </div>
                         </div>
-                    ))}
+                    );
+                })}
 
                     {/* Pagination Controls */}
                     {!focusedMissionId && totalPages > 1 && (
@@ -644,6 +720,35 @@ const DailyTask = () => {
           </div>
         </div>
       </div>
+      
+      {/* Expiration Timeout Modal */}
+      {showTimeoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border-2 border-red-500 animate-in zoom-in-95 duration-200">
+            <div className="mx-auto size-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-4xl">timer_off</span>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              Hết thời gian!
+            </h3>
+            <p className="text-slate-500 mb-6 font-medium">
+              Bạn đã quá 3 phút để hoàn thành nhiệm vụ này.
+              <br/>
+              Nhiệm vụ đã bị hủy bỏ.
+            </p>
+            <button
+              onClick={() => {
+                setShowTimeoutModal(false);
+                clearFocus();
+              }}
+              className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/30"
+            >
+              Đã hiểu, quay lại
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

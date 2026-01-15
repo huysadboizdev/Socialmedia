@@ -11,7 +11,9 @@ const submissionSchema = new Schema({
     default: 'pending' 
   },
   isClicked: { type: Boolean, default: false },
-  adminNote: { type: String }
+  adminNote: { type: String },
+  clickedAt: { type: Date },
+  imageHash: { type: String }
 }, { timestamps: true });
 
 // Ensure unique submission per mission per user (can change if re-submission allowed after rejection)
