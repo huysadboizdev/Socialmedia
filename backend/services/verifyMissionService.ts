@@ -18,15 +18,17 @@ interface ValidationResult {
  */
 async function hasBlueLikeButton(buffer: Buffer): Promise<boolean> {
     try {
-        // Resize to small width for speed scanning
+        // Resize to width 500 for better detail on desktop screenshots
         const { data, info } = await sharp(buffer)
-            .resize({ width: 100 }) // 100px width is enough to find a button
+            .resize({ width: 500 }) 
             .raw()
             .toBuffer({ resolveWithObject: true });
 
         let bluePixels = 0;
         const totalPixels = info.width * info.height;
-        const threshold = totalPixels * 0.005; // 0.5% of image (button is small but significant)
+        // Desktop: Button is tiny relative to screen. Mobile: Button is large.
+        // 0.1% of pixels is safe.
+        const threshold = totalPixels * 0.001; 
 
         for (let i = 0; i < data.length; i += 3) { // limit 3 channels (r,g,b) usually
             const r = data[i];
@@ -40,7 +42,7 @@ async function hasBlueLikeButton(buffer: Buffer): Promise<boolean> {
             
             // Logic: Blue must be significantly higher than Red and Green
             // And Blue component should be high (> 150)
-            if (b > 150 && b > r + 30 && b > g + 30) {
+            if (b > 140 && b > r + 30 && b > g + 30) {
                  bluePixels++;
             }
         }
@@ -52,6 +54,7 @@ async function hasBlueLikeButton(buffer: Buffer): Promise<boolean> {
         return false; // Fail safe
     }
 }
+
 
 /**
  * Verify mission proof image without AI Vision
@@ -66,30 +69,6 @@ export const verifyMissionProof = async (
         const fileBuffer = fs.readFileSync(imagePath);
 
 
-        // 3. TIME CHECK (Metadata + Content)
-        if (clickedAt) {
-             const timeDiff = Date.now() - new Date(clickedAt).getTime();
-             
-             // A. Minimum Time (Anticheat) - 10 seconds
-             if (timeDiff < 10000) { 
-                 return { 
-                    success: false, 
-                    status: 'rejected', 
-                    reason: 'Bạn nộp quá nhanh! Vui lòng thực hiện nhiệm vụ thật sự.' 
-                };
-            }
-
-            // B. Maximum Time (Timeout) - 3 Minutes
-            // User requirement: "3p không làm xong ... hủy bỏ ... không được làm lại"
-            if (timeDiff > 3 * 60 * 1000) {
-                return {
-                    success: false,
-                    status: 'rejected',
-                    reason: 'Quá thời gian làm nhiệm vụ (3 phút). Nhiệm vụ đã bị hủy.'
-                };
-            }
-        }
-
         // 4. DUPLICATE CHECK (Image Hash)
         const hashSum = crypto.createHash('sha256');
         hashSum.update(fileBuffer);
@@ -98,7 +77,7 @@ export const verifyMissionProof = async (
         // Check if this hash exists in accepted/approved submissions
         const duplicate = await submissionModel.findOne({ 
             imageHash: imageHash,
-            status: { $in: ['approved', 'accepted', 'pending'] } // Prevent re-using proofs
+            status: { $in: ['approved', 'accepted', 'pending'] } 
         });
 
         if (duplicate) {
@@ -109,38 +88,107 @@ export const verifyMissionProof = async (
             };
         }
 
-        // 5. OCR CONTENT CHECK
+        // 5. OCR EXTENSIVE CHECK (Full + Cropped)
         console.log(`[OCR] Starting recognition on: ${imagePath}`);
         const worker = await createWorker('eng+vie'); 
-        const { data: { text } } = await worker.recognize(imagePath);
+        
+        // Pass 1: Full Image
+        const { data: { text: fullText } } = await worker.recognize(imagePath);
+        let combinedText = fullText;
+
+        // Pass 2: Bottom-Right Crop (For Windows/Desktop Taskbar Time)
+        // Crop last 25% width and last 15% height
+        try {
+            const metadata = await sharp(fileBuffer).metadata();
+            if (metadata.width && metadata.height) {
+                // A. Bottom Right (Taskbar)
+                const cropWidth = Math.floor(metadata.width * 0.25);
+                const cropHeight = Math.floor(metadata.height * 0.15);
+                const left = metadata.width - cropWidth;
+                const top = metadata.height - cropHeight;
+
+                const cropBuffer = await sharp(fileBuffer)
+                    .extract({ left, top, width: cropWidth, height: cropHeight })
+                    .resize({ width: cropWidth * 2 }) // Upscale 2x
+                    .grayscale()
+                    .normalize()
+                    .toBuffer();
+                
+                const { data: { text: cropText } } = await worker.recognize(cropBuffer);
+                console.log(`[OCR] Cropped Text (Bottom-Right): "${cropText.trim()}"`);
+                combinedText += " " + cropText;
+
+                // B. Top Right (Calendar Widget / Big Clock)
+                // Often widgets are in the top-right or center-right.
+                // Let's grab the top-right 30% area.
+                const trWidth = Math.floor(metadata.width * 0.35);
+                const trHeight = Math.floor(metadata.height * 0.35);
+                const trLeft = metadata.width - trWidth;
+                const trTop = 0;
+
+                const trBuffer = await sharp(fileBuffer)
+                     .extract({ left: trLeft, top: trTop, width: trWidth, height: trHeight })
+                     .resize({ width: trWidth * 2 }) // Upscale 2x
+                     .grayscale()
+                     .normalize()
+                     .toBuffer();
+                
+                const { data: { text: trText } } = await worker.recognize(trBuffer);
+                console.log(`[OCR] Cropped Text (Top-Right): "${trText.trim()}"`);
+                combinedText += " " + trText;
+            }
+        } catch (cropError) {
+            console.error("[OCR] Crop Error:", cropError);
+        }
+
         await worker.terminate();
 
-        const cleanText = text.toLowerCase().replace(/\s+/g, ' ').trim();
-        console.log(`[OCR] Found Text: "${cleanText}"`);
+        // Remove am/pm to simplify number parsing, but keep logic if needed later
+        const cleanText = combinedText.toLowerCase()
+            .replace(/am|pm/g, '') 
+            .replace(/\s+/g, ' ')
+            .trim();
+        console.log(`[OCR] Final Combined Text: "${cleanText}"`);
 
-        // --- REAL TIME CLOCK CHECK (Restored & Improved) ---
+        // 6. REAL TIME CLOCK CHECK
         if (clickedAt) {
              const start = new Date(clickedAt);
              
-             // Generate valid HH:mm strings for strict comparison
-             // Range: -1 minute (drift) to +4 minutes (buffer) relative to clickedAt
+             // Timezone Adjustment: Ensure we check against VIETNAM TIME (UTC+7)
+             const getVNTime = (d: Date) => {
+                 return d.toLocaleTimeString('en-GB', { 
+                     timeZone: 'Asia/Ho_Chi_Minh', 
+                     hour: '2-digit', 
+                     minute: '2-digit' 
+                 }); 
+             };
+
              const validTimeStrings: string[] = [];
-             for (let i = -1; i <= 4; i++) {
+             // Range: -2 minute (drift) to +5 minutes (buffer)
+             for (let i = -2; i <= 5; i++) {
                  const t = new Date(start.getTime() + i * 60000);
-                 validTimeStrings.push(`${t.getHours()}:${t.getMinutes().toString().padStart(2, '0')}`);
+                 const vnTime = getVNTime(t); // e.g., "09:26" or "15:27"
+                 validTimeStrings.push(vnTime);
                  
-                 // Add 12h format variations just in case
-                 if (t.getHours() > 12) validTimeStrings.push(`${t.getHours()-12}:${t.getMinutes().toString().padStart(2, '0')}`);
-                 if (t.getHours() > 12) validTimeStrings.push(`${(t.getHours()-12).toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`);
+                 const [hStr, mStr] = vnTime.split(':');
+                 const h = parseInt(hStr);
+                 const m = parseInt(mStr);
+
+                 // Add unpadded hour format: "09:26" -> "9:26"
+                 if (h < 10) {
+                     validTimeStrings.push(`${h}:${mStr}`);
+                 }
+
+                 // Add 12h format variations
+                 if (h > 12) validTimeStrings.push(`${h-12}:${mStr}`);
+                 if (h > 12 && h-12 < 10) validTimeStrings.push(`${h-12}:${mStr}`); // 3:30
+                 if (h > 12) validTimeStrings.push(`${(h-12).toString().padStart(2, '0')}:${mStr}`); // 03:30
              }
 
-             console.log(`[OCR] Checking for times: ${validTimeStrings.join(', ')}`);
+             console.log(`[OCR] Checking for times (VN): ${validTimeStrings.join(', ')}`);
 
-             // Regex to extract time-like patterns from raw text + normalized text
-             // Matches: "12:30", "12;30", "12.30", "12 30", "12030" (risky so sticking to separator)
              const timeRegex = /(\d{1,2})[\s:;.,]+(\d{2})/g;
              
-             // Create a "normalized" version of text for better number matching
              const normalizedText = cleanText
                 .replace(/[oO]/g, '0')
                 .replace(/[lI]/g, '1')
@@ -150,22 +198,17 @@ export const verifyMissionProof = async (
              let foundValidTime = false;
              const foundTimes: string[] = [];
              
-             // Scan Normalized Text
              while ((match = timeRegex.exec(normalizedText)) !== null) {
-                 const h = parseInt(match[1] as string); // e.g. 1
-                 const m = parseInt(match[2] as string); // e.g. 05
+                 const h = parseInt(match[1] as string);
+                 const m = parseInt(match[2] as string);
                  
-                 // Reconstruct found time
                  const foundTimeStr = `${h}:${m.toString().padStart(2, '0')}`;
                  foundTimes.push(foundTimeStr);
 
-                 // Check against valid set
                  if (validTimeStrings.includes(foundTimeStr)) {
                      foundValidTime = true;
                      break;
                  }
-                 
-                 // Fallback: Check if this time string appears in original cleanText
                  if (validTimeStrings.some(vt => cleanText.includes(vt))) {
                     foundValidTime = true;
                     break;
@@ -173,35 +216,31 @@ export const verifyMissionProof = async (
              }
 
              if (!foundValidTime) {
-                 // Final Fallback: Digit-Only Match (Aggressive but safe due to Server Time check)
                  const digitsOnly = normalizedText.replace(/\D/g, ''); 
-                 
                  const digitMatches = validTimeStrings.some(vt => {
                      const vtDigits = vt.replace(/\D/g, ''); 
                      return digitsOnly.includes(vtDigits);
                  });
-
                  if (digitMatches) foundValidTime = true;
              }
 
              if (!foundValidTime) {
-                  const uniqueFound = [...new Set(foundTimes)].slice(0, 5); 
-                  
-                  console.log(`[OCR] Time Check Failed. Digits: ${normalizedText.replace(/\D/g, '')} | Expected: ${validTimeStrings.map(t=>t.replace(/\D/g,'')).join(',')}`);
-                  
-                  if (uniqueFound.length > 0) {
-                      return {
-                          success: false,
-                          status: 'rejected',
-                          reason: `Ảnh không hợp lệ. Thời gian trong ảnh (${uniqueFound.join(', ')}) KHÔNG PHẢI REAL-TIME. Hệ thống yêu cầu ảnh chụp ngay lúc làm nhiệm vụ (${validTimeStrings[0]}...). Vui lòng chụp mới.`
-                      };
-                  } else {
-                      return {
-                          success: false,
-                          status: 'rejected',
-                          reason: `Không tìm thấy đồng hồ trong ảnh. Vui lòng chụp ảnh toàn màn hình có hiện rõ thời gian thực (Realtime).`
-                      };
-                  }
+                   const uniqueFound = [...new Set(foundTimes)].slice(0, 5); 
+                   console.log(`[OCR] Time Check Failed. Digits: ${normalizedText.replace(/\D/g, '')} | Expected: ${validTimeStrings.map(t=>t.replace(/\D/g,'')).join(',')}`);
+                   
+                   if (uniqueFound.length > 0) {
+                       return {
+                           success: false,
+                           status: 'rejected',
+                           reason: `Ảnh không hợp lệ. Thời gian trong ảnh (${uniqueFound.join(', ')}) KHÔNG PHẢI REAL-TIME. Hệ thống yêu cầu ảnh chụp lúc ${validTimeStrings[0]} (VN Time).`
+                       };
+                   } else {
+                       return {
+                           success: false,
+                           status: 'rejected',
+                           reason: `Không tìm thấy đồng hồ trong ảnh. Vui lòng chụp ảnh toàn màn hình có hiện rõ thời gian thực.`
+                       };
+                   }
              }
         }
         // -------------------------------------
@@ -214,8 +253,8 @@ export const verifyMissionProof = async (
             // A. Visual Check (Blue Button)
             const isBlue = await hasBlueLikeButton(fileBuffer);
             
-            // B. Text Check (User Identity)
-            const keywords = ['bạn', 'you', 'liked']; // strict keywords
+            // B. Text Check (User Identity or Action)
+            const keywords = ['bạn', 'you', 'liked', 'thích', 'đã thích', 'like']; 
             const textLower = cleanText.toLowerCase();
             const hasUserRef = keywords.some(k => textLower.includes(k));
 
