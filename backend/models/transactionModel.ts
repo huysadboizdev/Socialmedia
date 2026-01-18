@@ -14,7 +14,8 @@ const transactionSchema = new Schema({
         method: { type: String, enum: ['web', 'bank'] },
         bankName: { type: String },
         bankAccount: { type: String },
-        qrCode: { type: String }
+        qrCode: { type: String },
+        email: { type: String }
     },
     createdAt: { type: Date, default: Date.now }
 });

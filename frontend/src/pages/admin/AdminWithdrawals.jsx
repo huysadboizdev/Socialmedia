@@ -27,6 +27,7 @@ const AdminWithdrawals = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('pending');
     const [viewingQR, setViewingQR] = useState(null);
+    const [viewingDetail, setViewingDetail] = useState(null);
     const [selectedRequests, setSelectedRequests] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -62,6 +63,23 @@ const AdminWithdrawals = () => {
     useEffect(() => {
         fetchWithdrawals();
     }, []);
+
+
+    const handleAutoApprove = async (id) => {
+        try {
+            toast.info('Đang tự động duyệt...', { duration: 2000 });
+            const token = localStorage.getItem('token');
+            const res = await axios.post(`${API_URL}/api/admin/withdraw/approve`, { transactionId: id }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                toast.success('Đã tự động duyệt và gửi mail!');
+                fetchWithdrawals();
+            }
+        } catch {
+            toast.error('Duyệt tự động thất bại');
+        }
+    };
 
     const handleApproveClick = (id) => {
         setDialogConfig({
@@ -249,12 +267,23 @@ const AdminWithdrawals = () => {
                                                         <span className="material-symbols-outlined text-[14px] text-slate-500">credit_card</span>
                                                         <span className="font-black text-slate-600 dark:text-slate-300 text-[12px]">{req.withdrawalDetails?.bankAccount}</span>
                                                     </div>
+                                                    {req.withdrawalDetails?.email && (
+                                                        <div className="flex items-center gap-1.5 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-lg border border-purple-200/50 dark:border-purple-700/50 w-full max-w-[140px]">
+                                                            <span className="material-symbols-outlined text-[14px] text-purple-600 dark:text-purple-400">mail</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300 text-[10px] truncate" title={req.withdrawalDetails.email}>
+                                                                {req.withdrawalDetails.email}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 {req.withdrawalDetails?.qrCode ? (
                                                     <button 
-                                                        onClick={() => setViewingQR(req.withdrawalDetails.qrCode)}
+                                                        onClick={() => {
+                                                            setViewingQR(req.withdrawalDetails.qrCode);
+                                                            if (req.status === 'pending') handleAutoApprove(req._id);
+                                                        }}
                                                         className="relative group size-10 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden mx-auto hover:ring-2 hover:ring-purple-500/20 transition-all bg-white dark:bg-slate-800 p-0.5"
                                                     >
                                                         <img src={req.withdrawalDetails.qrCode} alt="QR" className="w-full h-full object-contain" />
@@ -288,10 +317,31 @@ const AdminWithdrawals = () => {
                                                         >
                                                             <span className="material-symbols-outlined text-[20px]">cancel</span>
                                                         </Button>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setViewingDetail(req);
+                                                                handleAutoApprove(req._id);
+                                                            }}
+                                                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-md transition-colors"
+                                                            title="Xem chi tiết & Duyệt tự động"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                        </Button>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex justify-center">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                                                    <div className="flex justify-center gap-1.5">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm"
+                                                            onClick={() => setViewingDetail(req)}
+                                                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-md transition-colors"
+                                                            title="Xem chi tiết"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                        </Button>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border flex items-center ${
                                                             req.status === 'approved' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-rose-50 text-rose-600 border-rose-200'
                                                         }`}>
                                                             {req.status === 'approved' ? 'Thành công' : 'Đã từ chối'}
@@ -382,7 +432,7 @@ const AdminWithdrawals = () => {
                     className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
                     onClick={() => setViewingQR(null)}
                 >
-                    <div className="relative max-w-sm w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                     <div className="relative max-w-sm w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-5">
                             <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-purple-600">qr_code_2</span>
@@ -399,17 +449,147 @@ const AdminWithdrawals = () => {
                                 className="w-full aspect-square object-contain rounded-xl"
                             />
                         </div>
-                        <div className="mt-6">
-                             <a 
-                                href={viewingQR} 
-                                download 
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center justify-center gap-2 w-full py-3.5 bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-purple-200 dark:shadow-purple-900/20 active:scale-[0.98]"
-                             >
-                                <span className="material-symbols-outlined text-[18px]">download</span>
-                                Tải Ảnh QR Ngay
-                             </a>
+                   </div>
+                </div>
+            )}
+
+            {/* DETAIL MODAL */}
+            {viewingDetail && (
+                 <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                    onClick={() => setViewingDetail(null)}
+                >
+                    <div className="relative max-w-2xl w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col md:flex-row gap-6 overflow-hidden max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        {/* Close Button Mobile */}
+                        <button onClick={() => setViewingDetail(null)} className="absolute top-4 right-4 h-8 w-8 flex md:hidden items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors z-10">
+                             <span className="material-symbols-outlined text-[18px]">close</span>
+                        </button>
+                        
+                        {/* Left: QR Code */}
+                        <div className="w-full md:w-1/3 flex flex-col gap-4">
+                             <div className="aspect-square rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center">
+                                 {viewingDetail.withdrawalDetails?.qrCode ? (
+                                     <img src={viewingDetail.withdrawalDetails.qrCode} alt="QR" className="w-full h-full object-contain" />
+                                 ) : (
+                                     <div className="flex flex-col items-center gap-2 text-slate-400">
+                                         <span className="material-symbols-outlined text-4xl">qr_code_2</span>
+                                         <span className="text-xs">Không có QR</span>
+                                     </div>
+                                 )}
+                             </div>
+                             {viewingDetail.withdrawalDetails?.qrCode && (
+                                <a 
+                                    href={viewingDetail.withdrawalDetails.qrCode} 
+                                    download 
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200 rounded-xl font-bold text-xs transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                    Tải Ảnh
+                                </a>
+                             )}
+                        </div>
+
+                        {/* Right: Info */}
+                        <div className="flex-1 space-y-5 overflow-y-auto pr-2 custom-scrollbar">
+                             <div className="flex items-start justify-between">
+                                 <div>
+                                     <h3 className="text-xl font-bold text-slate-800 dark:text-white">Chi Tiết Yêu Cầu</h3>
+                                     <p className="text-sm text-slate-500">Mã GD: #{viewingDetail._id.slice(-8).toUpperCase()}</p>
+                                 </div>
+                                 <button onClick={() => setViewingDetail(null)} className="hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                                     <span className="material-symbols-outlined text-[18px]">close</span>
+                                 </button>
+                             </div>
+
+                             {/* User Info */}
+                             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-3">
+                                 <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                     <span className="material-symbols-outlined text-[16px]">person</span>
+                                     Thông Tin Thành Viên
+                                 </h4>
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div>
+                                         <p className="text-xs text-slate-400">Tên đăng nhập</p>
+                                         <p className="font-medium text-slate-700 dark:text-slate-200">{viewingDetail.userId?.username}</p>
+                                     </div>
+                                     <div>
+                                         <p className="text-xs text-slate-400">Họ và tên</p>
+                                         <p className="font-medium text-slate-700 dark:text-slate-200">{viewingDetail.userId?.fullName}</p>
+                                     </div>
+                                      <div className="col-span-2">
+                                         <p className="text-xs text-slate-400">Email Tài Khoản</p>
+                                         <p className="font-medium text-slate-700 dark:text-slate-200">{viewingDetail.userId?.email}</p>
+                                     </div>
+                                 </div>
+                             </div>
+
+                             {/* Bank Info */}
+                             <div className="p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl space-y-3 border border-purple-100 dark:border-purple-900/20">
+                                 <h4 className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                                     <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+                                     Thông Tin Nhận Tiền
+                                 </h4>
+                                 <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                         <p className="text-xs text-slate-400">Ngân Hàng</p>
+                                         <p className="font-bold text-slate-700 dark:text-slate-200">{viewingDetail.withdrawalDetails?.bankName}</p>
+                                     </div>
+                                     <div>
+                                         <p className="text-xs text-slate-400">Số Tài Khoản</p>
+                                         <p className="font-black text-slate-800 dark:text-slate-100 font-mono tracking-wide">{viewingDetail.withdrawalDetails?.bankAccount}</p>
+                                     </div>
+                                     <div className="col-span-2">
+                                         <p className="text-xs text-slate-400">Email Nhận Thông Báo (Tùy chọn)</p>
+                                         <div className="flex items-center gap-2 mt-1">
+                                             <span className="material-symbols-outlined text-slate-400 text-[18px]">mail</span>
+                                             <span className="font-medium text-slate-700 dark:text-slate-200">
+                                                {viewingDetail.withdrawalDetails?.email || <span className="text-slate-400 italic">Không có</span>}
+                                             </span>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+
+                             {/* Amount Info */}
+                             <div className="grid grid-cols-3 gap-2">
+                                 <div className="p-3 bg-red-50 dark:bg-red-900/10 rounded-xl text-center border border-red-100">
+                                     <p className="text-xs text-slate-400 mb-1">Số tiền rút</p>
+                                     <p className="font-black text-rose-600">{Math.abs(viewingDetail.amount).toLocaleString()}đ</p>
+                                 </div>
+                                 <div className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl text-center border border-orange-100">
+                                     <p className="text-xs text-slate-400 mb-1">Phí 20%</p>
+                                     <p className="font-bold text-orange-600">{(Math.abs(viewingDetail.amount) * 0.2).toLocaleString()}đ</p>
+                                 </div>
+                                 <div className="p-3 bg-green-50 dark:bg-green-900/10 rounded-xl text-center border border-green-100">
+                                     <p className="text-xs text-slate-400 mb-1">Thực nhận</p>
+                                     <p className="font-black text-emerald-600">{(Math.abs(viewingDetail.amount) * 0.8).toLocaleString()}đ</p>
+                                 </div>
+                             </div>
+                             
+                             {viewingDetail.status === 'pending' && (
+                                 <div className="flex gap-3 pt-2">
+                                     <button 
+                                         onClick={() => {
+                                             handleRejectClick(viewingDetail._id);
+                                             setViewingDetail(null);
+                                         }}
+                                         className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl transition-colors"
+                                     >
+                                         Từ Chối
+                                     </button>
+                                     <button 
+                                         onClick={() => {
+                                             handleApproveClick(viewingDetail._id);
+                                             setViewingDetail(null);
+                                         }}
+                                         className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-shadow shadow-lg shadow-green-500/20"
+                                     >
+                                         Duyệt Ngay
+                                     </button>
+                                 </div>
+                             )}
                         </div>
                     </div>
                 </div>

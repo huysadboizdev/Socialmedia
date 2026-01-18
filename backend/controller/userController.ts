@@ -172,18 +172,20 @@ export const withdrawMissionBalance: RequestHandler = async (req, res) => {
             res.status(403).json({ success: false, message: 'Unauthorized' });
             return
         }
-        const { amount, method, bankName, bankAccount } = req.body as { 
+        const { amount, method, bankName, bankAccount, email } = req.body as { 
             amount: string | number; 
             method?: 'web' | 'bank';
             bankName?: string;
             bankAccount?: string;
+            email?: string;
         }
         const qrCodeFile = req.file;
 
         const result = await userService.withdrawMissionBalance(userId, Number(amount), method, {
             bankName,
             bankAccount,
-            qrCodeFile
+            qrCodeFile,
+            email
         })
         res.json(result)
     } catch (err: unknown) {
