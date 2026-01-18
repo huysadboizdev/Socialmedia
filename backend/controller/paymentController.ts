@@ -21,26 +21,21 @@ export const handleWebhook = async (req: Request, res: Response) => {
         // Structure might be { transactions: [...] } or just [...]
         let transactions: WebhookTransaction[] = [];
         
-        // Define a loose type for incoming body to avoid any
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const body = req.body;
+        type WebhookBody = 
+            | WebhookTransaction 
+            | WebhookTransaction[] 
+            | { transactions?: WebhookTransaction[]; data?: WebhookTransaction[] };
 
-        if (body.transactions && Array.isArray(body.transactions)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const body = req.body as WebhookBody;
+
+        if (Array.isArray(body)) {
+            transactions = body;
+        } else if ('transactions' in body && Array.isArray(body.transactions)) {
             transactions = body.transactions;
-        } else if (Array.isArray(body)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-            transactions = body as any; // Some send direct array
-        } else if (body.amount && body.description) {
-            transactions = [body]; // Single object
-        } else {
-            // Unknown format, define generic extraction if possible or return error
-            // checks for specific 'data' field used by some others
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            if (body.data && Array.isArray(body.data)) {
-                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                 transactions = body.data;
-            }
+        } else if ('data' in body && Array.isArray(body.data)) {
+            transactions = body.data;
+        } else if ('amount' in body && 'description' in body) {
+            transactions = [body];
         }
 
         if (transactions.length === 0) {

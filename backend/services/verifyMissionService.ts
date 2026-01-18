@@ -42,7 +42,11 @@ async function hasBlueLikeButton(buffer: Buffer): Promise<boolean> {
             
             // Logic: Blue must be significantly higher than Red and Green
             // And Blue component should be high (> 150)
-            if (b > 140 && b > r + 30 && b > g + 30) {
+            const rVal = r ?? 0;
+            const gVal = g ?? 0;
+            const bVal = b ?? 0;
+
+            if (bVal > 140 && bVal > rVal + 30 && bVal > gVal + 30) {
                  bluePixels++;
             }
         }
@@ -171,8 +175,7 @@ export const verifyMissionProof = async (
                  validTimeStrings.push(vnTime);
                  
                  const [hStr, mStr] = vnTime.split(':');
-                 const h = parseInt(hStr);
-                 const m = parseInt(mStr);
+                 const h = parseInt(hStr ?? '0');
 
                  // Add unpadded hour format: "09:26" -> "9:26"
                  if (h < 10) {
@@ -199,8 +202,10 @@ export const verifyMissionProof = async (
              const foundTimes: string[] = [];
              
              while ((match = timeRegex.exec(normalizedText)) !== null) {
-                 const h = parseInt(match[1] as string);
-                 const m = parseInt(match[2] as string);
+                 const hStr = match[1] ?? '0';
+                 const mStr = match[2] ?? '0';
+                 const h = parseInt(hStr, 10);
+                 const m = parseInt(mStr, 10);
                  
                  const foundTimeStr = `${h}:${m.toString().padStart(2, '0')}`;
                  foundTimes.push(foundTimeStr);

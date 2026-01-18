@@ -32,7 +32,8 @@
     "noEmit": true,
 
     /* --- OPTIMIZATION --- */
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
   "include": ["**/*.ts", "eslint.config.js"],
   "exclude": ["node_modules", "dist", "build"]
