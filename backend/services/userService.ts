@@ -683,7 +683,7 @@ export const withdrawMissionBalance = async (
     userId: string, 
     amount: number, 
     method: 'web' | 'bank' = 'web',
-    details?: { bankName?: string; bankAccount?: string; qrCodeFile?: Express.Multer.File }
+    details?: { bankName?: string; bankAccount?: string; qrCodeFile?: Express.Multer.File; email?: string }
 ) => {
     if (amount < 10000) return { success: false, message: 'Số tiền rút tối thiểu là 10.000 đ' }
 
@@ -773,10 +773,26 @@ export const withdrawMissionBalance = async (
                 method: 'bank',
                 bankName: details?.bankName,
                 bankAccount: details?.bankAccount,
-                qrCode: qrCodeUrl
+                qrCode: qrCodeUrl,
+                email: details?.email
             },
             createdAt: new Date()
         })
+
+        if (details?.email) {
+            try {
+                // Dynamic import mailService
+                const { sendWithdrawalNotification } = await import('./mailService.js');
+                void sendWithdrawalNotification(details.email, {
+                     bankName: details.bankName || 'Unknown',
+                     bankAccount: details.bankAccount || 'Unknown',
+                     amount: amount,
+                     transactionId: `WD-${Date.now()}`
+                });
+            } catch (error) {
+                console.error("Email notification failed", error);
+            }
+        }
 
         return { 
             success: true, 

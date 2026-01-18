@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import huongDanTaiImg from '../assets/huongdantaiv2.png';
+import huongDanDungImg from '../assets/huongdandung.png';
 
 // --- SUB COMPONENTS ---
 
@@ -17,8 +21,7 @@ const MissionTimer = ({ clickedAt, onExpire }) => {
         
         const deadline = new Date(clickedAt).getTime() + 3 * 60 * 1000;
         
-        // Update immediately to sync
-        setTimeLeft(Math.max(0, deadline - Date.now()));
+        // Timer logic handles updates
 
         const timer = setInterval(() => {
             const remaining = Math.max(0, deadline - Date.now());
@@ -62,8 +65,20 @@ const DailyTask = () => {
   const [missions, setMissions] = useState([]);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  const [qrCodeFile, setQrCodeFile] = useState(null);
+  const [emailForNotification, setEmailForNotification] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [lastWithdrawAmount, setLastWithdrawAmount] = useState(0);
+  
+  // UI States
+  const [showWithdrawSuccessModal, setShowWithdrawSuccessModal] = useState(false);
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  
+  const navigate = useNavigate();
+  const [showInstructionModal, setShowInstructionModal] = useState(false);
+  const [instructionTab, setInstructionTab] = useState('mobile'); // 'mobile' | 'desktop'
+  const [instructionMission, setInstructionMission] = useState(null);
+  const [zoomedImage, setZoomedImage] = useState(null);
   const [focusedMissionId, setFocusedMissionId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -221,7 +236,6 @@ const DailyTask = () => {
 
   const [bankName, setBankName] = useState('');
   const [bankAccount, setBankAccount] = useState('');
-  const [qrCodeFile, setQrCodeFile] = useState(null);
 
   const handleWithdrawal = async () => {
     const numAmount = parseInt(amount);
@@ -255,28 +269,45 @@ const DailyTask = () => {
             if (qrCodeFile) {
                 formData.append('qrCode', qrCodeFile);
             }
+            if (emailForNotification) {
+                formData.append('email', emailForNotification);
+            }
         }
 
-        const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/withdraw`, formData, {
+        const dataResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/user/mission/withdraw`, formData, {
             headers: { 
-                Authorization: `Bearer ${token}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'multipart/form-data'
-            }
+             }
         });
 
-        if (res.data.success) {
-            toast.success(res.data.message + ". Tiền sẽ về tài khoản sau 24h.");
+        if (dataResponse.data.success) {
+            // Save amount for modal display
+            setLastWithdrawAmount(numAmount);
+            
+            // Show custom modal instead of toast for instructions
+            setShowWithdrawSuccessModal(true);
+            
+            // Reset form
             setAmount('');
             setBankName('');
             setBankAccount('');
             setQrCodeFile(null);
-            fetchUserData(); // Refresh balance
+            setWithdrawalType('web');
+            
+            // Update local balance
+            if (dataResponse.data.missionBalance !== undefined) {
+                setUserData(prev => ({ 
+                    ...prev, 
+                    missionBalance: dataResponse.data.missionBalance,
+                    balance: dataResponse.data.balance || prev.balance
+                }));
+            }
         } else {
-            toast.error(res.data.message);
+            toast.error(dataResponse.data.message);
         }
-    } catch (_error) {
-        console.error("Withdrawal error", _error);
-        toast.error("Lỗi khi gửi yêu cầu rút tiền");
+    } catch (error) {
+        toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
         setSubmitting(false);
     }
@@ -350,9 +381,10 @@ const DailyTask = () => {
         ))}
       </div>
 
+
       {/* Task Tabs */}
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 items-center">
           <button
             onClick={() => {
                 setActiveTab('list');
@@ -381,6 +413,17 @@ const DailyTask = () => {
           >
             Nhiệm vụ đã nhận ({missions.filter(m => m.status !== 'available').length})
           </button>
+          
+          <button
+            onClick={() => {
+                setInstructionMission(null);
+                setShowInstructionModal(true);
+            }}
+            className="ml-auto px-4 py-3 rounded-full font-bold transition-all bg-white border-2 border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[20px] text-purple-600">menu_book</span>
+            Hướng dẫn làm nhiệm vụ
+          </button>
         </div>
 
         {/* Mission List */}
@@ -397,6 +440,7 @@ const DailyTask = () => {
                      <div className="flex items-center gap-2">
                          {/* TIMER COMPONENT */}
                          <MissionTimer 
+                            key={activeMission?._id}
                             clickedAt={activeMission?.clickedAt} 
                             onExpire={() => {
                                 setShowTimeoutModal(true);
@@ -474,10 +518,14 @@ const DailyTask = () => {
                                     </div>
                                 )}
 
-                                {/* 2. AVAILABLE -> Show "Nhận nhiệm vụ" */}
+
+                                {/* 2. AVAILABLE -> Show "Nhận nhiệm vụ" - MODIFIED: Open Instruction Modal */}
                                 {!isExpired && mission.status === 'available' && (
                                     <button 
-                                        onClick={() => handleAcceptMission(mission._id)}
+                                        onClick={() => {
+                                            setInstructionMission(mission);
+                                            setShowInstructionModal(true);
+                                        }}
                                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
                                     >
                                         <span className="material-symbols-outlined text-[18px]">add_task</span>
@@ -488,13 +536,26 @@ const DailyTask = () => {
                                 {/* 3. ACCEPTED or REJECTED -> Show Submit Actions (If NOT Expired) */}
                                 {!isExpired && (mission.status === 'accepted' || mission.status === 'rejected') && (
                                     <>
-                                        <button 
-                                            onClick={() => handleLinkClick(mission)}
-                                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-                                            Thực hiện
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handleLinkClick(mission)}
+                                                className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                                                Thực hiện
+                                            </button>
+                                            
+                                            <button
+                                                onClick={() => {
+                                                    setInstructionMission(mission);
+                                                    setShowInstructionModal(true);
+                                                }}
+                                                className="size-[38px] flex items-center justify-center bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
+                                                title="Xem hướng dẫn"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">menu_book</span>
+                                            </button>
+                                        </div>
                                         
                                         <div className="relative">
                                             <input 
@@ -521,9 +582,21 @@ const DailyTask = () => {
                                 )}
 
                                 {!isExpired && mission.status === 'pending' && (
-                                    <div className="px-4 py-2 bg-yellow-50 text-yellow-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-yellow-200">
-                                        <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
-                                        Chờ duyệt 24h
+                                    <div className="flex flex-col gap-2">
+                                        <div className="px-4 py-2 bg-yellow-50 text-yellow-700 font-bold rounded-lg text-sm flex items-center justify-center gap-2 border border-yellow-200">
+                                            <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
+                                            Chờ duyệt 24h
+                                        </div>
+                                         <button
+                                            onClick={() => {
+                                                setInstructionMission(mission);
+                                                setShowInstructionModal(true);
+                                            }}
+                                            className="w-full py-2 text-xs font-bold text-slate-500 hover:text-purple-600 flex items-center justify-center gap-1"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">menu_book</span>
+                                            Xem lại hướng dẫn
+                                        </button>
                                     </div>
                                 )}
 
@@ -664,6 +737,24 @@ const DailyTask = () => {
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                            Email Nhận Thông Báo
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="email"
+                                value={emailForNotification}
+                                onChange={(e) => setEmailForNotification(e.target.value)}
+                                className="w-full p-3.5 border border-[#6610f2]/30 rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-4 focus:ring-purple-500/10 transition-all font-medium pl-11"
+                                placeholder="Nhập email để nhận thông báo khi tiền về..."
+                            />
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                mail
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
                             Tải Ảnh QR Nhận Tiền
                         </label>
                         <div className="relative">
@@ -748,6 +839,260 @@ const DailyTask = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Instruction Modal */}
+      {showInstructionModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div 
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                  onClick={() => setShowInstructionModal(false)}
+              />
+              <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                  <div className="flex items-center gap-3 mb-4 text-purple-600">
+                      <div className="size-10 rounded-full bg-purple-100 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-2xl">menu_book</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                          Hướng dẫn nhiệm vụ
+                      </h3>
+                  </div>
+
+                  {/* Tabs for Desktop/Mobile */}
+                  <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-4">
+                      <button
+                          onClick={() => setInstructionTab('mobile')}
+                          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                              instructionTab === 'mobile'
+                                  ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm'
+                                  : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                      >
+                          <span className="material-symbols-outlined text-[18px]">smartphone</span>
+                          Mobile
+                      </button>
+                      <button
+                          onClick={() => setInstructionTab('desktop')}
+                          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                              instructionTab === 'desktop'
+                                  ? 'bg-white dark:bg-slate-700 text-purple-600 shadow-sm'
+                                  : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                      >
+                          <span className="material-symbols-outlined text-[18px]">computer</span>
+                          Desktop
+                      </button>
+                  </div>
+                  
+                  <div className="overflow-y-auto flex-1 pr-2 space-y-4 mb-6 custom-scrollbar">
+                      
+                      {/* Step 1 (DESKTOP ONLY): Install Extension */}
+                      {instructionTab === 'desktop' && (
+                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-900/50">
+                             <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                                <span className="size-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">1</span>
+                                Cài đặt Extension Hỗ Trợ
+                            </h4>
+                            <div className="pl-8 space-y-3">
+                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                    Bắt buộc phải cài đặt Extension để hệ thống tự động kiểm tra nhiệm vụ.
+                                </p>
+                                <a 
+                                    href="https://chromewebstore.google.com/detail/%C4%91%E1%BB%93ng-h%E1%BB%93-cho-google-chrome/emakkfldeggiinnfcdjkakdfcppbfhdg?hl=vi&utm_source=ext_sidebar" 
+                                    target="_blank"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-sm transition-colors shadow-lg shadow-purple-500/30"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">download</span>
+                                    Tải Extension tại đây
+                                </a>
+                                
+
+                                {/* Image Placeholders */}
+                                <div className="grid grid-cols-2 gap-3 mt-2">
+                                     {/* Bỏ link ảnh hướng dẫn tải vào src bên dưới */}
+                                     <img 
+                                        src={huongDanTaiImg} 
+                                        alt="Hướng dẫn tải"
+                                        className="w-full aspect-video object-cover rounded-lg border-2 border-slate-200 dark:border-slate-700 cursor-pointer hover:opacity-90 transition-opacity"
+                                        onClick={() => setZoomedImage(huongDanTaiImg)}
+                                     />
+                                     
+                                     {/* Bỏ link ảnh hướng dẫn cài vào src bên dưới */}
+                                     <img 
+                                        src={huongDanDungImg} 
+                                        alt="Hướng dẫn cài"
+                                        className="w-full aspect-video object-cover rounded-lg border-2 border-slate-200 dark:border-slate-700 cursor-pointer hover:opacity-90 transition-opacity"
+                                        onClick={() => setZoomedImage(huongDanDungImg)}
+                                     />
+                                </div>
+                            </div>
+                        </div>
+                      )}
+
+                      {/* Step 2 (Desktop) / Step 1 (Mobile): Link */}
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                          <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                              <span className="size-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">
+                                  {instructionTab === 'desktop' ? '2' : '1'}
+                              </span>
+                              Truy cập liên kết
+                          </h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 pl-8">
+                              Nhấn vào nút <span className="font-bold text-purple-600">"Link nhiệm vụ"</span> hoặc <span className="font-bold text-purple-600">"Thực hiện"</span> để mở trang web cần tương tác.
+                              {instructionTab === 'desktop' ? ' (Nên mở tab mới trên trình duyệt).' : ' (Sẽ mở ứng dụng Facebook/TikTok/..).'}
+                          </p>
+                      </div>
+
+                      {/* Step 3 (Desktop) / Step 2 (Mobile): Interact */}
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                           <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                              <span className="size-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">
+                                  {instructionTab === 'desktop' ? '3' : '2'}
+                              </span>
+                              Thực hiện tương tác
+                          </h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 pl-8">
+                              Thực hiện đúng yêu cầu: <span className="font-bold text-blue-600">Like</span>, <span className="font-bold text-pink-600">Follow</span>, hoặc <span className="font-bold text-violet-600">Share</span> bài viết/trang cá nhân đó.
+                          </p>
+                      </div>
+
+                      {/* Step 4 (Desktop) / Step 3 (Mobile): Screenshot - DYNAMIC CONTENT */}
+                       <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                           <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                              <span className="size-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs">
+                                  {instructionTab === 'desktop' ? '4' : '3'}
+                              </span>
+                              Chụp ảnh bằng chứng
+                          </h4>
+                          <div className="pl-8 text-sm text-slate-600 dark:text-slate-400 space-y-2">
+                              <p>
+                                  {instructionTab === 'desktop' 
+                                      ? 'Chụp TOÀN BỘ MÀN HÌNH máy tính.' 
+                                      : 'Chụp màn hình điện thoại.'}
+                              </p>
+                              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-600">
+                                  {instructionTab === 'desktop' ? (
+                                      <>
+                                          <p className="font-bold text-slate-700 dark:text-slate-300 mb-1">Yêu cầu Desktop:</p>
+                                          <ul className="list-disc list-inside text-xs space-y-1">
+                                              <li>Phải thấy rõ <span className="text-red-500 font-bold">thanh Taskbar</span> (thanh công cụ bên dưới).</li>
+                                              <li>Phải thấy rõ <span className="text-red-500 font-bold">ngày giờ hệ thống</span> ở góc phải.</li>
+                                              <li>Trình duyệt phải thấy rõ hành động (Đã Like/Follow).</li>
+                                          </ul>
+                                      </>
+                                  ) : (
+                                      <>
+                                          <p className="font-bold text-slate-700 dark:text-slate-300 mb-1">Yêu cầu Mobile:</p>
+                                          <ul className="list-disc list-inside text-xs space-y-1">
+                                              <li>Phải thấy rõ <span className="text-red-500 font-bold">thanh trạng thái</span> trên cùng (giờ, pin, sóng).</li>
+                                              <li>KHÔNG tải ảnh đã cắt (crop).</li>
+                                              <li>Ảnh phải chụp toàn bộ giao diện ứng dụng.</li>
+                                          </ul>
+                                      </>
+                                  )}
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/50">
+                           <h4 className="font-bold text-red-600 mb-2 flex items-center gap-2">
+                              <span className="material-symbols-outlined text-xl">warning</span>
+                              Lưu ý quan trọng
+                          </h4>
+                          <ul className="list-disc list-inside text-sm text-red-600 space-y-1 ml-1">
+                              <li>Không dùng ảnh cũ hoặc ảnh mạng.</li>
+                              <li>Thời gian nộp bài phải trùng khớp với thời gian chụp.</li>
+                              <li>Nếu phát hiện gian lận sẽ bị khóa tài khoản vĩnh viễn.</li>
+                          </ul>
+                      </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2 border-t dark:border-slate-800">
+                      <button
+                          onClick={() => setShowInstructionModal(false)}
+                          className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                      >
+                          {instructionMission?.status === 'available' ? 'Hủy bỏ' : 'Đóng'}
+                      </button>
+                      
+                      {instructionMission?.status === 'available' && (
+                          <button
+                              onClick={() => {
+                                  setShowInstructionModal(false);
+                                  handleAcceptMission(instructionMission._id);
+                              }}
+                              className="flex-1 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-purple-500/30"
+                          >
+                              Đồng ý và Tiếp tục
+                          </button>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+      {/* Zoomed Image Modal */}
+      <AnimatePresence>
+        {zoomedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+            onClick={() => setZoomedImage(null)}
+          >
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              src={zoomedImage}
+              alt="Zoomed instruction"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+            <button
+              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              onClick={() => setZoomedImage(null)}
+            >
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Withdrawal Success Modal */}
+      {showWithdrawSuccessModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+              <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-in zoom-in-95 duration-200 border-2 border-green-500">
+                  <div className="mx-auto size-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-green-500/20">
+                      <span className="material-symbols-outlined text-5xl">check_circle</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                      Gửi Yêu Cầu Thành Công!
+                  </h3>
+                  <div className="text-slate-600 dark:text-slate-400 mb-6 text-sm space-y-2">
+                      <p>Hệ thống đã ghi nhận yêu cầu rút tiền của bạn.</p>
+                      <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <p className="font-bold text-purple-600 mb-1">Đã trừ {Number(lastWithdrawAmount).toLocaleString()}đ trong ví nhiệm vụ.</p>
+                          <p>Vui lòng kiểm tra trạng thái tại lịch sử giao dịch.</p>
+                      </div>
+                  </div>
+                  <div className="space-y-3">
+                      <button
+                          onClick={() => navigate('/history')}
+                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl shadow-blue-500/30 flex items-center justify-center gap-2"
+                      >
+                          <span className="material-symbols-outlined">history</span>
+                          Kiểm Tra Lịch Sử
+                      </button>
+                      <button
+                          onClick={() => setShowWithdrawSuccessModal(false)}
+                          className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                      >
+                          Đóng
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );
