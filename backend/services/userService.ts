@@ -784,8 +784,8 @@ export const withdrawMissionBalance = async (
                 // Dynamic import mailService
                 const { sendWithdrawalNotification } = await import('./mailService.js');
                 void sendWithdrawalNotification(details.email, {
-                     bankName: details.bankName || 'Unknown',
-                     bankAccount: details.bankAccount || 'Unknown',
+                     bankName: details.bankName ?? 'Unknown',
+                     bankAccount: details.bankAccount ?? 'Unknown',
                      amount: amount,
                      transactionId: `WD-${Date.now()}`
                 });

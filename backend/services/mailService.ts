@@ -1,10 +1,13 @@
 import nodemailer from 'nodemailer';
 
+const emailUser = process.env.MAIL_USER ?? process.env.EMAIL_USER ?? '';
+const emailPass = process.env.MAIL_PASSWORD ?? process.env.EMAIL_PASS ?? '';
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.MAIL_USER ?? process.env.EMAIL_USER,
-    pass: process.env.MAIL_PASSWORD ?? process.env.EMAIL_PASS,
+    user: emailUser,
+    pass: emailPass,
   },
 });
 
@@ -16,7 +19,7 @@ export const sendWithdrawalNotification = async (
     amount: number;
     transactionId: string;
   }
-) => {
+): Promise<{ success: boolean; message?: string; error?: unknown }> => {
   const emailUser = process.env.MAIL_USER ?? process.env.EMAIL_USER;
   const emailPass = process.env.MAIL_PASSWORD ?? process.env.EMAIL_PASS;
 
@@ -75,7 +78,7 @@ export const sendWithdrawalApprovedNotification = async (
     amount: number;
     transactionId: string;
   }
-) => {
+): Promise<{ success: boolean; message?: string; error?: unknown }> => {
   const emailUser = process.env.MAIL_USER ?? process.env.EMAIL_USER;
   const emailPass = process.env.MAIL_PASSWORD ?? process.env.EMAIL_PASS;
 
