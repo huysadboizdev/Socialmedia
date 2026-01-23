@@ -10,8 +10,28 @@ interface WebhookTransaction {
     transactionDate?: string;
     referenceCode?: string; // Some gateways send this
     gateway?: string; // Custom field if needed
-    [key: string]: any; // Allow other props for flexibility during parsing
 }
+
+// Define specific fields we expect from various gateways to avoid 'any'
+interface IncomingTransaction {
+    amount?: number | string;
+    description?: string;
+    transferAmount?: number | string;
+    transferContent?: string;
+    content?: string;
+    transactionDate?: string;
+    referenceCode?: string;
+    gateway?: string;
+    [key: string]: unknown;
+}
+
+interface WebhookContainer {
+    transactions?: IncomingTransaction[];
+    data?: IncomingTransaction[];
+    [key: string]: unknown;
+}
+
+type WebhookBody = IncomingTransaction | IncomingTransaction[] | WebhookContainer;
 
 export const handleWebhook = async (req: Request, res: Response) => {
     try {
@@ -20,49 +40,43 @@ export const handleWebhook = async (req: Request, res: Response) => {
         // 1. Parse Data - Support common formats
         // SePay/Casso usually send a list of transactions
         // Structure might be { transactions: [...] } or just [...]
-        let transactions: WebhookTransaction[] = [];
+        let rawTransactions: IncomingTransaction[] = [];
         
-        type WebhookBody = 
-            | WebhookTransaction 
-            | WebhookTransaction[] 
-            | { transactions?: WebhookTransaction[]; data?: WebhookTransaction[] };
-
         const body = req.body as WebhookBody;
 
         if (Array.isArray(body)) {
-            transactions = body;
-        } else if ('transactions' in body && Array.isArray(body.transactions)) {
-            transactions = body.transactions;
-        } else if ('data' in body && Array.isArray(body.data)) {
-            transactions = body.data;
-        } else if ('amount' in body && 'description' in body) {
-            transactions = [body];
+            rawTransactions = body;
         } else {
-            // Flexible check using any cast to avoid TS union errors
-            const flexibleBody = body as any;
-            if (flexibleBody.transferAmount && (flexibleBody.transferContent || flexibleBody.content || flexibleBody.description)) {
-                transactions = [{
-                    amount: Number(flexibleBody.transferAmount || flexibleBody.amount),
-                    description: String(flexibleBody.transferContent || flexibleBody.content || flexibleBody.description),
-                    gateway: String(flexibleBody.gateway || ''),
-                    transactionDate: String(flexibleBody.transactionDate || ''),
-                    referenceCode: String(flexibleBody.referenceCode || '')
-                }];
+            // Check for container properties first
+            const container = body as WebhookContainer;
+            if (Array.isArray(container.transactions)) {
+                rawTransactions = container.transactions;
+            } else if (Array.isArray(container.data)) {
+                rawTransactions = container.data;
+            } else {
+                 // Assume single object body is a transaction if it has fields
+                 rawTransactions = [body as IncomingTransaction];
             }
         }
 
-        if (transactions.length === 0) {
-             // Second pass for flat structure that might miss some keys but has transferAmount
-             const flexibleBody = body as any;
-             if (flexibleBody.transferAmount) {
-                 transactions = [{
-                    amount: Number(flexibleBody.transferAmount),
-                    description: String(flexibleBody.transferContent || flexibleBody.content || flexibleBody.description || ''),
-                    gateway: flexibleBody.gateway,
-                    transactionDate: flexibleBody.transactionDate,
-                    referenceCode: flexibleBody.referenceCode
-                 }];
-             }
+        // Normalize to internal WebhookTransaction
+        const transactions: WebhookTransaction[] = [];
+
+        for (const raw of rawTransactions) {
+            // Determine amount
+            const amountVal = raw.transferAmount ?? raw.amount;
+            // Determine description
+            const descVal = raw.transferContent ?? raw.content ?? raw.description;
+
+            if (amountVal !== undefined && descVal !== undefined) {
+                 transactions.push({
+                     amount: Number(amountVal),
+                     description: descVal,
+                     gateway: raw.gateway,
+                     transactionDate: raw.transactionDate,
+                     referenceCode: raw.referenceCode
+                 });
+            }
         }
 
         if (transactions.length === 0) {
@@ -189,7 +203,7 @@ export const checkPaymentStatus = async (req: Request, res: Response) => {
             createdAt: transaction.createdAt
         }); 
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error(err);
         return res.status(500).json({ status: 'error', msg: 'Server Error' });
     }
