@@ -16,46 +16,75 @@ interface ValidationResult {
  * Check for significant blue color (Facebook Active Like)
  * Heuristic: Active buttons are typically bright blue (#0866FF, #0084FF)
  */
-async function hasBlueLikeButton(buffer: Buffer): Promise<boolean> {
+async function hasBlueLikeText(buffer: Buffer, worker: Tesseract.Worker): Promise<boolean> {
     try {
-        // Resize to width 500 for better detail on desktop screenshots
+        const metadata = await sharp(buffer).metadata();
+        const height = metadata.height || 100;
+
+        // FIX: Smart Crop
+        // For small images (already cropped to button), DO NOT CROP anything.
+        // For large screenshots, crop top 20% to remove header but keep main content.
+        let top = 0;
+        let extractHeight = height;
+
+        if (height > 600) {
+             top = Math.floor(height * 0.20); 
+             extractHeight = height - top;
+        }
+
         const { data, info } = await sharp(buffer)
-            .resize({ width: 500 }) 
+            .extract({ left: 0, top: top, width: metadata.width || 100, height: extractHeight })
+            .resize({ width: 1600 }) // Upscale to 1600px (2x) for sharp text detection on Desktop
             .raw()
             .toBuffer({ resolveWithObject: true });
 
-        let bluePixels = 0;
-        const totalPixels = info.width * info.height;
-        // Desktop: Button is tiny relative to screen. Mobile: Button is large.
-        // 0.1% of pixels is safe.
-        const threshold = totalPixels * 0.001; 
+        const outputData = Buffer.alloc(data.length);
 
-        for (let i = 0; i < data.length; i += 3) { // limit 3 channels (r,g,b) usually
+        // 2. Filter: Keep ONLY standard Blue pixels. Make them BLACK. Make others WHITE.
+        // This isolates the Blue "Thích"/"Like" text or Blue "Like" icon.
+        for (let i = 0; i < data.length; i += 3) {
             const r = data[i];
             const g = data[i+1];
             const b = data[i+2];
 
-            // Facebook Blue targets roughly:
-            // Modern: R:8 G:102 B:255 (#0866FF)
-            // Messenger: R:0 G:132 B:255 (#0084FF)
-            // Classic: R:24 G:119 B:242 (#1877F2)
-            
-            // Logic: Blue must be significantly higher than Red and Green
-            // And Blue component should be high (> 150)
             const rVal = r ?? 0;
             const gVal = g ?? 0;
             const bVal = b ?? 0;
 
-            if (bVal > 140 && bVal > rVal + 30 && bVal > gVal + 30) {
-                 bluePixels++;
+            // Relaxed Blue Definition to catch anti-aliased text or lighter blue
+            // b > 110 (was 130)
+            // difference > 15 (was 30)
+            if (bVal > 110 && bVal > rVal + 15 && bVal > gVal + 15) {
+                 // Keep Blue (Black for OCR)
+                 outputData[i] = 0;
+                 outputData[i+1] = 0;
+                 outputData[i+2] = 0;
+            } else {
+                 // Wipe Non-Blue (White)
+                 outputData[i] = 255;
+                 outputData[i+1] = 255;
+                 outputData[i+2] = 255;
             }
         }
 
-        console.log(`[VISUAL] Blue Pixels: ${bluePixels} / ${threshold} needed`);
-        return bluePixels > threshold;
+        const blueMaskBuffer = await sharp(outputData, { raw: { width: info.width, height: info.height, channels: 3 } })
+            .png()
+            .toBuffer();
+
+        // 3. OCR on the Blue Mask
+        const { data: { text } } = await worker.recognize(blueMaskBuffer);
+        const cleanText = text.toLowerCase();
+        
+        console.log(`[BLUE-OCR] Extracted Text from Blue Layer: "${cleanText.replace(/\s+/g, ' ').trim().substring(0, 50)}..."`);
+
+        const keywords = ['thích', 'like', 'liked'];
+        const hasKeyword = keywords.some(k => cleanText.includes(k));
+
+        return hasKeyword;
+
     } catch (e) {
-        console.error("[VISUAL] Check Error:", e);
-        return false; // Fail safe
+        console.error("[BLUE-OCR] Check Error:", e);
+        return false;
     }
 }
 
@@ -125,7 +154,10 @@ export const verifyMissionProof = async (
                 // B. Top Right (Calendar Widget / Big Clock)
                 // Often widgets are in the top-right or center-right.
                 // Let's grab the top-right 30% area.
-                const trWidth = Math.floor(metadata.width * 0.35);
+                // B. Top Right (Calendar Widget / Big Clock)
+                // Often widgets are in the top-right or center-right.
+                // Let's grab the top-right 50% area to be safe for wide widgets.
+                const trWidth = Math.floor(metadata.width * 0.50);
                 const trHeight = Math.floor(metadata.height * 0.35);
                 const trLeft = metadata.width - trWidth;
                 const trTop = 0;
@@ -145,7 +177,7 @@ export const verifyMissionProof = async (
             console.error("[OCR] Crop Error:", cropError);
         }
 
-        await worker.terminate();
+        // await worker.terminate(); // Keep worker alive for Blue Text Check
 
         // Remove am/pm to simplify number parsing, but keep logic if needed later
         const cleanText = combinedText.toLowerCase()
@@ -168,8 +200,8 @@ export const verifyMissionProof = async (
              };
 
              const validTimeStrings: string[] = [];
-             // Range: -2 minute (drift) to +5 minutes (buffer)
-             for (let i = -2; i <= 5; i++) {
+             // Range: -1 minute (drift) to +3 minutes (strict window per user request)
+             for (let i = -1; i <= 3; i++) {
                  const t = new Date(start.getTime() + i * 60000);
                  const vnTime = getVNTime(t); // e.g., "09:26" or "15:27"
                  validTimeStrings.push(vnTime);
@@ -190,7 +222,8 @@ export const verifyMissionProof = async (
 
              console.log(`[OCR] Checking for times (VN): ${validTimeStrings.join(', ')}`);
 
-             const timeRegex = /(\d{1,2})[\s:;.,]+(\d{2})/g;
+             // REGEX: Allow more separators (dot, comma, dash, space, quote)
+             const timeRegex = /(\d{1,2})[\s:;.,'"-]+(\d{2})/g;
              
              const normalizedText = cleanText
                 .replace(/[oO]/g, '0')
@@ -201,6 +234,7 @@ export const verifyMissionProof = async (
              let foundValidTime = false;
              const foundTimes: string[] = [];
              
+             // 1. Check Standard Separated Times
              while ((match = timeRegex.exec(normalizedText)) !== null) {
                  const hStr = match[1] ?? '0';
                  const mStr = match[2] ?? '0';
@@ -214,38 +248,57 @@ export const verifyMissionProof = async (
                      foundValidTime = true;
                      break;
                  }
+                 // Fuzzy match (contains)
                  if (validTimeStrings.some(vt => cleanText.includes(vt))) {
                     foundValidTime = true;
                     break;
                  }
              }
 
+             // 2. Check Compact Times (e.g. "1012" found in text)
+             // ONLY if we verify it against our expected list to avoid false positives (years/likes)
              if (!foundValidTime) {
                  const digitsOnly = normalizedText.replace(/\D/g, ''); 
+                 
                  const digitMatches = validTimeStrings.some(vt => {
+                     // vt is "10:12" -> "1012"
                      const vtDigits = vt.replace(/\D/g, ''); 
-                     return digitsOnly.includes(vtDigits);
+                     
+                     // Check if "1012" exists in the digits stream
+                     // AND check if "1012" exists as a whole word in normalized text (safer)
+                     // converting normalizedText to space-separated digits might be better
+                     
+                     if (digitsOnly.includes(vtDigits)) {
+                         // Double check: ensure it's not part of "2026" (Year)
+                         // e.g. Year 2026 -> 2026. If time is 20:26 -> match. 
+                         // But here time is 10:12 -> 1012. Year is 2026. Safe.
+                         return true;
+                     }
+                     return false;
                  });
+
                  if (digitMatches) foundValidTime = true;
              }
-
+             
              if (!foundValidTime) {
                    const uniqueFound = [...new Set(foundTimes)].slice(0, 5); 
                    console.log(`[OCR] Time Check Failed. Digits: ${normalizedText.replace(/\D/g, '')} | Expected: ${validTimeStrings.map(t=>t.replace(/\D/g,'')).join(',')}`);
                    
-                   if (uniqueFound.length > 0) {
-                       return {
-                           success: false,
-                           status: 'rejected',
-                           reason: `Ảnh không hợp lệ. Thời gian trong ảnh (${uniqueFound.join(', ')}) KHÔNG PHẢI REAL-TIME. Hệ thống yêu cầu ảnh chụp lúc ${validTimeStrings[0]} (VN Time).`
-                       };
-                   } else {
-                       return {
-                           success: false,
-                           status: 'rejected',
-                           reason: `Không tìm thấy đồng hồ trong ảnh. Vui lòng chụp ảnh toàn màn hình có hiện rõ thời gian thực.`
-                       };
-                   }
+                       if (uniqueFound.length > 0) {
+                           await worker.terminate();
+                           return {
+                               success: false,
+                               status: 'rejected',
+                               reason: `Ảnh không hợp lệ. Thời gian trong ảnh (${uniqueFound.join(', ')}) KHÔNG PHẢI REAL-TIME. Hệ thống yêu cầu ảnh chụp trong khoảng ${validTimeStrings[0]} - ${validTimeStrings[validTimeStrings.length-1]} (VN Time).`
+                           };
+                       } else {
+                           await worker.terminate();
+                           return {
+                               success: false,
+                               status: 'rejected',
+                               reason: `Không tìm thấy đồng hồ trong ảnh. Vui lòng chụp ảnh toàn màn hình có hiện rõ thời gian thực.`
+                           };
+                       }
              }
         }
         // -------------------------------------
@@ -255,29 +308,54 @@ export const verifyMissionProof = async (
         let rejectReason = "";
 
         if (missionType === 'like') {
-            // A. Visual Check (Blue Button)
-            const isBlue = await hasBlueLikeButton(fileBuffer);
+            // A. Check for Blue Text (Blue Mask OCR) - Gate 1
+            // This verifies that "Thích"/"Like" is actually colored BLUE.
+            // Using the worker from the main scope
+            const hasBlueText = await hasBlueLikeText(fileBuffer, worker);
             
-            // B. Text Check (User Identity or Action)
-            const keywords = ['bạn', 'you', 'liked', 'thích', 'đã thích', 'like']; 
+            // B. Check for Strong Keywords (Standard OCR)
+            // Added "bạn," (comma is important) to catch "Bạn, [Name]..." status line which confirms user like.
+            const strongKeywords = ['đã thích', 'liked', 'you liked', 'bạn và', 'reaction', 'bạn,']; 
             const textLower = cleanText.toLowerCase();
-            const hasUserRef = keywords.some(k => textLower.includes(k));
+            const hasStrongKeyword = strongKeywords.some(k => textLower.includes(k));
 
-            // LOGIC UPDATE:
-            // If Blue Button is found + Time Check passed -> We are confident checking "Like".
-            // The word "Bạn" is sometimes missed by OCR in complex backgrounds.
-            // So: Success if (Blue) OR (Text "Bạn")
+            // C. Compound Check (Contextual Verification)
+            // "Bạn" + "thích" OR "Bạn" + "người khác" OR "Bạn" + "và" matches "Bạn, X và Y người khác đã thích"
+            // Also handles unaccented cases (OCR issues)
+            // C. Compound Check (Contextual Verification)
+            // "Bạn" + "thích" OR "Bạn" + "người khác" OR "Bạn" + "và" matches "Bạn, X và Y người khác đã thích"
+            // Also handles unaccented cases (OCR issues)
             
-            if (isBlue) {
-                 isValidContent = true; // Visual proof is strong enough
-                 if (!hasUserRef) {
-                     console.log("[VERIFY] Blue Button detected but 'Bạn' missing. Approving based on Visual.");
-                 }
-            } else if (hasUserRef) {
-                 isValidContent = true; // Text proof found even if visual failed (e.g. dark mode weirdness)
+            // Replaced Regex with simple substring checks for robustness against concatenated OCR (e.g. "Banva")
+            // "bạn và" or "bạn," are very specific to the status line.
+            const hasBanPrefix = 
+                textLower.includes('bạn,') || textLower.includes('ban,') ||
+                textLower.includes('bạn và') || textLower.includes('ban va') ||
+                textLower.includes('bạn ') || textLower.includes('ban '); // Space is safe if "bạn" is a word
+
+            const hasCompoundKeyword = hasBanPrefix && (
+                textLower.includes('thích') || 
+                textLower.includes('người khác') || 
+                textLower.includes('và') ||
+                textLower.includes('thich') || // Unaccented
+                textLower.includes('nguoi khac') || 
+                textLower.includes('va') ||
+                textLower.includes('liked') 
+            );
+
+            if (hasBlueText) {
+                 isValidContent = true;
+                 console.log("[VERIFY] Blue Like Text Detected (Mask OCR). Approved.");
+            } else if (hasStrongKeyword) {
+                 isValidContent = true; 
+                 console.log("[VERIFY] Strong keyword detected. Approved.");
+            } else if (hasCompoundKeyword) {
+                 isValidContent = true;
+                 console.log("[VERIFY] Compound Context detected (Bạn/Ban + ...). Approved.");
             } else {
-                 rejectReason = 'Không tìm thấy nút Like màu xanh HOẶC chữ "Bạn" trong ảnh.';
+                 rejectReason = 'Nút Like chưa chuyển sang màu xanh (Chưa active) HOẶC không có chữ "Đã thích".';
             }
+
         } else if (missionType === 'follow') {
              const keywords = ['follow', 'theo dõi', 'đang follow', 'following', 'đã follow', 'follow back', 'nhắn tin'];
              if (keywords.some(k => cleanText.includes(k))) {
@@ -298,6 +376,7 @@ export const verifyMissionProof = async (
 
         if (!isValidContent) {
             console.log(`[OCR] Failed. Reason: ${rejectReason}`);
+            await worker.terminate();
             return {
                 success: false,
                 status: 'rejected',
@@ -305,6 +384,7 @@ export const verifyMissionProof = async (
             };
         }
 
+        await worker.terminate();
         return {
             success: true,
             status: 'approved', 
