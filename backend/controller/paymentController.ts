@@ -10,6 +10,7 @@ interface WebhookTransaction {
     transactionDate?: string;
     referenceCode?: string; // Some gateways send this
     gateway?: string; // Custom field if needed
+    [key: string]: any; // Allow other props for flexibility during parsing
 }
 
 export const handleWebhook = async (req: Request, res: Response) => {
@@ -36,6 +37,32 @@ export const handleWebhook = async (req: Request, res: Response) => {
             transactions = body.data;
         } else if ('amount' in body && 'description' in body) {
             transactions = [body];
+        } else {
+            // Flexible check using any cast to avoid TS union errors
+            const flexibleBody = body as any;
+            if (flexibleBody.transferAmount && (flexibleBody.transferContent || flexibleBody.content || flexibleBody.description)) {
+                transactions = [{
+                    amount: Number(flexibleBody.transferAmount || flexibleBody.amount),
+                    description: String(flexibleBody.transferContent || flexibleBody.content || flexibleBody.description),
+                    gateway: String(flexibleBody.gateway || ''),
+                    transactionDate: String(flexibleBody.transactionDate || ''),
+                    referenceCode: String(flexibleBody.referenceCode || '')
+                }];
+            }
+        }
+
+        if (transactions.length === 0) {
+             // Second pass for flat structure that might miss some keys but has transferAmount
+             const flexibleBody = body as any;
+             if (flexibleBody.transferAmount) {
+                 transactions = [{
+                    amount: Number(flexibleBody.transferAmount),
+                    description: String(flexibleBody.transferContent || flexibleBody.content || flexibleBody.description || ''),
+                    gateway: flexibleBody.gateway,
+                    transactionDate: flexibleBody.transactionDate,
+                    referenceCode: flexibleBody.referenceCode
+                 }];
+             }
         }
 
         if (transactions.length === 0) {
@@ -131,8 +158,39 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
         return res.json({ success: true, stats });
 
+
     } catch (err: unknown) {
         console.error("Webhook Critical Error:", err);
         return res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 }
+
+// Check Payment Status (Polling) based on Description Code (e.g. HUYTICHXANH123)
+export const checkPaymentStatus = async (req: Request, res: Response) => {
+    try {
+        const { code } = req.params; // Expecting transaction code like HUYTICHXANH123
+        
+        if (!code) {
+           return res.status(400).json({ status: 'error', message: 'Missing transaction code' }); 
+        }
+
+        // Find transaction by description (assuming code is unique enough or we take the latest)
+        const transaction = await transactionModel.findOne({
+            description: { $regex: code, $options: 'i' }
+        }).sort({ createdAt: -1 });
+
+        if (!transaction) {
+            return res.status(404).json({ status: 'NOT_FOUND', message: 'Transaction not found' });
+        }
+
+        return res.json({ 
+            status: transaction.status, // 'pending', 'approved', 'rejected'
+            amount: transaction.amount,
+            createdAt: transaction.createdAt
+        }); 
+
+    } catch (err: any) {
+        console.error(err);
+        return res.status(500).json({ status: 'error', msg: 'Server Error' });
+    }
+};
