@@ -3,6 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import axios from 'axios';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const Deposit = () => {
     const [amount, setAmount] = useState('');
@@ -10,6 +19,7 @@ const Deposit = () => {
     const [qrContent, setQrContent] = useState('');
     const [qrUrl, setQrUrl] = useState('');
     const [timeLeft, setTimeLeft] = useState(null); // Timer state in seconds
+    const [successData, setSuccessData] = useState(null);
 
     const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
@@ -25,7 +35,8 @@ const Deposit = () => {
                 if (remaining > 0) {
                     setAmount(amount.toLocaleString('vi-VN'));
                     setQrContent(content);
-                    setQrUrl(`https://img.vietqr.io/image/MB-HUYDEV204-compact2.png?amount=${amount}&addInfo=${content}&accountName=HA%20QUANG%20HUY`);
+                    // Updated to SePay QR format
+                    setQrUrl(`https://qr.sepay.vn/img?bank=TPBank&acc=HUYDEV204&template=compact&amount=${amount}&des=${content}`);
                     setShowQR(true);
                     setTimeLeft(remaining);
                 } else {
@@ -56,6 +67,40 @@ const Deposit = () => {
         return () => clearInterval(intervalId);
     }, [timeLeft]);
 
+    // Polling Transaction Status
+    React.useEffect(() => {
+        if (!showQR || !qrContent) return;
+
+        const checkStatus = async () => {
+             try {
+                const res = await axios.get(`${API_URL}/api/payment/check-status/${qrContent}`);
+                if (res.data && res.data.status === 'approved') {
+                    // Success!
+                    setSuccessData({
+                        amount: parseInt(res.data.amount).toLocaleString('vi-VN'),
+                        date: new Date().toLocaleString('vi-VN')
+                    });
+                    
+                    setShowQR(false);
+                    setAmount('');
+                    setTimeLeft(null);
+                    localStorage.removeItem('pendingDeposit');
+                    // Optional: Refresh user balance here if you have a context/function
+                    // window.location.reload(); 
+                }
+             } catch (error) {
+                 // Ignore 404 (not found yet) or network errors during polling
+                 if (error.response && error.response.status !== 404) {
+                     console.error("Polling error", error);
+                 }
+             }
+        };
+
+        const pollInterval = setInterval(checkStatus, 3000); // Check every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [showQR, qrContent, API_URL]);
+
     const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -80,9 +125,9 @@ const Deposit = () => {
         const content = `HUYTICHXANH${randomDigits}`;
         setQrContent(content);
 
-        // Generate VietQR URL
-        // Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>&accountName=<NAME>
-        const url = `https://img.vietqr.io/image/MB-HUYDEV204-compact2.png?amount=${value}&addInfo=${content}&accountName=HA%20QUANG%20HUY`;
+        // Generate SePay QR URL
+        // Template: https://qr.sepay.vn/img?bank=TPBank&acc=HUYDEV204&template=compact&amount=&des=
+        const url = `https://qr.sepay.vn/img?bank=TPBank&acc=HUYDEV204&template=compact&amount=${value}&des=${content}`;
         setQrUrl(url);
         setShowQR(true);
         setTimeLeft(600); // 10 minutes = 600 seconds
@@ -100,7 +145,7 @@ const Deposit = () => {
             const token = localStorage.getItem('token');
             if (token) {
                  await axios.post(`${API_URL}/api/user/deposit`, {
-                    userId: JSON.parse(localStorage.getItem('user'))._id, // Assuming user object is in local storage
+                    userId: JSON.parse(localStorage.getItem('user'))._id, 
                     amount: value,
                     content: content
                 }, {
@@ -109,7 +154,7 @@ const Deposit = () => {
             }
         } catch (error) {
             console.error("Failed to create pending transaction", error);
-            // Non-blocking error, user can still see QR but might want to know
+            // Non-blocking error
             toast.error("Không thể tạo giao dịch trên hệ thống, vui lòng liên hệ Admin nếu đã chuyển khoản.");
         }
     };
@@ -200,14 +245,14 @@ const Deposit = () => {
                                     <div className="mt-3 flex items-center justify-center gap-4 text-xs font-bold text-slate-600">
                                          <span className="flex items-center gap-1"><img src="https://static.mservice.io/img/logo-momo.png" className="w-4 h-4 object-contain grayscale opacity-50"/> NAPAS 247</span>
                                          <span className="w-px h-3 bg-slate-300"></span>
-                                         <span>MB BANK</span>
+                                         <span>TPBANK</span>
                                     </div>
                                 </div>
 
                                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 space-y-3 text-left">
                                     <div className="flex justify-between items-center text-sm">
                                          <span className="text-slate-500">Ngân hàng:</span>
-                                         <span className="font-bold text-slate-800 dark:text-slate-200">MB BANK</span>
+                                         <span className="font-bold text-slate-800 dark:text-slate-200">TPBank</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
                                          <span className="text-slate-500">Số tài khoản:</span>
@@ -264,6 +309,41 @@ const Deposit = () => {
                     )}
                 </div>
             </div>
+
+            {/* Success Modal */}
+            <AlertDialog open={!!successData} onOpenChange={() => setSuccessData(null)}>
+                <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <AlertDialogHeader>
+                        <div className="mx-auto size-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                            <span className="material-symbols-outlined text-3xl text-green-600 dark:text-green-500">check_circle</span>
+                        </div>
+                        <AlertDialogTitle className="text-center text-2xl font-bold text-slate-800 dark:text-white">
+                            Nạp Tiền Thành Công!
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-center space-y-2">
+                            <span className="block text-slate-500">Bạn vừa nạp thành công số tiền</span>
+                            <span className="block text-3xl font-black text-green-600 dark:text-green-500">
+                                {successData?.amount}đ
+                            </span>
+                            <span className="block text-xs text-slate-400">
+                                {successData?.date}
+                            </span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="sm:justify-center">
+                        <AlertDialogAction 
+                            onClick={() => {
+                                setSuccessData(null);
+                                // Optional: Reload page to update balance header if needed
+                                // window.location.reload(); 
+                            }}
+                            className="w-full sm:w-auto min-w-[120px] bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl"
+                        >
+                            HOÀN TẤT
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
