@@ -17,6 +17,7 @@ interface IncomingTransaction {
     amount?: number | string;
     description?: string;
     transferAmount?: number | string;
+    transferType?: string;
     transferContent?: string;
     content?: string;
     transactionDate?: string;
@@ -38,8 +39,6 @@ export const handleWebhook = async (req: Request, res: Response) => {
         console.log("Webhook Received:", JSON.stringify(req.body));
 
         // 1. Parse Data - Support common formats
-        // SePay/Casso usually send a list of transactions
-        // Structure might be { transactions: [...] } or just [...]
         let rawTransactions: IncomingTransaction[] = [];
         
         const body = req.body as WebhookBody;
@@ -47,14 +46,12 @@ export const handleWebhook = async (req: Request, res: Response) => {
         if (Array.isArray(body)) {
             rawTransactions = body;
         } else {
-            // Check for container properties first
             const container = body as WebhookContainer;
             if (Array.isArray(container.transactions)) {
                 rawTransactions = container.transactions;
             } else if (Array.isArray(container.data)) {
                 rawTransactions = container.data;
             } else {
-                 // Assume single object body is a transaction if it has fields
                  rawTransactions = [body as IncomingTransaction];
             }
         }
@@ -64,13 +61,19 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
         for (const raw of rawTransactions) {
             // Determine amount
-            const amountVal = raw.transferAmount ?? raw.amount;
+            let amountVal = Number(raw.transferAmount ?? raw.amount);
+            
+            // Adjust for SePay transferType (out = deduction)
+            if (raw.transferType === 'out' && amountVal > 0) {
+                amountVal = -amountVal;
+            }
+
             // Determine description
             const descVal = raw.transferContent ?? raw.content ?? raw.description;
 
-            if (amountVal !== undefined && descVal !== undefined) {
+            if (!isNaN(amountVal) && descVal !== undefined) {
                  transactions.push({
-                     amount: Number(amountVal),
+                     amount: amountVal,
                      description: descVal,
                      gateway: raw.gateway,
                      transactionDate: raw.transactionDate,
@@ -97,9 +100,8 @@ export const handleWebhook = async (req: Request, res: Response) => {
                 const { amount, description } = tx;
                 const content: string = description;
                 
-                // 3. Extract logic: Find "HUYTICHXANH" + digits
-                // RegEx: /HUYTICHXANH\d+/i
-                const regex = /HUYTICHXANH\d+/i;
+                // 3. Extract logic: Find "HUYTICHXANH" or "HUYWD" + digits
+                const regex = /(HUYTICHXANH|HUYWD)\d+/i;
                 const match = regex.exec(content);
                 
                 if (!match) {
@@ -110,58 +112,93 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
                 const code = match[0].toUpperCase(); // e.g., HUYTICHXANH123
 
-                // 4. Find Pending Transaction
-                // We look for a pending deposit with this description info
-                const transaction = await transactionModel.findOne({
-                    status: 'pending',
-                    type: 'deposit',
-                    description: { $regex: code, $options: 'i' }
-                });
+                if (amount > 0) {
+                    // --- CASE: DEPOSIT ---
+                    // 4. Find Pending Deposit Transaction
+                    const transaction = await transactionModel.findOne({
+                        status: 'pending',
+                        type: 'deposit',
+                        description: { $regex: code, $options: 'i' }
+                    });
 
-                if (!transaction) {
-                    console.log(`No pending transaction found for code: ${code}`);
-                    // Optional: maybe create a new transaction if you want to support "transfer without request"
-                    // For now, we only support matching requests
-                    continue;
+                    if (!transaction) {
+                        console.log(`No pending deposit transaction found for code: ${code}`);
+                        continue;
+                    }
+
+                    // 5. Amount Check
+                    if (amount < transaction.amount) {
+                        console.warn(`Amount mismatch for deposit ${code}. Expected ${transaction.amount}, got ${amount}`);
+                        continue;
+                    }
+
+                    // 6. Approve & Add Balance
+                    const user = await userModel.findById(transaction.userId);
+                    if (!user) {
+                        console.error(`User not found for tx ${String(transaction._id)}`);
+                        continue;
+                    }
+
+                    transaction.status = 'approved';
+                    transaction.amount = amount;
+                    await transaction.save();
+
+                    user.balance = (user.balance || 0) + amount;
+                    await user.save();
+
+                    const { updateUserDepositStats } = await import('../services/adminService.js');
+                    await updateUserDepositStats(user._id, amount);
+
+                    stats.success++;
+                    console.log(`Successfully approved deposit ${code} for user ${user.username}, amount ${amount}`);
+                } else if (amount < 0) {
+                    // --- CASE: WITHDRAWAL (SePay deducting from admin account) ---
+                    // 4. Find Pending Withdrawal Transaction
+                    // Withdrawal amount in DB is usually stored as negative or positive? 
+                    // Looking at userService.ts withdrawal: amount: -amount (negative)
+                    const absAmount = Math.abs(amount);
+                    
+                    const transaction = await transactionModel.findOne({
+                        status: 'pending',
+                        type: 'withdraw',
+                        description: { $regex: code, $options: 'i' }
+                    });
+
+                    if (!transaction) {
+                        console.log(`No pending withdrawal transaction found for code: ${code}`);
+                        continue;
+                    }
+
+                    // Verify amount matches (allow some tolerance if needed, but usually withdrawal is exact)
+                    if (Math.abs(transaction.amount) !== absAmount) {
+                         console.warn(`Withdrawal amount mismatch for ${code}. Expected ${Math.abs(transaction.amount)}, got ${absAmount}`);
+                         // continue; // Optional: maybe some banks/gateways have small fee differences
+                    }
+
+                    // 5. Approve Withdrawal
+                    transaction.status = 'approved';
+                    await transaction.save();
+
+                    console.log(`Withdrawal ${code} confirmed via webhook. Sending email...`);
+
+                    // 6. Send Email Notification
+                    if (transaction.withdrawalDetails?.email) {
+                        try {
+                            const { sendWithdrawalApprovedNotification } = await import('../services/mailService.js');
+                            await sendWithdrawalApprovedNotification(transaction.withdrawalDetails.email, {
+                                bankName: transaction.withdrawalDetails.bankName ?? '',
+                                bankAccount: transaction.withdrawalDetails.bankAccount ?? '',
+                                amount: absAmount,
+                                transactionId: transaction._id.toString()
+                            });
+                        } catch (mailErr) {
+                            console.error(`Failed to send withdrawal email for ${code}:`, mailErr);
+                        }
+                    }
+
+                    stats.success++;
+                    console.log(`Successfully confirmed withdrawal ${code} for user. Amount deducted: ${absAmount}`);
                 }
-
-                // 5. Amount Check
-                // Allow some tolerance or require exact? Usually exact or >=
-                if (amount < transaction.amount) {
-                    console.warn(`Amount mismatch for ${code}. Expected ${transaction.amount}, got ${amount}`);
-                    // Decide: Reject? Or Partial?
-                    // Let's keep it pending or mark specialized status
-                    continue;
-                }
-
-                // 6. Approve & Add Balance
-                const user = await userModel.findById(transaction.userId);
-                if (!user) {
-                     console.error(`User not found for tx ${String(transaction._id)}`);
-                     continue;
-                }
-
-                // Update Transaction
-                transaction.status = 'approved';
-                transaction.amount = amount; // Update to actual received if different (e.g. user sent more)
-                // transaction.paymentGatewayId = ... // if we had field
-                await transaction.save();
-
-                // Update User Balance
-                user.balance = (user.balance || 0) + amount;
-                await user.save();
-                
-
-                // Update Deposit Stats
-                const { updateUserDepositStats } = await import('../services/adminService.js');
-                await updateUserDepositStats(user._id, amount);
-                
-
-                // Create a generic "Payment Received" record if strictly separating log vs balance?
-                // No, updating the 'deposit' transaction status is the standard way.
-
-                stats.success++;
-                console.log(`Successfully approved deposit ${code} for user ${user.username}, amount ${amount}`);
 
             } catch (err) {
                 console.error("Error processing transaction", err);
