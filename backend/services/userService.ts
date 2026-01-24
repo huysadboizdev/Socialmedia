@@ -757,6 +757,9 @@ export const withdrawMissionBalance = async (
         const fee = amount * 0.2;
         const finalAmount = amount - fee;
 
+        // Generate a tracking code for SePay matching
+        const trackingCode = `HUYWD${Math.floor(1000 + Math.random() * 9000)}`;
+
         await user.save();
 
         // Create a pending transaction record
@@ -764,7 +767,7 @@ export const withdrawMissionBalance = async (
             userId,
             amount: -amount,
             type: 'withdraw',
-            description: `Yêu cầu rút tiền về ngân hàng (${details?.bankName}). Thực nhận: ${finalAmount.toLocaleString()} đ (Phí 20%: ${fee.toLocaleString()} đ)`,
+            description: `${trackingCode} - Yêu cầu rút tiền về ngân hàng (${details?.bankName}). Thực nhận: ${finalAmount.toLocaleString()} đ (Phí 20%: ${fee.toLocaleString()} đ)`,
             oldBalance: user.missionBalance + amount,
             newBalance: user.missionBalance,
             balanceType: 'mission',

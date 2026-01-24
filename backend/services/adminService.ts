@@ -5,7 +5,6 @@ import orderModel, { type OrderStatus } from '../models/orderModel.js'
 import missionModel from '../models/missionModel.js'
 import submissionModel from '../models/submissionModel.js'
 import type { UpdateQuery, Types } from 'mongoose'
-import * as mailService from './mailService.js'
 
 export interface AdminLoginParams {
   email?: string;
@@ -660,21 +659,6 @@ export const approveWithdrawalRequest = async (transactionId: string) => {
 
     transaction.status = 'approved'
     await transaction.save()
-
-    // Send email notification if available
-    console.log('[DEBUG] Checking if email exists for transaction:', transaction._id, 'Email:', transaction.withdrawalDetails?.email);
-    if (transaction.withdrawalDetails?.email) {
-        console.log('[DEBUG] Attempting to send approved email to:', transaction.withdrawalDetails.email);
-        const emailResult = await mailService.sendWithdrawalApprovedNotification(transaction.withdrawalDetails.email, {
-            bankName: transaction.withdrawalDetails.bankName ?? '',
-            bankAccount: transaction.withdrawalDetails.bankAccount ?? '',
-            amount: Math.abs(transaction.amount),
-            transactionId: transaction._id.toString()
-        });
-        console.log('[DEBUG] Email service result:', emailResult);
-    } else {
-        console.log('[DEBUG] No email found in withdrawalDetails'); // Log if missing
-    }
 
     return { success: true, message: 'Withdrawal approved' }
 }

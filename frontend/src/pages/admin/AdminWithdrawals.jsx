@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
@@ -42,44 +42,57 @@ const AdminWithdrawals = () => {
         confirmLoading: false
     });
 
-    const fetchWithdrawals = async () => {
+    const prevRequestsRef = useRef([]);
+    const pollingTimerRef = useRef(null);
+
+    const fetchWithdrawals = async (isBackground = false) => {
         try {
-            setLoading(true);
+            if (!isBackground) setLoading(true);
             const token = localStorage.getItem('token');
             const res = await axios.get(`${API_URL}/api/admin/withdrawals`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                setRequests(res.data.requests || []);
+                const newRequests = res.data.requests || [];
+                
+                // --- Status Change Detection ---
+                if (isBackground && prevRequestsRef.current.length > 0) {
+                    newRequests.forEach(newReq => {
+                        const oldReq = prevRequestsRef.current.find(r => r._id === newReq._id);
+                        if (oldReq && oldReq.status === 'pending' && newReq.status === 'approved') {
+                            toast.success(`Hệ thống: Lệnh rút ${newReq.withdrawalDetails?.bankAccount} (${newReq.amount.toLocaleString()}đ) đã được tự động duyệt!`, {
+                                duration: 5000,
+                                position: 'top-right'
+                            });
+                        }
+                    });
+                }
+                
+                setRequests(newRequests);
+                prevRequestsRef.current = newRequests;
             }
         } catch (_error) {
             console.error(_error);
-            toast.error('Failed to fetch withdrawal requests');
+            if (!isBackground) toast.error('Failed to fetch withdrawal requests');
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchWithdrawals();
+
+        // Start Polling every 10 seconds
+        pollingTimerRef.current = setInterval(() => {
+            fetchWithdrawals(true);
+        }, 10000);
+
+        return () => {
+            if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+        };
     }, []);
 
 
-    const handleAutoApprove = async (id) => {
-        try {
-            toast.info('Đang tự động duyệt...', { duration: 2000 });
-            const token = localStorage.getItem('token');
-            const res = await axios.post(`${API_URL}/api/admin/withdraw/approve`, { transactionId: id }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data.success) {
-                toast.success('Đã tự động duyệt và gửi mail!');
-                fetchWithdrawals();
-            }
-        } catch {
-            toast.error('Duyệt tự động thất bại');
-        }
-    };
 
     const handleApproveClick = (id) => {
         setDialogConfig({
@@ -190,6 +203,24 @@ const AdminWithdrawals = () => {
                 </div>
             </div>
 
+            {/* Instruction Alert */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-xl flex items-start gap-3">
+                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
+                <div className="text-sm text-blue-800 dark:text-blue-200">
+                    <p className="font-bold mb-1">Hướng dẫn đối soát tự động:</p>
+                    <p>Khi chuyển khoản cho user, vui lòng copy **Mã Đối Soát** (ví dụ: HUYWD1234) dán vào **nội dung chuyển khoản**. Khi SePay báo trừ tiền, hệ thống sẽ tự động duyệt và gửi mail cho user.</p>
+                </div>
+            </div>
+
+            {/* Instruction Alert */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-xl flex items-start gap-3">
+                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
+                <div className="text-sm text-blue-800 dark:text-blue-200">
+                    <p className="font-bold mb-1">Hướng dẫn đối soát tự động:</p>
+                    <p>Khi chuyển khoản cho user, vui lòng copy **Mã Đối Soát** (ví dụ: HUYWD1234) dán vào **nội dung chuyển khoản**. Khi SePay báo trừ tiền, hệ thống sẽ tự động duyệt và gửi mail cho user.</p>
+                </div>
+            </div>
+
             {/* Table Section */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm transition-all">
                 <div className="overflow-x-auto">
@@ -244,7 +275,13 @@ const AdminWithdrawals = () => {
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-slate-700 dark:text-slate-200 text-[13px]">{req.userId?.username}</span>
                                                     <span className="text-[11px] text-slate-400">{req.userId?.fullName}</span>
-                                                    <span className="text-[10px] text-slate-400 italic font-medium">{req.userId?.email}</span>
+                                                    {req.description && req.description.includes('HUYWD') && (
+                                                        <div className="mt-1">
+                                                            <span className="text-[10px] font-black bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded cursor-help" title="Mã đối soát - Cần ghi vào nội dung chuyển tiền">
+                                                                {req.description.split(' - ')[0]}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
@@ -282,7 +319,6 @@ const AdminWithdrawals = () => {
                                                     <button 
                                                         onClick={() => {
                                                             setViewingQR(req.withdrawalDetails.qrCode);
-                                                            if (req.status === 'pending') handleAutoApprove(req._id);
                                                         }}
                                                         className="relative group size-10 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden mx-auto hover:ring-2 hover:ring-purple-500/20 transition-all bg-white dark:bg-slate-800 p-0.5"
                                                     >
@@ -322,7 +358,6 @@ const AdminWithdrawals = () => {
                                                             size="sm"
                                                             onClick={() => {
                                                                 setViewingDetail(req);
-                                                                handleAutoApprove(req._id);
                                                             }}
                                                             className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-md transition-colors"
                                                             title="Xem chi tiết & Duyệt tự động"
@@ -496,7 +531,17 @@ const AdminWithdrawals = () => {
                              <div className="flex items-start justify-between">
                                  <div>
                                      <h3 className="text-xl font-bold text-slate-800 dark:text-white">Chi Tiết Yêu Cầu</h3>
-                                     <p className="text-sm text-slate-500">Mã GD: #{viewingDetail._id.slice(-8).toUpperCase()}</p>
+                                     <div className="flex flex-col gap-0.5 mt-1">
+                                         <p className="text-xs text-slate-500 font-medium">Mã GD: #{viewingDetail._id.slice(-8).toUpperCase()}</p>
+                                         {viewingDetail.description && viewingDetail.description.includes('HUYWD') && (
+                                             <div className="flex items-center gap-1.5">
+                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Mã Đối Soát:</span>
+                                                 <span className="text-[11px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
+                                                     {viewingDetail.description.split(' - ')[0]}
+                                                 </span>
+                                             </div>
+                                         )}
+                                     </div>
                                  </div>
                                  <button onClick={() => setViewingDetail(null)} className="hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                                      <span className="material-symbols-outlined text-[18px]">close</span>
