@@ -7,7 +7,15 @@ const router = express.Router()
 
 router.get(
   '/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] }) as express.RequestHandler
+  (req, res, next) => {
+      const { platform } = req.query;
+      const state = platform ? Buffer.from(JSON.stringify({ platform })).toString('base64') : undefined;
+      
+      passport.authenticate('google', { 
+          scope: ['profile', 'email'],
+          state: state
+      })(req, res, next);
+  }
 )
 
 router.get(
@@ -15,9 +23,32 @@ router.get(
   passport.authenticate('google', { failureRedirect: '/' }) as express.RequestHandler,
   (req: express.Request, res: express.Response) => {
     const user = req.user as IUser | undefined;
+    const { state } = req.query; // Get state from query params
+    
+    // Determine frontend URL based on state or platform
+    // We can pass 'mobile' in state when initiating auth from app
+    let frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+    let isMobile = false;
+
+    if (state && typeof state === 'string') {
+        try {
+             // If state tells us it's mobile
+             const stateObj = JSON.parse(Buffer.from(state, 'base64').toString());
+             if (stateObj.platform === 'mobile') {
+                 frontendUrl = 'mobile://'; // Deep link scheme
+                 isMobile = true;
+             }
+        } catch (e) {
+            // ignore if not json or base64
+        }
+    }
+
     if (!user) {
-      res.redirect(`${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login?error=auth_failed`);
-      return;
+        const errorUrl = isMobile 
+            ? `${frontendUrl}login?error=auth_failed` 
+            : `${frontendUrl}/login?error=auth_failed`;
+        res.redirect(errorUrl);
+        return;
     }
 
     const token = jwt.sign(
@@ -26,8 +57,11 @@ router.get(
     )
 
     // Redirect to frontend with token
-    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
-    res.redirect(`${frontendUrl}/login?token=${token}`)
+    const redirectUrl = isMobile
+            ? `${frontendUrl}google-auth?token=${token}` // mobile://google-auth?token=...
+            : `${frontendUrl}/login?token=${token}`;
+            
+    res.redirect(redirectUrl)
     return;
   }
 )
