@@ -1,19 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../context/ThemeContext';
+
+// Assets
+import supportGif from '../assets/supportusser.gif';
+import zaloGif from '../assets/supportzalo.gif';
+import fbGif from '../assets/supportfb.gif';
 
 export default function Support() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
 
   const handleContact = (type) => {
     if (type === 'telegram') {
-        Linking.openURL('https://t.me/support_huytichxanh');
+        Linking.openURL('https://t.me/badboiz123');
     } else if (type === 'zalo') {
-        Linking.openURL('https://zalo.me/0123456789');
+        Linking.openURL('https://zalo.me/0763076124');
     } else if (type === 'facebook') {
-        Linking.openURL('https://facebook.com/huytichxanh');
+        Linking.openURL('https://www.facebook.com/huy.haquang.39395/');
     }
   };
 
@@ -21,9 +29,12 @@ export default function Support() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Hỗ trợ khách hàng</Text>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+             <Image source={supportGif} style={{ width: 28, height: 28 }} resizeMode="contain" />
+             <Text style={styles.headerTitle}>Hỗ trợ khách hàng</Text>
+        </View>
         <View style={{width: 24}} /> 
       </View>
 
@@ -35,13 +46,24 @@ export default function Support() {
             </Text>
 
             <View style={styles.contactOptions}>
-                <TouchableOpacity style={styles.option} onPress={() => handleContact('telegram')}>
-                    <Ionicons name="paper-plane" size={24} color="#0088cc" />
-                    <Text style={styles.optionText}>Telegram</Text>
+                {/* Zalo */}
+                <TouchableOpacity style={styles.option} onPress={() => handleContact('zalo')}>
+                    <Image source={zaloGif} style={{ width: 40, height: 40, borderRadius: 8 }} resizeMode="cover" />
+                    <Text style={styles.optionText}>Zalo Admin</Text>
                 </TouchableOpacity>
+
+                {/* Facebook */}
                 <TouchableOpacity style={styles.option} onPress={() => handleContact('facebook')}>
-                    <Ionicons name="logo-facebook" size={24} color="#1877f2" />
+                    <Image source={fbGif} style={{ width: 40, height: 40, borderRadius: 8 }} resizeMode="cover" />
                     <Text style={styles.optionText}>Facebook</Text>
+                </TouchableOpacity>
+
+                {/* Telegram */}
+                <TouchableOpacity style={styles.option} onPress={() => handleContact('telegram')}>
+                    <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: '#0088cc', alignItems: 'center', justifyContent: 'center' }}>
+                         <Ionicons name="paper-plane" size={24} color="white" />
+                    </View>
+                    <Text style={styles.optionText}>Telegram</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -62,10 +84,10 @@ export default function Support() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -73,13 +95,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#27272a',
+    borderBottomColor: colors.border,
   },
   backBtn: {
     padding: 4,
   },
   headerTitle: {
-    color: 'white',
+    color: colors.text,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -88,20 +110,20 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
   },
   sectionTitle: {
-    color: 'white',
+    color: colors.text,
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   text: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     marginBottom: 20,
     lineHeight: 20,
   },
@@ -111,26 +133,26 @@ const styles = StyleSheet.create({
   },
   option: {
     flex: 1,
-    backgroundColor: '#27272a',
+    backgroundColor: colors.secondary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     gap: 8,
   },
   optionText: {
-    color: 'white',
+    color: colors.text,
     fontWeight: '600',
   },
   faqItem: {
     marginBottom: 16,
   },
   question: {
-    color: 'white',
+    color: colors.text,
     fontWeight: '600',
     marginBottom: 4,
   },
   answer: {
-     color: '#a1a1aa',
+     color: colors.subtext,
      fontSize: 13,
      lineHeight: 18,
   }

@@ -1,14 +1,27 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getUserInfo } from '../../service/userService';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
+// Assets
+import sotienGif from '../../assets/sotien.gif';
+import tongnapGif from '../../assets/tongnap.gif';
+import napthangGif from '../../assets/napthang.gif';
+import capbacGif from '../../assets/capbac.gif';
+
 export default function Home() {
+  const { user } = useContext(AuthContext);
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+  
   const [userData, setUserData] = useState(null);
   const [currentTime, setCurrentTime] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Local stats state removed as we use displayUser
 
   const fetchUserData = async () => {
     try {
@@ -50,66 +63,71 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  // Use local userData if available, else context user, else null
+  const displayUser = userData || user;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
         {/* Header */}
         <View style={styles.header}>
             <View>
-                <Text style={styles.welcomeText}>Xin chào,</Text>
-                <Text style={styles.username}>{userData?.username || 'Thành viên'}</Text>
+                <Text style={styles.greeting}>Xin chào,</Text>
+                <Text style={styles.username}>{displayUser?.username || 'Thành viên'}</Text>
             </View>
-            <Ionicons name="notifications-outline" size={24} color="white" />
+            <TouchableOpacity style={styles.notiBtn}>
+                <Ionicons name="notifications-outline" size={24} color="white" />
+            </TouchableOpacity>
         </View>
 
         {/* Stats Grid */}
-        <View style={styles.grid}>
+        <View style={styles.statsGrid}>
             {/* Balance */}
-            <View style={styles.card}>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}>
-                    <Ionicons name="wallet-outline" size={24} color="#f472b6" />
+            <View style={styles.statCard}>
+                <View style={[styles.iconBox, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}>
+                    <Image source={sotienGif} style={{ width: 32, height: 32 }} resizeMode="contain" />
                 </View>
                 <View>
-                    <Text style={styles.cardValue}>{(userData?.balance || 0).toLocaleString('vi-VN')}</Text>
-                    <Text style={styles.cardLabel}>Số dư</Text>
+                    <Text style={styles.statValue}>{(displayUser?.balance || 0).toLocaleString('vi-VN')} đ</Text>
+                    <Text style={styles.statLabel}>Số dư</Text>
                 </View>
             </View>
 
             {/* Total Deposit */}
-            <View style={styles.card}>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(234, 179, 8, 0.2)' }]}>
-                    <Ionicons name="cash-outline" size={24} color="#facc15" />
+            <View style={styles.statCard}>
+                <View style={[styles.iconBox, { backgroundColor: 'rgba(234, 179, 8, 0.2)' }]}>
+                    <Image source={tongnapGif} style={{ width: 32, height: 32 }} resizeMode="contain" />
                 </View>
                 <View>
-                    <Text style={styles.cardValue}>0</Text>
-                    <Text style={styles.cardLabel}>Tổng nạp</Text>
+                    <Text style={styles.statValue}>{(displayUser?.totalDeposit || 0).toLocaleString('vi-VN')}</Text>
+                    <Text style={styles.statLabel}>Tổng nạp</Text>
                 </View>
             </View>
 
             {/* Month Deposit */}
-            <View style={styles.card}>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(249, 115, 22, 0.2)' }]}>
-                    <Ionicons name="calendar-outline" size={24} color="#fb923c" />
+            <View style={styles.statCard}>
+                <View style={[styles.iconBox, { backgroundColor: 'rgba(249, 115, 22, 0.2)' }]}>
+                     <Image source={napthangGif} style={{ width: 32, height: 32 }} resizeMode="contain" />
                 </View>
                 <View>
-                    <Text style={styles.cardValue}>0 USD</Text>
-                    <Text style={styles.cardLabel}>Nạp tháng</Text>
+                    <Text style={styles.statValue}>{(displayUser?.monthDeposit || 0).toLocaleString('vi-VN')}</Text>
+                    <Text style={styles.statLabel}>Nạp tháng</Text>
                 </View>
             </View>
 
             {/* Rank */}
-            <View style={styles.card}>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
-                    <Ionicons name="trophy-outline" size={24} color="#f87171" />
+            <View style={styles.statCard}>
+                <View style={[styles.iconBox, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                    <Image source={capbacGif} style={{ width: 32, height: 32 }} resizeMode="contain" />
                 </View>
                 <View>
-                    <Text style={styles.cardValue}>Thành viên</Text>
-                    <Text style={styles.cardLabel}>Cấp bậc</Text>
+                    <Text style={styles.statValue}>Thành viên</Text>
+                    <Text style={styles.statLabel}>Cấp bậc</Text>
                 </View>
             </View>
         </View>
@@ -174,10 +192,10 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b', // zinc-950
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -190,43 +208,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  welcomeText: {
-    color: '#a1a1aa', // zinc-400
+  greeting: {
+    color: colors.subtext,
     fontSize: 14,
   },
   username: {
-    color: 'white',
+    color: colors.text,
     fontSize: 20,
     fontWeight: 'bold',
   },
-  grid: {
+  notiBtn: {
+      padding: 8,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+  },
+  statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-  card: {
+  statCard: {
     width: '48%', // Approx half with gap
-    backgroundColor: '#18181b', // zinc-900
+    backgroundColor: colors.card,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27272a', // zinc-800
+    borderColor: colors.border,
     gap: 12,
+    flexGrow: 1,
   },
-  iconContainer: {
+  iconBox: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cardValue: {
-    color: 'white',
+  statValue: {
+    color: colors.text,
     fontSize: 16,
     fontWeight: 'bold',
   },
-  cardLabel: {
-    color: '#a1a1aa', // zinc-400
+  statLabel: {
+    color: colors.subtext,
     fontSize: 12,
   },
   section: {
@@ -237,6 +261,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     gap: 12,
+    backgroundColor: colors.card,
+    borderColor: colors.border,
   },
   infoTitle: {
     color: '#22d3ee', // cyan-400
@@ -248,15 +274,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingRight: 16,
   },
   infoIcon: {
-    backgroundColor: '#1e293b', // slate-800
+    backgroundColor: colors.secondary, 
     borderRadius: 10,
     padding: 2,
     overflow: 'hidden',
   },
   infoText: {
-    color: '#e2e8f0', // slate-200
+    color: colors.text, 
     fontSize: 13,
     flex: 1,
   },
@@ -270,18 +297,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   updatesCard: {
-    backgroundColor: '#18181b', // zinc-900
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27272a', // zinc-800
+    borderColor: colors.border,
     padding: 16,
   },
   sectionTitle: {
-    color: 'white',
+    color: colors.text,
     fontSize: 16,
     fontWeight: 'bold',
     borderBottomWidth: 1,
-    borderBottomColor: '#27272a',
+    borderBottomColor: colors.border,
     paddingBottom: 12,
     marginBottom: 16,
   },
@@ -294,19 +321,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeTitle: {
-    color: '#e2e8f0',
+    color: colors.text,
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   welcomeDescription: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,
   },
   welcomeFooter: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 8,
@@ -318,10 +345,10 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#27272a', // dashed border workaround
+    borderTopColor: colors.border, 
   },
   footerTime: {
-    color: '#71717a',
+    color: colors.subtext,
     fontSize: 12,
   },
 });

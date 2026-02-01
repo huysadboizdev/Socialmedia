@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useRouter, Link } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
@@ -12,6 +13,8 @@ export default function Signup() {
   
   const { register, isLoading } = useContext(AuthContext);
   const router = useRouter();
+  const { colors, theme } = useTheme();
+  const styles = getStyles(colors);
 
   const handleRegister = async () => {
     if (!username || !email || !password || !confirmPassword) {
@@ -38,7 +41,7 @@ export default function Signup() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
     >
-      <StatusBar style="light" />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
             <Text style={styles.title}>Tạo tài khoản</Text>
@@ -51,7 +54,7 @@ export default function Signup() {
                 <TextInput
                     style={styles.input}
                     placeholder="Nhập tên của bạn"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.subtext}
                     value={username}
                     onChangeText={setUsername}
                 />
@@ -62,7 +65,7 @@ export default function Signup() {
                 <TextInput
                     style={styles.input}
                     placeholder="email@example.com"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.subtext}
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -75,7 +78,7 @@ export default function Signup() {
                 <TextInput
                     style={styles.input}
                     placeholder="Tạo mật khẩu"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.subtext}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -87,7 +90,7 @@ export default function Signup() {
                 <TextInput
                     style={styles.input}
                     placeholder="Nhập lại mật khẩu"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.subtext}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
@@ -100,7 +103,7 @@ export default function Signup() {
                 disabled={isLoading}
             >
                 {isLoading ? (
-                    <ActivityIndicator color="black" />
+                    <ActivityIndicator color={colors.background} />
                 ) : (
                     <Text style={styles.buttonText}>Đăng ký</Text>
                 )}
@@ -120,10 +123,10 @@ export default function Signup() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b', // zinc-950
+    backgroundColor: colors.background, // zinc-950
   },
   scrollContent: {
     flexGrow: 1,
@@ -141,10 +144,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text,
   },
   subtitle: {
-    color: '#a1a1aa', // zinc-400
+    color: colors.subtext, // zinc-400
     textAlign: 'center',
   },
   form: {
@@ -154,21 +157,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
   input: {
-    backgroundColor: '#27272a', // zinc-800
+    backgroundColor: colors.input, // zinc-800
     borderWidth: 1,
-    borderColor: '#3f3f46', // zinc-700
+    borderColor: colors.border, // zinc-700
     borderRadius: 8,
     padding: 12,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
   },
   button: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text, // Invert logic
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -177,7 +180,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   buttonText: {
-    color: 'black',
+    color: colors.background, // Invert logic
     fontWeight: '600',
     fontSize: 14,
   },
@@ -187,10 +190,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   footerText: {
-    color: '#a1a1aa', // zinc-400
+    color: colors.subtext, // zinc-400
   },
   link: {
-    color: 'white',
+    color: colors.text,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

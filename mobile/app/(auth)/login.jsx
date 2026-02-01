@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { Link } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
@@ -11,7 +12,9 @@ WebBrowser.maybeCompleteAuthSession();
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading, setToken } = useContext(AuthContext); // Access context directly if needed
+  const { login, isLoading, setToken } = useContext(AuthContext);
+  const { colors, theme } = useTheme();
+  const styles = getStyles(colors);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -59,7 +62,7 @@ export default function Login() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
     >
-      <StatusBar style="light" />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <View style={styles.content}>
         <View style={styles.header}>
             <Text style={styles.title}>Chào mừng trở lại</Text>
@@ -72,7 +75,7 @@ export default function Login() {
                 <TextInput
                     style={styles.input}
                     placeholder="email@example.com"
-                    placeholderTextColor="#71717a" // zinc-500
+                    placeholderTextColor={colors.subtext} // zinc-500
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -85,7 +88,7 @@ export default function Login() {
                 <TextInput
                     style={styles.input}
                     placeholder="Nhập mật khẩu của bạn"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.subtext}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -98,7 +101,7 @@ export default function Login() {
                 disabled={isLoading}
             >
                 {isLoading ? (
-                    <ActivityIndicator color="black" />
+                    <ActivityIndicator color={colors.background} />
                 ) : (
                     <Text style={styles.buttonText}>Đăng nhập</Text>
                 )}
@@ -126,10 +129,10 @@ export default function Login() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b', // zinc-950
+    backgroundColor: colors.background, // zinc-950
     padding: 24,
     justifyContent: 'center',
   },
@@ -146,10 +149,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text,
   },
   subtitle: {
-    color: '#a1a1aa', // zinc-400
+    color: colors.subtext, // zinc-400
     textAlign: 'center',
   },
   form: {
@@ -159,21 +162,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
   input: {
-    backgroundColor: '#27272a', // zinc-800
+    backgroundColor: colors.input, // zinc-800 or white
     borderWidth: 1,
-    borderColor: '#3f3f46', // zinc-700
+    borderColor: colors.border, // zinc-700
     borderRadius: 8,
     padding: 12,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
   },
   button: {
-    backgroundColor: 'white',
+    backgroundColor: colors.text, // Invert: White on Dark, Black on Light
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -182,7 +185,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   buttonText: {
-    color: 'black',
+    color: colors.background, // Invert: Black on White btn, White on Black btn
     fontWeight: '600',
     fontSize: 14,
   },
@@ -192,10 +195,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   footerText: {
-    color: '#a1a1aa', // zinc-400
+    color: colors.subtext, // zinc-400
   },
   link: {
-    color: 'white',
+    color: colors.text,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

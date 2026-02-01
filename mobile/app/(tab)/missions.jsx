@@ -1,14 +1,21 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert, Modal, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../service/userService';
 import * as Linking from 'expo-linking';
 import * as ImagePicker from 'expo-image-picker';
 
+// Assets
+import nhiemvuGif from '../../assets/nhiemvu.gif';
+
 export default function Missions() {
   const { user } = useContext(AuthContext);
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   const [loading, setLoading] = useState(true);
   const [missions, setMissions] = useState([]);
   const [activeTab, setActiveTab] = useState('list'); // list, received
@@ -20,6 +27,7 @@ export default function Missions() {
   const [withdrawMethod, setWithdrawMethod] = useState('web'); // 'web' or 'bank'
   const [bankName, setBankName] = useState('');
   const [bankAccount, setBankAccount] = useState('');
+  const [email, setEmail] = useState(''); // Added email state
   const [qrCodeImage, setQrCodeImage] = useState(null);
 
   const pickQrCode = async () => {
@@ -38,9 +46,6 @@ export default function Missions() {
       setQrCodeImage(result.assets[0]);
     }
   };
-  
-  
-
 
   useEffect(() => {
     fetchMissions();
@@ -112,7 +117,6 @@ export default function Missions() {
           formData.append('missionId', missionId);
           
           // Append image
-          // React Native FormData expects specific object shape for files
           const uriParts = asset.uri.split('.');
           const fileType = uriParts[uriParts.length - 1];
 
@@ -122,9 +126,6 @@ export default function Missions() {
             type: `image/${fileType}`,
           });
 
-          // Upload requires multipart/form-data
-          // userService api instance sets Content-Type to application/json by default
-          // We need to override it for this request
           const res = await api.post('/user/mission/submit', formData, {
               headers: {
                   'Content-Type': 'multipart/form-data',
@@ -144,8 +145,6 @@ export default function Missions() {
           setSubmitting(false);
       }
   };
-
-
 
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
@@ -170,10 +169,13 @@ export default function Missions() {
         if (withdrawMethod === 'bank') {
             formData.append('bankName', bankName);
             formData.append('bankAccount', bankAccount);
+            if (email) {
+                formData.append('email', email); // Include email
+            }
             
             const uriParts = qrCodeImage.uri.split('.');
             const fileType = uriParts[uriParts.length - 1];
-            formData.append('qrCodeFile', {
+            formData.append('qrCode', { // Corrected field name
                 uri: qrCodeImage.uri,
                 name: `qrcode.${fileType}`,
                 type: `image/${fileType}`,
@@ -190,9 +192,9 @@ export default function Missions() {
             setWithdrawAmount('');
             setBankName('');
             setBankAccount('');
+            setEmail('');
             setQrCodeImage(null);
-            // Reload user info if needed
-            fetchMissions(); // Indirectly refreshes data if needed or trigger global refresh
+            fetchMissions();
         } else {
              Alert.alert('Lỗi', res.data.message);
         }
@@ -210,12 +212,7 @@ export default function Missions() {
         const res = await api.post('/user/attendance');
         if (res.data.success) {
             Alert.alert('Điểm danh', res.data.message);
-            // Refresh user info to update balance/streak
-            const { getUserInfo } = require('../../service/userService'); 
-            // Note: best to expose refreshUser from AuthContext, but for now we rely on simple state update or app reload
-            // Actually, let's try to update missions or balance if we can. 
-            // Ideally AuthContext should provide a way to reload user.
-            // For now, we just fetch missions again which triggers a re-render maybe
+            fetchMissions(); // Indirectly refresh
         } else {
              Alert.alert('Thông báo', res.data.message);
         }
@@ -234,7 +231,10 @@ export default function Missions() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Nhiệm vụ</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Image source={nhiemvuGif} style={{ width: 32, height: 32 }} resizeMode="contain" />
+            <Text style={styles.headerTitle}>Nhiệm vụ</Text>
+        </View>
         <TouchableOpacity style={styles.withdrawBtn} onPress={() => setShowWithdraw(true)}>
              <Ionicons name="wallet-outline" size={20} color="white" />
              <Text style={styles.withdrawText}>{(user?.missionBalance || 0).toLocaleString()} đ</Text>
@@ -271,7 +271,7 @@ export default function Missions() {
            </TouchableOpacity>
         </View>
         {loading ? (
-             <ActivityIndicator color="#8b5cf6" size="large" />
+             <ActivityIndicator color={colors.primary} size="large" />
         ) : filteredMissions.length === 0 ? (
              <Text style={styles.emptyText}>Không có nhiệm vụ nào.</Text>
         ) : (
@@ -281,7 +281,7 @@ export default function Missions() {
                          <Ionicons 
                             name={mission.type === 'like' ? 'thumbs-up' : mission.type === 'follow' ? 'person-add' : 'share-social'} 
                             size={24} 
-                            color="#8b5cf6" 
+                            color={colors.primary} 
                          />
                      </View>
                      <View style={styles.cardContent}>
@@ -290,9 +290,9 @@ export default function Missions() {
                          {mission.status !== 'available' && (
                              <Text style={[
                                  styles.statusBadge, 
-                                 mission.status === 'approved' ? { color: '#10b981' } :
-                                 mission.status === 'rejected' ? { color: '#ef4444' } :
-                                 { color: '#f59e0b' }
+                                 mission.status === 'approved' ? { color: colors.success } :
+                                 mission.status === 'rejected' ? { color: colors.danger } :
+                                 { color: colors.warning }
                              ]}>
                                  {mission.status.toUpperCase()}
                              </Text>
@@ -312,7 +312,7 @@ export default function Missions() {
                          {(mission.status === 'accepted' || mission.status === 'rejected') && (
                              <View style={{ gap: 8 }}>
                                  <TouchableOpacity 
-                                    style={[styles.actionBtn, { backgroundColor: '#3f3f46' }]}
+                                    style={[styles.actionBtn, { backgroundColor: colors.secondary }]}
                                     onPress={() => handleDoMission(mission)}
                                  >
                                      <Text style={styles.actionBtnText}>Thực hiện</Text>
@@ -362,7 +362,7 @@ export default function Missions() {
                               value={withdrawAmount}
                               onChangeText={setWithdrawAmount}
                               placeholder="Số tiền (tối thiểu 10.000)"
-                              placeholderTextColor="#71717a"
+                              placeholderTextColor={colors.subtext}
                               keyboardType="numeric"
                           />
                       </View>
@@ -374,7 +374,7 @@ export default function Missions() {
                               value={withdrawAmount}
                               onChangeText={setWithdrawAmount}
                               placeholder="Số tiền (tối thiểu 10.000)"
-                              placeholderTextColor="#71717a"
+                              placeholderTextColor={colors.subtext}
                               keyboardType="numeric"
                           />
                           <TextInput 
@@ -382,15 +382,23 @@ export default function Missions() {
                               value={bankName}
                               onChangeText={setBankName}
                               placeholder="Tên ngân hàng (VD: MBBank)"
-                              placeholderTextColor="#71717a"
+                              placeholderTextColor={colors.subtext}
                           />
                           <TextInput 
                               style={styles.input}
                               value={bankAccount}
                               onChangeText={setBankAccount}
                               placeholder="Số tài khoản"
-                              placeholderTextColor="#71717a"
+                              placeholderTextColor={colors.subtext}
                               keyboardType="numeric"
+                          />
+                           <TextInput 
+                              style={styles.input}
+                              value={email}
+                              onChangeText={setEmail}
+                              placeholder="Email nhận thông báo"
+                              placeholderTextColor={colors.subtext}
+                              keyboardType="email-address"
                           />
                            <TouchableOpacity style={styles.uploadBtn} onPress={pickQrCode}>
                               <Ionicons name="qr-code-outline" size={20} color="white" />
@@ -421,10 +429,10 @@ export default function Missions() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b',
+    backgroundColor: colors.background,
   },
   header: {
     padding: 20,
@@ -435,12 +443,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text,
   },
   withdrawBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -461,15 +469,15 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#8b5cf6',
+    borderBottomColor: colors.primary,
   },
   tabText: {
-    color: '#71717a',
+    color: colors.subtext,
     fontSize: 16,
     fontWeight: '600',
   },
   activeTabText: {
-    color: 'white',
+    color: colors.text,
   },
   list: {
     padding: 20,
@@ -477,19 +485,19 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   emptyText: {
-    color: '#71717a',
+    color: colors.subtext,
     textAlign: 'center',
     marginTop: 40,
   },
   card: {
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     padding: 16,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
   },
   cardIcon: {
     width: 48,
@@ -503,12 +511,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    color: 'white',
+    color: colors.text,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   cardReward: {
-    color: '#10b981', // green-500
+    color: colors.success, // green-500
     fontWeight: 'bold',
     fontSize: 12,
   },
@@ -521,7 +529,7 @@ const styles = StyleSheet.create({
     // 
   },
   actionBtn: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -538,30 +546,30 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
   },
   modalTitle: {
-    color: 'white',
+    color: colors.text,
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   modalSub: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontSize: 14,
     marginBottom: 20,
   },
   input: {
-    backgroundColor: '#09090b',
+    backgroundColor: colors.input,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
-    color: 'white',
+    color: colors.text,
     fontSize: 16,
     marginBottom: 20,
   },
@@ -573,18 +581,18 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#27272a',
+    backgroundColor: colors.secondary,
     alignItems: 'center',
   },
   confirmBtn: {
     flex: 1,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.primary,
     alignItems: 'center',
   },
   cancelText: {
-    color: 'white',
+    color: colors.text,
     fontWeight: 'bold',
   },
   confirmText: {
@@ -594,7 +602,7 @@ const styles = StyleSheet.create({
   methodTabs: {
     flexDirection: 'row',
     marginBottom: 20,
-    backgroundColor: '#09090b',
+    backgroundColor: colors.background,
     borderRadius: 8,
     padding: 4,
   },
@@ -605,10 +613,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   activeMethodTab: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.primary,
   },
   methodTabText: {
-    color: '#71717a',
+    color: colors.subtext,
     fontWeight: '600',
   },
   activeMethodTabText: {
@@ -619,38 +627,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#27272a',
+    backgroundColor: colors.secondary,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#3f3f46',
+    borderColor: colors.border,
     borderStyle: 'dashed',
     gap: 8,
     marginBottom: 20,
   },
   uploadBtnText: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontWeight: '500',
   },
   attendanceCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#18181b', // zinc-900
+    backgroundColor: colors.card, // zinc-900
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     marginBottom: 20,
   },
   attendanceTitle: {
-    color: 'white',
+    color: colors.text,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   attendanceSub: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontSize: 13,
   },
   attendanceBtn: {

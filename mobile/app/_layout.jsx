@@ -1,5 +1,6 @@
 import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { AuthProvider, AuthContext } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
 import { useContext, useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 
@@ -19,24 +20,34 @@ const RootLayoutNav = () => {
       if (!rootNavigationState?.key) return; // Wait for navigation to be ready
 
       const inAuthGroup = segments[0] === "(auth)";
+      const inAdminGroup = segments[0] === "(admin)";
       const inTabsGroup = segments[0] === "(tab)";
+      // Check for protected routes outside of groups
+      const isProtectedRoute = inTabsGroup || inAdminGroup || segments[0] === "history" || segments[0] === "orders";
 
-      // If user is logged in, redirect to home if they are in auth group or on landing page
-      if (user && (inAuthGroup || segments.length === 0)) {
-        router.replace("/(tab)/home");
+      // If user is logged in
+      if (user) {
+        // Redirect logic based on role
+        if (user.role === 'admin') {
+            // Admin should perform work in (admin)
+            // But if they want to view the app, they can navigate manually.
+            // Default redirect:
+            if (inAuthGroup || segments.length === 0) {
+                 router.replace("/(admin)");
+            }
+        } else {
+            // Normal user
+            if (inAuthGroup || inAdminGroup || segments.length === 0) {
+                 router.replace("/(tab)/home");
+            }
+        }
       } 
-      // If user is NOT logged in:
-      else if (!user) {
-        // If they are trying to access protected tabs, send to login
-        if (inTabsGroup) {
+      // If user is NOT logged in
+      else {
+        // If they are trying to access protected routes, send to login
+        if (isProtectedRoute) {
             router.replace("/(auth)/login");
         }
-        // If they are deep in auth flow (e.g. cached state) but we want to force Landing on fresh open?
-        // The user wants "Open app -> Landing". 
-        // We can force replace to "/" if we detect we are not at root and not in tabs.
-        // However, this might annoy users actively trying to login.
-        // Let's rely on the "initialRouteName" for fresh starts, but explicitly handle the case 
-        // where we might be falsely stuck in (auth).
       }
     }, [user, segments, isInitialized, rootNavigationState, router]);
 
@@ -52,18 +63,23 @@ const RootLayoutNav = () => {
     <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen name="(tab)" options={{ headerShown: false }} />
         <Stack.Screen name="history" options={{ headerShown: false }} />
+        <Stack.Screen name="orders" options={{ headerShown: false }} />
         <Stack.Screen name="support" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
     </Stack>
   );
 }
 
+
 export default function RootLayout() {
   return (
-    <AuthProvider>
-        <RootLayoutNav />
-    </AuthProvider>
+    <ThemeProvider>
+        <AuthProvider>
+            <RootLayoutNav />
+        </AuthProvider>
+    </ThemeProvider>
   );
 }
