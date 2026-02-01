@@ -90,7 +90,7 @@ const TransactionHistory = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] min-h-screen">
+    <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] dark:bg-slate-950 min-h-screen">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
@@ -127,7 +127,7 @@ const TransactionHistory = () => {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -158,7 +158,7 @@ const TransactionHistory = () => {
                 </TableRow>
               ) : (
                 paginatedData.map((t, index) => (
-                  <TableRow key={t._id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                  <TableRow key={t._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0">
                     <td className="text-center font-bold text-slate-400 text-xs">{(currentPage-1)*pageSize + index + 1}</td>
                     <TableCell className="text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight text-white ${

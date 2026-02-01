@@ -4,10 +4,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
+
+// Assets
+import lichsuGif from '../../assets/lichsugd.gif';
+import allGif from '../../assets/alll_list.gif';
+import supportGif from '../../assets/supportusser.gif';
+import dieukhoanGif from '../../assets/dieukhoan.gif';
 
 export default function Profile() {
   const { user, logout } = useContext(AuthContext);
+  const { theme, toggleTheme, colors } = useTheme();
   const router = useRouter();
+  const styles = getStyles(colors);
   
   const [activeTab, setActiveTab] = useState('info'); // info, password
   const [loading, setLoading] = useState(false);
@@ -83,9 +92,14 @@ export default function Profile() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Hồ sơ</Text>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Ionicons name="log-out-outline" size={24} color="#ef4444" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity onPress={toggleTheme} style={styles.iconButton}>
+                <Ionicons name={theme === 'dark' ? "sunny-outline" : "moon-outline"} size={24} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
+                <Ionicons name="log-out-outline" size={24} color={colors.danger} />
+            </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -111,28 +125,47 @@ export default function Profile() {
         {/* Management Menu */}
         <View style={styles.menuSection}>
             <Text style={styles.menuTitle}>Quản lý chung</Text>
+            
+            {user?.role === 'admin' && (
+                 <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(admin)')}>
+                    <View style={[styles.menuIconBox, { backgroundColor: '#8b5cf6' + '20' }]}>
+                        <Ionicons name="shield-checkmark" size={20} color="#8b5cf6" />
+                    </View>
+                    <Text style={styles.menuText}>Admin Panel</Text>
+                    <Ionicons name="chevron-forward" size={20} color={colors.subtext} />
+                </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/history')}>
                 <View style={styles.menuIconBox}>
-                    <Ionicons name="time-outline" size={20} color="#3b82f6" />
+                    <Image source={lichsuGif} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </View>
                 <Text style={styles.menuText}>Lịch sử giao dịch</Text>
-                <Ionicons name="chevron-forward" size={20} color="#52525b" />
+                <Ionicons name="chevron-forward" size={20} color={colors.subtext} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/orders')}>
+                <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                    <Image source={allGif} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                </View>
+                <Text style={styles.menuText}>Tất cả tiến trình</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.subtext} />
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/support')}>
                 <View style={[styles.menuIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                    <Ionicons name="chatbubbles-outline" size={20} color="#10b981" />
+                    <Image source={supportGif} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </View>
                 <Text style={styles.menuText}>Hỗ trợ khách hàng</Text>
-                <Ionicons name="chevron-forward" size={20} color="#52525b" />
+                <Ionicons name="chevron-forward" size={20} color={colors.subtext} />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/terms')}>
                 <View style={[styles.menuIconBox, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
-                    <Ionicons name="document-text-outline" size={20} color="#f97316" />
+                    <Image source={dieukhoanGif} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </View>
                 <Text style={styles.menuText}>Điều khoản dịch vụ</Text>
-                <Ionicons name="chevron-forward" size={20} color="#52525b" />
+                <Ionicons name="chevron-forward" size={20} color={colors.subtext} />
             </TouchableOpacity>
         </View>
 
@@ -162,7 +195,7 @@ export default function Profile() {
                         value={fullName}
                         onChangeText={setFullName}
                         placeholder="Cập nhật họ tên của bạn"
-                        placeholderTextColor="#71717a"
+                        placeholderTextColor={colors.subtext}
                     />
                 </View>
 
@@ -200,7 +233,7 @@ export default function Profile() {
                         value={currentPassword}
                         onChangeText={setCurrentPassword}
                         secureTextEntry
-                        placeholderTextColor="#71717a"
+                        placeholderTextColor={colors.subtext}
                     />
                 </View>
                 <View style={styles.inputGroup}>
@@ -210,7 +243,7 @@ export default function Profile() {
                         value={newPassword}
                         onChangeText={setNewPassword}
                         secureTextEntry
-                        placeholderTextColor="#71717a"
+                        placeholderTextColor={colors.subtext}
                     />
                 </View>
                 <View style={styles.inputGroup}>
@@ -220,7 +253,7 @@ export default function Profile() {
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
                         secureTextEntry
-                        placeholderTextColor="#71717a"
+                        placeholderTextColor={colors.subtext}
                     />
                 </View>
 
@@ -240,10 +273,10 @@ export default function Profile() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b', // zinc-950
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -251,12 +284,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#27272a',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text,
+  },
+  logoutButton: {
+      // deprecated by iconButton
+  },
+  iconButton: {
+      padding: 4,
   },
   content: {
     padding: 20,
@@ -266,10 +305,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
     padding: 20,
-    backgroundColor: '#18181b', // zinc-900
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
   },
   avatarContainer: {
     marginBottom: 15,
@@ -280,57 +319,57 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: '#8b5cf6', // violet-500
+    borderColor: colors.primary,
   },
   avatarPlaceholder: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#2e1065', // violet-950
+    backgroundColor: '#2e1065', // still hardcoded slightly
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#8b5cf6',
+    borderColor: colors.primary,
   },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#a78bfa', // violet-400
+    color: '#a78bfa',
   },
   roleBadge: {
     position: 'absolute',
     bottom: -5,
-    backgroundColor: '#5b21b6', // violet-800
+    backgroundColor: '#5b21b6',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#09090b',
+    borderColor: colors.background,
   },
   roleText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#ddd6fe', // violet-200
+    color: '#ddd6fe',
   },
   username: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text,
     marginBottom: 4,
   },
   email: {
     fontSize: 14,
-    color: '#a1a1aa', // zinc-400
+    color: colors.subtext,
     marginBottom: 8,
   },
   balance: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#4ade80', // green-400
+    color: colors.success,
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     padding: 4,
     borderRadius: 12,
     marginBottom: 24,
@@ -342,10 +381,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#8b5cf6', // violet-500
+    backgroundColor: colors.primary,
   },
   tabText: {
-    color: '#a1a1aa', // zinc-400
+    color: colors.subtext,
     fontWeight: '600',
   },
   activeTabText: {
@@ -358,25 +397,25 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    color: '#e4e4e7', // zinc-200
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
   input: {
-    backgroundColor: '#18181b',
+    backgroundColor: colors.input,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
-    color: 'white',
+    color: colors.text,
     fontSize: 16,
   },
   disabledInput: {
-    backgroundColor: '#121215',
-    color: '#71717a', // zinc-500
+    backgroundColor: colors.secondary,
+    color: colors.subtext,
   },
   saveButton: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -392,7 +431,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuTitle: {
-    color: '#71717a',
+    color: colors.subtext,
     fontSize: 12,
     fontWeight: 'bold',
     textTransform: 'uppercase',
@@ -402,11 +441,11 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
   },
   menuIconBox: {
     width: 36,
@@ -419,7 +458,7 @@ const styles = StyleSheet.create({
   },
   menuText: {
     flex: 1,
-    color: 'white',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '500',
   },

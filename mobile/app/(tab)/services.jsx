@@ -1,47 +1,60 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform as RNPlatform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform as RNPlatform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../service/userService';
+
+// Assets
+import igGif from '../../assets/ig.gif';
+import fbGif from '../../assets/fb.gif';
+import tiktokGif from '../../assets/tiktok.gif';
+// Placeholders for others if not available as GIFs, fallback to icons or standard images if you have them.
+// User requested "put where they are in frontend". Frontend has these 3 clearly. 
+// For others (Youtube, Shopee, Telegram), I'll stick to Ionicons for now or check if I have GIFs.
+// Checking file list: fb.gif, ig.gif, tiktok.gif exist. 
 
 // Platform Config
 const PLATFORMS = [
-  { id: 'Instagram', name: 'Instagram', icon: 'logo-instagram', color: '#E1306C' },
-  { id: 'Facebook', name: 'Facebook', icon: 'logo-facebook', color: '#1877F2' },
-  { id: 'TikTok', name: 'TikTok', icon: 'logo-tiktok', color: '#ffffff' },
-  { id: 'Youtube', name: 'Youtube', icon: 'logo-youtube', color: '#FF0000' },
-  { id: 'Shopee', name: 'Shopee', icon: 'cart', color: '#EE4D2D' },
-  { id: 'Telegram', name: 'Telegram', icon: 'paper-plane', color: '#0088cc' },
+  { id: 'Instagram', name: 'Instagram', type: 'gif', source: igGif, color: '#E1306C' },
+  { id: 'Facebook', name: 'Facebook', type: 'gif', source: fbGif, color: '#1877F2' },
+  { id: 'TikTok', name: 'TikTok', type: 'gif', source: tiktokGif, color: '#ffffff' },
+  { id: 'Youtube', name: 'Youtube', type: 'icon', icon: 'logo-youtube', color: '#FF0000' },
+  { id: 'Shopee', name: 'Shopee', type: 'icon', icon: 'cart', color: '#EE4D2D' },
+  { id: 'Telegram', name: 'Telegram', type: 'icon', icon: 'paper-plane', color: '#0088cc' },
 ];
 
 export default function Services() {
   const { user } = useContext(AuthContext);
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState([]);
   
-  // Tabs
+  //Tabs
   const [activeTab, setActiveTab] = useState('create'); // 'create', 'history'
+
+  // ... (rest of state items are unchanged, just re-declaring to keep context for replace)
+  // Actually, replace_file_content replaces a block. I should find a stable block.
+  // The block starts at imports and goes down to PLATFORMS and start of Component.
 
   // Selection State
   const [activePlatform, setActivePlatform] = useState('Instagram');
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   
-  // Form State
   const [link, setLink] = useState('');
   const [quantity, setQuantity] = useState('');
   const [discount, setDiscount] = useState('');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Blue Tick State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [twoFaCode, setTwoFaCode] = useState('');
   const [contactInfo, setContactInfo] = useState('');
 
-  // History State
   const [orders, setOrders] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -87,10 +100,8 @@ export default function Services() {
   // Filter logic
   const platformServices = services.filter(s => s.platform === activePlatform && s.isActive !== false);
   
-  // Extract Categories
   const categories = [...new Set(platformServices.map(s => s.category))];
   
-  // Auto-select first category if changed
   useEffect(() => {
     if (categories.length > 0 && !categories.includes(activeCategory)) {
         setActiveCategory(categories[0]);
@@ -99,10 +110,8 @@ export default function Services() {
     }
   }, [activePlatform, services]);
 
-  // Filtered Services for List
   const displayServices = platformServices.filter(s => s.category === activeCategory);
 
-  // Update selected service if list changes
   useEffect(() => {
     if (displayServices.length > 0) {
          if (!selectedService || !displayServices.find(s => s._id === selectedService._id)) {
@@ -116,7 +125,7 @@ export default function Services() {
 
   const handleSubmit = async () => {
     if (!selectedService) return;
-    if (!link && activeCategory !== 'Tích Xanh') { // Blue tick might use link as targetUrl
+    if (!link && activeCategory !== 'Tích Xanh') { 
         Alert.alert('Lỗi', 'Vui lòng nhập link hợp lệ');
         return;
     }
@@ -124,7 +133,6 @@ export default function Services() {
     let qty = parseInt(quantity);
     let details = { discount };
 
-    // Blue Tick Validation
     if (activeCategory === 'Tích Xanh') {
         if (!username || !password || !contactInfo || !link) {
              Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin (Link Profile, Tài khoản, Mật khẩu, Liên hệ)');
@@ -134,7 +142,7 @@ export default function Services() {
              Alert.alert('Lỗi', 'Tài khoản phải là địa chỉ Gmail (@gmail.com)');
              return;
         }
-        qty = 1; // Force quantity 1 for Blue Tick
+        qty = 1; 
         details = {
             ...details,
             username,
@@ -143,7 +151,6 @@ export default function Services() {
             contactInfo
         };
     } else {
-        // Normal Validation
         if (!qty || qty < 1000) {
             Alert.alert('Lỗi', 'Số lượng tối thiểu là 1000');
             return;
@@ -168,7 +175,6 @@ export default function Services() {
             setQuantity('');
             setNote('');
             setDiscount('');
-            // Reset Blue Tick fields
             setUsername('');
             setPassword('');
             setTwoFaCode('');
@@ -206,7 +212,11 @@ export default function Services() {
                     ]}
                     onPress={() => { setActivePlatform(p.id); setActiveCategory(null); }}
                 >
-                    <Ionicons name={p.icon} size={20} color={activePlatform === p.id ? p.color : '#71717a'} />
+                    {p.type === 'gif' ? (
+                        <Image source={p.source} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                    ) : (
+                        <Ionicons name={p.icon} size={20} color={activePlatform === p.id ? p.color : '#71717a'} />
+                    )}
                     <Text style={[
                         styles.platformText,
                         activePlatform === p.id && { color: p.color, fontWeight: 'bold' }
@@ -390,7 +400,7 @@ export default function Services() {
                                 value={note}
                                 onChangeText={setNote}
                                 placeholder="Ghi chú..."
-                                placeholderTextColor="#52525b"
+                                placeholderTextColor={colors.subtext}
                                 multiline
                             />
                         </View>
@@ -427,14 +437,14 @@ export default function Services() {
                  ) : (
                     <View style={{ width: '100%', gap: 12 }}>
                         {orders.map(order => (
-                            <View key={order._id} style={{ backgroundColor: '#18181b', padding: 16, borderRadius: 12 }}>
+                            <View key={order._id} style={{ backgroundColor: colors.card, padding: 16, borderRadius: 12 }}>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                                    <Text style={{ color: '#a1a1aa', fontSize: 12 }}>#{order._id.slice(-6)}</Text>
-                                    <Text style={{ color: order.status === 'Completed' ? '#22c55e' : '#eab308', fontWeight: 'bold' }}>{order.status}</Text>
+                                    <Text style={{ color: colors.subtext, fontSize: 12 }}>#{order._id.slice(-6)}</Text>
+                                    <Text style={{ color: order.status === 'Completed' ? colors.success : colors.warning, fontWeight: 'bold' }}>{order.status}</Text>
                                 </View>
-                                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>{order.service?.name || 'Dịch vụ không xác định'}</Text>
-                                <Text style={{ color: '#a1a1aa', marginTop: 4 }}>Số lượng: {order.quantity}</Text>
-                                <Text style={{ color: '#a1a1aa' }}>Tổng: {order.totalPrice?.toLocaleString('vi-VN')}đ</Text>
+                                <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 16 }}>{order.service?.name || 'Dịch vụ không xác định'}</Text>
+                                <Text style={{ color: colors.subtext, marginTop: 4 }}>Số lượng: {order.quantity}</Text>
+                                <Text style={{ color: colors.subtext }}>Tổng: {order.totalPrice?.toLocaleString('vi-VN')}đ</Text>
                             </View>
                         ))}
                     </View>
@@ -448,10 +458,10 @@ export default function Services() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b', // zinc-950
+    backgroundColor: colors.background, // zinc-950
   },
   scrollContent: {
     padding: 16,
@@ -460,7 +470,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text,
     marginBottom: 20,
   },
   platformScroll: {
@@ -475,12 +485,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     marginRight: 10,
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
   },
   platformText: {
-    color: '#71717a',
+    color: colors.subtext,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -492,17 +502,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#18181b', // zinc-900
+    backgroundColor: colors.card, // zinc-900
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
   },
   activeCategoryChip: {
-    backgroundColor: '#8b5cf6', // violet-500
-    borderColor: '#8b5cf6',
+    backgroundColor: colors.primary, // violet-500
+    borderColor: colors.primary,
   },
   categoryText: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontWeight: '600',
     fontSize: 12,
   },
@@ -510,14 +520,14 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   emptyText: {
-    color: '#71717a',
+    color: colors.subtext,
     fontStyle: 'italic',
   },
   section: {
     marginBottom: 24,
   },
   sectionLabel: {
-    color: '#e4e4e7',
+    color: colors.text,
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 12,
@@ -528,15 +538,15 @@ const styles = StyleSheet.create({
   serverCard: {
     width: 280,
     padding: 16,
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     marginRight: 12,
     gap: 8,
   },
   activeServerCard: {
-    borderColor: '#8b5cf6',
+    borderColor: colors.primary,
     backgroundColor: 'rgba(139, 92, 246, 0.1)',
   },
   serverHeader: {
@@ -549,31 +559,31 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#71717a',
+    borderColor: colors.subtext,
   },
   radioActive: {
-    borderColor: '#8b5cf6',
-    backgroundColor: '#8b5cf6',
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   serverName: {
-    color: 'white',
+    color: colors.text,
     fontWeight: 'bold',
     fontSize: 14,
     flex: 1,
   },
   serverDesc: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontSize: 12,
     lineHeight: 18,
   },
   maintenanceText: {
-    color: '#ef4444',
+    color: colors.danger,
     fontSize: 10,
     fontWeight: 'bold',
     marginTop: 4,
   },
   formCard: {
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     padding: 20,
     borderRadius: 20,
     gap: 16,
@@ -582,17 +592,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#e4e4e7',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#09090b',
+    backgroundColor: colors.input,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
-    color: 'white',
+    color: colors.text,
     fontSize: 16,
   },
   totalContainer: {
@@ -601,19 +611,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#27272a',
+    borderTopColor: colors.border,
   },
   totalLabel: {
-    color: '#a1a1aa',
+    color: colors.subtext,
     fontSize: 16,
   },
   totalValue: {
-    color: '#facc15', // yellow-400
+    color: colors.warning, // yellow-400
     fontSize: 20,
     fontWeight: 'bold',
   },
   submitButton: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -634,7 +644,7 @@ const styles = StyleSheet.create({
   },
   viewTabs: {
     flexDirection: 'row',
-    backgroundColor: '#18181b',
+    backgroundColor: colors.card,
     borderRadius: 12,
     marginBottom: 20,
     padding: 4,
@@ -646,14 +656,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   activeViewTab: {
-    backgroundColor: '#27272a',
+    backgroundColor: colors.border,
   },
   viewTabText: {
-    color: '#71717a',
+    color: colors.subtext,
     fontWeight: '600',
   },
   activeViewTabText: {
-    color: 'white',
+    color: colors.text,
     fontWeight: 'bold',
   },
   historyContainer: {

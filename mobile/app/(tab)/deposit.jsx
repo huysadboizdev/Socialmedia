@@ -5,10 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../service/userService';
 
 export default function Deposit() {
   const { user } = useContext(AuthContext);
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+  
   const [amount, setAmount] = useState('');
   const [showQR, setShowQR] = useState(false);
   const [qrData, setQrData] = useState(null); // { url, content, amount }
@@ -150,7 +154,7 @@ export default function Deposit() {
                     value={amount}
                     onChangeText={handleAmountChange}
                     placeholder="Ví dụ: 50.000"
-                    placeholderTextColor="#52525b"
+                    placeholderTextColor={colors.subtext}
                     keyboardType="numeric"
                 />
                 <Text style={styles.currency}>VND</Text>
@@ -193,7 +197,7 @@ export default function Deposit() {
                         <View style={styles.copyRow}>
                             <Text style={styles.detailValue}>HUYDEV204</Text>
                             <TouchableOpacity onPress={() => copyToClipboard('HUYDEV204')}>
-                                <Ionicons name="copy-outline" size={16} color="#3b82f6" />
+                                <Ionicons name="copy-outline" size={16} color={colors.info} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -207,15 +211,15 @@ export default function Deposit() {
 
                      <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Số tiền:</Text>
-                        <Text style={[styles.detailValue, { color: '#10b981' }]}>{qrData.amount.toLocaleString('vi-VN')} VND</Text>
+                        <Text style={[styles.detailValue, { color: colors.success }]}>{qrData.amount.toLocaleString('vi-VN')} VND</Text>
                     </View>
 
                      <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Nội dung:</Text>
                         <View style={styles.copyRow}>
-                            <Text style={[styles.detailValue, { color: '#ef4444' }]}>{qrData.content}</Text>
+                            <Text style={[styles.detailValue, { color: colors.danger }]}>{qrData.content}</Text>
                             <TouchableOpacity onPress={() => copyToClipboard(qrData.content)}>
-                                <Ionicons name="copy-outline" size={16} color="#3b82f6" />
+                                <Ionicons name="copy-outline" size={16} color={colors.info} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -238,10 +242,10 @@ export default function Deposit() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b', // zinc-950
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -281,15 +285,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   formCard: {
-    backgroundColor: '#18181b', // zinc-900
+    backgroundColor: colors.card,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     gap: 12,
   },
   label: {
-    color: '#e4e4e7',
+    color: colors.text,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -297,13 +301,13 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   input: {
-    backgroundColor: '#09090b',
+    backgroundColor: colors.input,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     paddingRight: 60,
-    color: 'white',
+    color: colors.text,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -311,11 +315,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     top: 18,
-    color: '#71717a',
+    color: colors.subtext,
     fontWeight: 'bold',
   },
   helperText: {
-    color: '#71717a',
+    color: colors.subtext,
     fontSize: 12,
   },
   button: {
@@ -331,22 +335,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   qrCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'white', // QR Card usually needs to be light for contrast or specific design? Or maybe themed? 
+    // QR code image is usually black/white. The background should be light to ensure readability if transparent logic exists
+    // But here we are displaying an image.
+    // Let's keep it white for now as it simulates a printed paper or distinct card.
+    // Or if we want dark mode support, let's look at the content.
+    // The text inside is hardcoded colors in jsx or styles.
+    // Let's refactor this to be adaptive if possible, but the styles previously used 'white' background and specific dark text colors.
+    // If I change background to colors.card (dark), I must change text colors too.
+    backgroundColor: colors.card,
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
     gap: 16,
   },
   qrTitle: {
-    color: '#18181b',
+    color: colors.text,
     fontSize: 18,
     fontWeight: 'bold',
   },
   qrContainer: {
     padding: 10,
     borderWidth: 1,
-    borderColor: '#e4e4e7',
+    borderColor: colors.border,
     borderRadius: 12,
+    backgroundColor: 'white', // QR image background should stay white
   },
   qrImage: {
     width: 250,
@@ -354,7 +367,7 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     width: '100%',
-    backgroundColor: '#f4f4f5', // zinc-100
+    backgroundColor: colors.secondary, // zinc-100 or zinc-700
     borderRadius: 12,
     padding: 16,
     gap: 10,
@@ -365,12 +378,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailLabel: {
-    color: '#71717a',
+    color: colors.subtext,
     fontSize: 13,
     fontWeight: '500',
   },
   detailValue: {
-    color: '#18181b', // zinc-900
+    color: colors.text, // zinc-900 or white
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -381,7 +394,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#e4e4e7', // zinc-200
+    backgroundColor: colors.border,
     marginVertical: 4,
     borderStyle: 'dashed',
     borderRadius: 1,
@@ -390,12 +403,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#fff7ed', // orange-50
+    backgroundColor: colors.background === '#09090b' ? 'rgba(249, 115, 22, 0.1)' : '#fff7ed', // orange-50 adapted
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#ffedd5',
+    borderColor: colors.background === '#09090b' ? '#f97316' : '#ffedd5',
   },
   timerLabel: {
     color: '#f97316',
@@ -409,7 +422,7 @@ const styles = StyleSheet.create({
   },
   note: {
     fontSize: 12,
-    color: '#71717a',
+    color: colors.subtext,
     textAlign: 'center',
     fontStyle: 'italic',
   },
