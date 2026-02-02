@@ -365,6 +365,9 @@ export const fetchDashboardStats = async () => {
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
     const todayOrders = await orderModel.countDocuments({ orderDate: { $gte: startOfToday } })
+    
+    // Count all non-cancelled orders
+    const totalOrders = await orderModel.countDocuments({ status: { $ne: 'Cancelled' } })
 
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
@@ -372,27 +375,34 @@ export const fetchDashboardStats = async () => {
     
     interface AggResult { total: number }
 
+    const revenueFilter = { status: { $ne: 'Cancelled' } } // Include Pending, In Progress, Completed
+    const monthlyFilter = { ...revenueFilter, orderDate: { $gte: startOfMonth } }
+
     const monthlyRevenueData = await orderModel.aggregate<AggResult>([
-        { $match: { status: 'Completed', orderDate: { $gte: startOfMonth } } },
+        { $match: monthlyFilter },
         { $group: { _id: null, total: { $sum: '$totalPrice' } } }
     ])
     const monthlyRevenue = monthlyRevenueData.length > 0 ? (monthlyRevenueData[0]?.total ?? 0) : 0
 
+    const totalRevenueData = await orderModel.aggregate<AggResult>([
+        { $match: revenueFilter },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ])
+    const totalRevenue = totalRevenueData.length > 0 ? (totalRevenueData[0]?.total ?? 0) : 0
 
-    // const userBalances = await userModel.aggregate<AggResult>([
-    //     { $group: { _id: null, total: { $sum: '$balance' } } }
-    // ])
-    // const systemBalance = userBalances.length > 0 ? (userBalances[0]?.total ?? 0) : 0
-    
-    // User requested System Balance to match Monthly Revenue
-
-    const systemBalance = monthlyRevenue
+    // User requested System Balance to match Total Revenue
+    const systemBalance = totalRevenue
 
     const recentOrders = await orderModel.find()
         .populate('service', 'name platform')
         .populate('userId', 'username')
         .sort({ orderDate: -1 })
-        .limit(10)
+        .limit(5)
+
+    const recentDeposits = await transactionModel.find({ type: 'deposit' })
+        .populate('userId', 'username')
+        .sort({ createdAt: -1 })
+        .limit(5)
 
     // --- Analytics Data (Last 7 Days) ---
     const sevenDaysAgo = new Date()
@@ -442,10 +452,13 @@ export const fetchDashboardStats = async () => {
         stats: {
             totalUsers,
             todayOrders,
+            totalOrders,
             monthlyRevenue,
+            totalRevenue,
             systemBalance
         },
         recentOrders,
+        recentDeposits,
         analytics: {
             weeklyData,
             totalClicks: (await orderModel.countDocuments()) * 3 + totalUsers,
