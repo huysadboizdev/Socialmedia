@@ -1,17 +1,42 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler", // Phù hợp với Vite 
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    /* --- PATH ALIAS (Quan trọng cho Shadcn/ui) --- */
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./src/*"]
+    },
+
+    /* --- CHẾ ĐỘ NGHIÊM NGẶT (Học từ AdonisJS) --- */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true, // Check mảng cực kỹ
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+
+    /* --- INTEROP & CHUẨN HÓA --- */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "useDefineForClassFields": true,
+    "noEmit": true,
+
+    /* --- OPTIMIZATION --- */
+    "allowImportingTsExtensions": true,
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "app/_layout.jsx", "app/index.jsx"  ]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "eslint.config.js"],
+  "exclude": ["node_modules", "dist", "build"]
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, Platform, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,19 +21,48 @@ export default function AdminDashboard() {
     todayOrders: 0,
     systemBalance: 0
   });
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchStats = async () => {
     try {
         const res = await api.get('/admin/stats');
-        if (res.data.success && res.data.stats) {
-             setStats({
-                monthlyRevenue: res.data.stats.monthlyRevenue || 0,
-                totalUsers: res.data.stats.totalUsers || 0,
-                todayOrders: res.data.stats.todayOrders || 0,
-                systemBalance: res.data.stats.systemBalance || 0
-            });
+        if (res.data.success) {
+            if (res.data.stats) {
+                setStats({
+                    monthlyRevenue: res.data.stats.monthlyRevenue || 0,
+                    totalRevenue: res.data.stats.totalRevenue || 0,
+                    totalUsers: res.data.stats.totalUsers || 0,
+                    todayOrders: res.data.stats.todayOrders || 0,
+                    totalOrders: res.data.stats.totalOrders || 0,
+                    systemBalance: res.data.stats.systemBalance || 0
+                });
+            }
+
+            // Process recent activity
+            const orders = (res.data.recentOrders || []).map(o => ({
+                type: 'order',
+                id: o._id,
+                date: new Date(o.orderDate),
+                title: `Đơn hàng: ${o.service?.name || 'Unknown Service'}`,
+                subtitle: `${o.userId?.username || 'Guest'} • ${o.quantity} items`,
+                amount: o.totalPrice,
+                status: o.status
+            }));
+
+            const deposits = (res.data.recentDeposits || []).map(d => ({
+                type: 'deposit',
+                id: d._id,
+                date: new Date(d.createdAt),
+                title: `Nạp tiền: ${d.amount.toLocaleString()}đ`,
+                subtitle: `${d.userId?.username || 'User'} • ${d.description || 'Nạp tiền'}`,
+                amount: d.amount,
+                status: d.status
+            }));
+
+            const combined = [...orders, ...deposits].sort((a, b) => b.date - a.date).slice(0, 10);
+            setRecentActivity(combined);
         }
     } catch (e) {
         console.error("Error fetching stats:", e);
@@ -98,18 +127,18 @@ export default function AdminDashboard() {
         <Text style={styles.sectionTitle}>Thống kê nhanh</Text>
         <View style={styles.statsGrid}>
             <StatCard 
-                title="Doanh thu tháng" 
-                value={`${(stats.monthlyRevenue).toLocaleString('vi-VN')} đ`}
+                title="Tổng doanh thu" 
+                value={`${(stats.totalRevenue || 0).toLocaleString('vi-VN')} đ`}
                 icon="bar-chart" 
                 color="#8b5cf6" // Violet
-                subtext="+12.5% vs tháng trước"
+                subtext={`+${(stats.monthlyRevenue || 0).toLocaleString('vi-VN')} đ tháng này`}
             />
              <StatCard 
-                title="Đơn hàng mới" 
-                value={`+${stats.todayOrders}`}
+                title="Tổng đơn hàng" 
+                value={`+${stats.totalOrders || 0}`}
                 icon="cart" 
                 color="#f59e0b" // Amber
-                subtext="Hôm nay"
+                subtext={`+${stats.todayOrders} hôm nay`}
             />
             <StatCard 
                 title="Thành viên" 
@@ -128,11 +157,53 @@ export default function AdminDashboard() {
         </View>
 
         <Text style={styles.sectionTitle}>Hoạt động gần đây</Text>
-        <View style={styles.activityCard}>
-            <View style={styles.emptyState}>
-                <Ionicons name="clipboard-outline" size={48} color={colors.border} />
-                <Text style={styles.emptyText}>Chưa có hoạt động nào được ghi nhận</Text>
-            </View>
+        <View style={styles.activityList}>
+            {recentActivity.length > 0 ? (
+                recentActivity.map((item, index) => (
+                    <TouchableOpacity 
+                        key={`${item.type}-${item.id}`} 
+                        style={[styles.activityItem, index < recentActivity.length - 1 && styles.borderBottom]}
+                        onPress={() => {
+                            if (item.type === 'order') {
+                                router.push('/(admin)/orders');
+                            } else if (item.type === 'deposit') {
+                                router.push('/(admin)/deposits');
+                            }
+                        }}
+                    >
+                        <View style={[styles.activityIcon, { backgroundColor: item.type === 'deposit' ? '#dcfce7' : '#dbeafe' }]}>
+                            <Ionicons 
+                                name={item.type === 'deposit' ? "wallet-outline" : "cart-outline"} 
+                                size={20} 
+                                color={item.type === 'deposit' ? '#16a34a' : '#2563eb'} 
+                            />
+                        </View>
+                        <View style={styles.activityContent}>
+                            <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
+                            <Text style={styles.activitySub}>{item.subtitle}</Text>
+                            <Text style={styles.activityTime}>{item.date.toLocaleString('vi-VN')}</Text>
+                        </View>
+                        <View style={styles.activityRight}>
+                            <Text style={[styles.activityAmount, { color: item.type === 'deposit' ? '#16a34a' : '#2563eb' }]}>
+                                {item.type === 'deposit' ? '+' : '-'}{item.amount.toLocaleString()}đ
+                            </Text>
+                            <Text style={[styles.activityStatus, { 
+                                color: 
+                                    item.status === 'Completed' || item.status === 'approved' ? '#16a34a' : 
+                                    item.status === 'Pending' || item.status === 'pending' ? '#eab308' : 
+                                    '#ef4444' 
+                            }]}>
+                                {item.status}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                ))
+            ) : (
+                <View style={styles.emptyState}>
+                    <Ionicons name="clipboard-outline" size={48} color={colors.border} />
+                    <Text style={styles.emptyText}>Chưa có hoạt động nào được ghi nhận</Text>
+                </View>
+            )}
         </View>
 
       </ScrollView>
@@ -278,16 +349,63 @@ const getStyles = (colors, theme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  activityCard: {
-    marginHorizontal: 20,
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 150,
-    justifyContent: 'center',
-    alignItems: 'center',
+
+  activityList: {
+      marginHorizontal: 20,
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+  },
+  activityItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      gap: 12,
+  },
+  borderBottom: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+  },
+  activityIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  activityContent: {
+      flex: 1,
+  },
+  activityTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 2,
+  },
+  activitySub: {
+      fontSize: 12,
+      color: colors.subtext,
+      marginBottom: 2,
+  },
+  activityTime: {
+      fontSize: 10,
+      color: colors.subtext,
+      opacity: 0.8,
+  },
+  activityRight: {
+      alignItems: 'flex-end',
+  },
+  activityAmount: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      marginBottom: 2,
+  },
+  activityStatus: {
+      fontSize: 10,
+      fontWeight: '600',
+      textTransform: 'uppercase',
   },
   emptyState: {
     alignItems: 'center',

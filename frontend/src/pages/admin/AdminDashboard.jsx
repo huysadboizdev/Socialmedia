@@ -21,7 +21,7 @@ const AdminDashboard = () => {
     monthlyRevenue: 0,
     systemBalance: 0
   });
-  const [recentOrders, setRecentOrders] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(null);
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
@@ -36,10 +36,38 @@ const AdminDashboard = () => {
           setStatsData({
             totalUsers: res.data.stats?.totalUsers || 0,
             todayOrders: res.data.stats?.todayOrders || 0,
+            totalOrders: res.data.stats?.totalOrders || 0,
             monthlyRevenue: res.data.stats?.monthlyRevenue || 0,
+            totalRevenue: res.data.stats?.totalRevenue || 0,
             systemBalance: res.data.stats?.systemBalance || 0
           });
-          setRecentOrders(res.data.recentOrders || []);
+          
+          // Process combined activity
+          const orders = (res.data.recentOrders || []).map(o => ({
+            type: 'order',
+            id: o._id,
+            date: new Date(o.orderDate),
+            username: o.userId?.username || 'Khách hàng',
+            description: o.service?.name || 'Dịch vụ đã xóa',
+            amount: o.totalPrice,
+            status: o.status
+          }));
+
+          const deposits = (res.data.recentDeposits || []).map(d => ({
+            type: 'deposit',
+            id: d._id,
+            date: new Date(d.createdAt),
+            username: d.userId?.username || 'Thành viên',
+            description: `Nạp tiền: ${d.description || 'Qua ngân hàng'}`,
+            amount: d.amount,
+            status: d.status
+          }));
+
+          const combined = [...orders, ...deposits]
+            .sort((a, b) => b.date - a.date)
+            .slice(0, 10);
+            
+          setRecentActivity(combined);
           setAnalyticsData(res.data.analytics || null);
         }
       } catch (error) {
@@ -93,9 +121,9 @@ const AdminDashboard = () => {
                 </svg>
               </CardHeader>
               <CardContent>
-                <div className='text-2xl font-bold'>{(statsData.monthlyRevenue || 0).toLocaleString()} ₫</div>
+                <div className='text-2xl font-bold'>{(statsData.totalRevenue || 0).toLocaleString()} ₫</div>
                 <p className='text-xs text-muted-foreground'>
-                  +20.1% so với tháng trước
+                  +{(statsData.monthlyRevenue || 0).toLocaleString()} ₫ tháng này
                 </p>
               </CardContent>
             </Card>
@@ -144,9 +172,9 @@ const AdminDashboard = () => {
                 </svg>
               </CardHeader>
               <CardContent>
-                <div className='text-2xl font-bold'>+{(statsData.todayOrders || 0).toLocaleString()}</div>
+                <div className='text-2xl font-bold'>+{(statsData.totalOrders || 0).toLocaleString()}</div>
                 <p className='text-xs text-muted-foreground'>
-                  +19% so với hôm qua
+                  +{statsData.todayOrders || 0} hôm nay
                 </p>
               </CardContent>
             </Card>
@@ -187,13 +215,13 @@ const AdminDashboard = () => {
             </Card>
             <Card className='col-span-3'>
               <CardHeader>
-                <CardTitle>Đơn Hàng Gần Đây</CardTitle>
+                <CardTitle>Hoạt động gần đây</CardTitle>
                 <CardDescription>
-                  Hệ thống có {recentOrders.length} đơn hàng mới trong hôm nay.
+                  {recentActivity.length} giao dịch gần nhất.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <RecentSales orders={recentOrders} />
+                <RecentSales items={recentActivity} />
               </CardContent>
             </Card>
           </div>
