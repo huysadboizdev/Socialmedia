@@ -48,7 +48,7 @@ export default function Profile() {
              Alert.alert('Sắp ra mắt', 'Tính năng cập nhật hồ sơ đang được hoàn thiện.');
              setLoading(false);
         }, 1000);
-    } catch (e) {
+    } catch (_e) {
         Alert.alert('Lỗi', 'Không thể cập nhật hồ sơ');
         setLoading(false);
     }

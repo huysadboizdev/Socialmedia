@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useState, useEffect } from "react"
 import LogoutModal from "../common/LogoutModal"
+import NotificationDropdown from "../common/NotificationDropdown"
 import { useNavigate, useLocation } from "react-router-dom"
 
 export default function Header({ onMenu }) {
@@ -72,7 +73,9 @@ export default function Header({ onMenu }) {
     "/admin/missions": "Quản Lý Nhiệm Vụ",
     "/admin/mission-requests": "Duyệt Nhiệm Vụ",
     "/admin/withdrawals": "Duyệt Rút Tiền",
+    "/admin/reports": "Quản Lý Báo Lỗi",
     "/admin/settings": "Cài Đặt Hệ Thống",
+    "/reports": "Lịch sử báo lỗi",
   }
 
   const currentPage = routeMap[location.pathname] || ""
@@ -128,9 +131,8 @@ export default function Header({ onMenu }) {
               {isDark ? "☀️" : "🌙"}
             </span>
           </button>
-          <button className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
-            <span className="text-xl">🔔</span>
-          </button>
+          
+          <NotificationDropdown />
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

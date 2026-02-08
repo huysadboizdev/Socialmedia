@@ -34,6 +34,10 @@ const ServiceOrderList = ({ serviceType }) => {
     status: 'Tất cả',
     search: ''
   });
+  const [reportOrder, setReportOrder] = useState(null);
+  const [reportIssue, setReportIssue] = useState('');
+  const [reportNote, setReportNote] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
 
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
@@ -143,6 +147,40 @@ const ServiceOrderList = ({ serviceType }) => {
     return true;
   });
 
+  const handleReportSubmit = async () => {
+    if (!reportIssue) {
+        toast.error("Vui lòng chọn vấn đề cần báo cáo");
+        return;
+    }
+
+    try {
+        setIsReporting(true);
+        const token = localStorage.getItem("token");
+        const res = await axios.post(`${API_URL}/api/user/service`, { 
+            action: 'reportOrder',
+            orderId: reportOrder._id,
+            issue: reportIssue,
+            reportNote: reportNote
+        }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (res.data.success) {
+            toast.success(res.data.message);
+            setReportOrder(null);
+            setReportIssue('');
+            setReportNote('');
+        } else {
+            toast.error(res.data.message || "Có lỗi xảy ra");
+        }
+    } catch (error) {
+        console.error("Report error:", error);
+        toast.error("Lỗi kết nối đến máy chủ");
+    } finally {
+        setIsReporting(false);
+    }
+  };
+
   const displayedOrders = filteredOrders.slice(0, parseInt(filters.limit));
 
   return (
@@ -247,6 +285,18 @@ const ServiceOrderList = ({ serviceType }) => {
                       title="Xem chi tiết"
                     >
                        <span className="material-symbols-outlined text-[20px]">info</span>
+                    </button>
+                    {/* Report Button */}
+                     <button 
+                      onClick={() => {
+                          setReportOrder(order);
+                          setReportIssue('');
+                          setReportNote('');
+                      }}
+                      className="text-orange-500 hover:text-orange-600 hover:bg-orange-50 p-1.5 rounded-full transition-all ml-1"
+                      title="Báo lỗi"
+                    >
+                       <span className="material-symbols-outlined text-[20px]">flag</span>
                     </button>
                   </TableCell>
                   <TableCell className="text-center font-mono text-xs text-slate-500">
@@ -357,6 +407,67 @@ const ServiceOrderList = ({ serviceType }) => {
                  </div>
                </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    {/* Report Dialog */}
+      <Dialog open={!!reportOrder} onOpenChange={(open) => !open && setReportOrder(null)}>
+        <DialogContent className="sm:max-w-[500px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <span className="material-symbols-outlined text-orange-500">warning</span>
+              Báo lỗi đơn hàng {reportOrder?._id.slice(-6).toUpperCase()}
+            </DialogTitle>
+             <p className="text-sm text-slate-500 dark:text-slate-400">
+                Hãy cung cấp thông tin chi tiết về vấn đề của bạn để chúng tôi hỗ trợ nhanh nhất.
+             </p>
+          </DialogHeader>
+          
+          {reportOrder && (
+          <div className="space-y-4 pt-2">
+             <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Vấn đề gặp phải</label>
+                <Select value={reportIssue} onValueChange={setReportIssue}>
+                  <SelectTrigger className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                    <SelectValue placeholder="Chọn vấn đề..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Chưa chạy">Đơn hàng chưa chạy</SelectItem>
+                    <SelectItem value="Lên thiếu">Lên được 1 phần rồi dừng (Thiếu số lượng)</SelectItem>
+                    <SelectItem value="Huỷ đơn">Yêu cầu huỷ đơn hàng</SelectItem>
+                    <SelectItem value="Bảo hành">Yêu cầu bảo hành (Tụt)</SelectItem>
+                    <SelectItem value="Khác">Vấn đề khác</SelectItem>
+                  </SelectContent>
+                </Select>
+             </div>
+
+             <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Chi tiết / Ghi chú thêm</label>
+                <textarea 
+                    className="w-full min-h-[100px] p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
+                    placeholder="Mô tả chi tiết vấn đề của bạn..."
+                    value={reportNote}
+                    onChange={(e) => setReportNote(e.target.value)}
+                />
+             </div>
+
+             <div className="flex justify-end gap-3 pt-2">
+                <button 
+                    onClick={() => setReportOrder(null)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                >
+                    Đóng
+                </button>
+                <button 
+                    onClick={handleReportSubmit}
+                    disabled={isReporting}
+                    className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shadow-orange-500/20 flex items-center gap-2"
+                >
+                    {isReporting && <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>}
+                    Gửi Báo Cáo
+                </button>
+             </div>
+          </div>
           )}
         </DialogContent>
       </Dialog>

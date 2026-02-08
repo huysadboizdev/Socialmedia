@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ export default function AdminMenu() {
     { title: 'Quản Lý Nhiệm Vụ', icon: 'checkbox-outline', route: '/(admin)/missions', color: '#ef4444' },
     { title: 'Duyệt Nhiệm Vụ', icon: 'fact-check-outline', route: '/(admin)/mission-requests', color: '#ec4899' },
     { title: 'Duyệt Rút Tiền', icon: 'cash-outline', route: '/(admin)/withdrawals', color: '#6366f1' },
+    { title: 'Quản Lý Báo Lỗi', icon: 'flag-outline', route: '/(admin)/reports', color: '#f59e0b' },
     { title: 'Cài Đặt Hệ Thống', icon: 'settings-outline', route: '/(admin)/settings', color: '#64748b' },
   ];
 

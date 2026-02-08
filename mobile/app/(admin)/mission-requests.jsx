@@ -69,7 +69,7 @@ export default function AdminMissionRequests() {
                           } else {
                               Alert.alert("Thất bại", res.data.message);
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể duyệt nhiệm vụ");
                       }
                   }
@@ -103,7 +103,7 @@ export default function AdminMissionRequests() {
           } else {
               Alert.alert("Thất bại", res.data.message);
           }
-      } catch (e) {
+      } catch (_e) {
           Alert.alert("Lỗi", "Không thể từ chối nhiệm vụ");
       }
   };
@@ -293,32 +293,37 @@ const getStyles = (colors) => StyleSheet.create({
       marginHorizontal: 20,
       marginBottom: 16,
       backgroundColor: colors.card,
-      padding: 4,
-      borderRadius: 12,
+      padding: 6,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
   },
   tab: {
       flex: 1,
-      paddingVertical: 10,
+      paddingVertical: 12,
       alignItems: 'center',
-      borderRadius: 10,
+      borderRadius: 12,
   },
   activeTab: {
-      backgroundColor: colors.primary, // Or theme specific
-      backgroundColor: colors.background === '#ffffff' ? '#ffffff' : colors.primary,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
+      backgroundColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
   },
   tabText: {
       fontWeight: '600',
       color: colors.subtext,
+      fontSize: 14,
   },
   activeTabText: {
-      color: colors.primary,
+      color: 'white',
       fontWeight: 'bold',
   },
   listContent: {
@@ -332,16 +337,16 @@ const getStyles = (colors) => StyleSheet.create({
   },
   card: {
       backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+      borderRadius: 20,
+      padding: 18,
+      marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.border,
       shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 3,
   },
   cardHeader: {
       flexDirection: 'row',

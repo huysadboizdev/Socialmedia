@@ -103,9 +103,7 @@ export const sendWithdrawalApprovedNotification = async (
             <li style="margin-bottom: 10px;"><strong>Mã Giao Dịch:</strong> ${details.transactionId}</li>
             <li style="margin-bottom: 10px;"><strong>Ngân Hàng:</strong> ${details.bankName}</li>
             <li style="margin-bottom: 10px;"><strong>Số Tài Khoản:</strong> ${details.bankAccount}</li>
-            <li style="margin-bottom: 10px;"><strong>Số Tiền Rút:</strong> <span style="color: dimgrey; font-weight: bold;">${details.amount.toLocaleString()} đ</span></li>
-            <li style="margin-bottom: 10px;"><strong>Thực Nhận:</strong> <span style="color: #28a745; font-weight: bold;">${(details.amount * 0.8).toLocaleString()} đ</span></li>
-          </ul>
+            <li style="margin-bottom: 10px;"><strong>Số Tiền Đã Chuyển:</strong> <span style="color: #28a745; font-weight: bold;">${details.amount.toLocaleString()} đ</span></li>          </ul>
         </div>
 
         <p style="color: #004085; background-color: #cce5ff; padding: 10px; border-radius: 5px; border-left: 5px solid #b8daff;">

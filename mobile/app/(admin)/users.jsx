@@ -6,8 +6,8 @@ import api from '../../service/userService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AdminUsers() {
-  const { colors, theme } = useTheme();
-  const styles = getStyles(colors, theme);
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +76,7 @@ export default function AdminUsers() {
                         } else {
                             Alert.alert("Thất bại", res.data.message || "Không thể xóa");
                         }
-                    } catch(e) {
+                    } catch(_e) {
                          Alert.alert("Lỗi", "Đã có lỗi xảy ra");
                     }
                 }
@@ -110,7 +110,7 @@ export default function AdminUsers() {
         } else {
              Alert.alert("Thất bại", res.data.message || "Cập nhật thất bại");
         }
-    } catch(e) {
+    } catch(_e) {
         Alert.alert("Lỗi", "Không thể cập nhật thông tin");
     }
   };
@@ -137,7 +137,7 @@ export default function AdminUsers() {
         } else {
              Alert.alert("Thất bại", res.data.message);
         }
-    } catch(e) {
+    } catch(_e) {
          Alert.alert("Lỗi", "Không thể điều chỉnh số dư");
     }
   };
@@ -344,7 +344,7 @@ export default function AdminUsers() {
   );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
       flexDirection: 'row',

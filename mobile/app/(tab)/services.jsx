@@ -184,7 +184,7 @@ export default function Services() {
         } else {
             Alert.alert('Lỗi', res.data.message || 'Đặt đơn thất bại');
         }
-    } catch (e) {
+    } catch (_e) {
         Alert.alert('Lỗi', 'Lỗi kết nối');
     } finally {
         setSubmitting(false);

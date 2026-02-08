@@ -11,10 +11,10 @@ router.get(
       const { platform } = req.query;
       const state = platform ? Buffer.from(JSON.stringify({ platform })).toString('base64') : undefined;
       
-      passport.authenticate('google', { 
+      (passport.authenticate('google', { 
           scope: ['profile', 'email'],
           state: state
-      })(req, res, next);
+      }) as express.RequestHandler)(req, res, next);
   }
 )
 
@@ -33,12 +33,12 @@ router.get(
     if (state && typeof state === 'string') {
         try {
              // If state tells us it's mobile
-             const stateObj = JSON.parse(Buffer.from(state, 'base64').toString());
+             const stateObj = JSON.parse(Buffer.from(state, 'base64').toString()) as { platform?: string };
              if (stateObj.platform === 'mobile') {
                  frontendUrl = 'mobile://'; // Deep link scheme
                  isMobile = true;
              }
-        } catch (e) {
+        } catch (_e) {
             // ignore if not json or base64
         }
     }

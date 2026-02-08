@@ -65,7 +65,7 @@ export default function AdminDeposits() {
                               Alert.alert("Thành công", "Đã duyệt giao dịch");
                               fetchDeposits();
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể duyệt giao dịch");
                       }
                   }
@@ -90,7 +90,7 @@ export default function AdminDeposits() {
                               Alert.alert("Thành công", "Đã từ chối giao dịch");
                               fetchDeposits();
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể từ chối giao dịch");
                       }
                   }
@@ -244,53 +244,64 @@ const getStyles = (colors) => StyleSheet.create({
       marginHorizontal: 20,
       marginBottom: 16,
       backgroundColor: colors.card,
-      padding: 4,
-      borderRadius: 12,
+      padding: 6,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
   },
   tab: {
       flex: 1,
-      paddingVertical: 10,
+      paddingVertical: 12,
       alignItems: 'center',
-      borderRadius: 10,
+      borderRadius: 12,
   },
   activeTab: {
-      backgroundColor: colors.background === '#ffffff' ? '#ffffff' : colors.primary,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
+      backgroundColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
   },
   tabText: {
       fontWeight: '600',
       color: colors.subtext,
-      fontSize: 13,
+      fontSize: 14,
   },
   activeTabText: {
-      color: colors.primary,
+      color: 'white',
       fontWeight: 'bold',
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    height: 44,
+    height: 50,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 10,
     color: colors.text,
     height: '100%',
+    fontSize: 15,
   },
   listContent: {
       paddingHorizontal: 20,
@@ -303,16 +314,16 @@ const getStyles = (colors) => StyleSheet.create({
   },
   card: {
       backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+      borderRadius: 20,
+      padding: 18,
+      marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.border,
       shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 3,
   },
   cardHeader: {
       flexDirection: 'row',

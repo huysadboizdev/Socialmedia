@@ -28,7 +28,9 @@ import {
     rejectWithdrawal,
     runBalanceFix,
     getAllDeposits,
-    editUser
+    editUser,
+    getReportedOrders,
+    replyReport
 } from '../controller/adminController.js'
 import { updateAnnouncement } from '../controller/settingController.js'
 
@@ -70,5 +72,9 @@ adminRouter.post('/fix-balances', runBalanceFix)
 
 // settings
 adminRouter.post('/announcement', updateAnnouncement)
+
+// reports
+adminRouter.get('/reports', getReportedOrders)
+adminRouter.post('/reply-report', replyReport)
 
 export default adminRouter

@@ -11,6 +11,43 @@ import * as ImagePicker from 'expo-image-picker';
 // Assets
 import nhiemvuGif from '../../assets/nhiemvu.gif';
 
+const MissionTimer = ({ clickedAt, onExpire, styles }) => {
+    const [timeLeft, setTimeLeft] = useState(() => {
+        if (!clickedAt) return 0;
+        const deadline = new Date(clickedAt).getTime() + 3 * 60 * 1000;
+        return Math.max(0, deadline - Date.now());
+    });
+
+    useEffect(() => {
+        if (!clickedAt) return;
+        const deadline = new Date(clickedAt).getTime() + 3 * 60 * 1000;
+        const timer = setInterval(() => {
+            const remaining = Math.max(0, deadline - Date.now());
+            setTimeLeft(remaining);
+            if (remaining <= 0) {
+                clearInterval(timer);
+                if (onExpire) onExpire();
+            }
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [clickedAt, onExpire]);
+
+    if (!clickedAt) return null;
+
+    const minutes = Math.floor(timeLeft / 60000);
+    const seconds = Math.floor((timeLeft % 60000) / 1000);
+    const isUrgent = minutes === 0 && seconds < 30;
+
+    return (
+        <View style={[styles.timerContainer, isUrgent ? styles.timerUrgent : styles.timerNormal]}>
+            <Ionicons name="timer-outline" size={16} color={isUrgent ? 'white' : '#ea580c'} />
+            <Text style={[styles.timerText, isUrgent ? { color: 'white' } : { color: '#ea580c' }]}>
+                {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
+            </Text>
+        </View>
+    );
+};
+
 export default function Missions() {
   const { user } = useContext(AuthContext);
   const { colors } = useTheme();
@@ -20,6 +57,7 @@ export default function Missions() {
   const [missions, setMissions] = useState([]);
   const [activeTab, setActiveTab] = useState('list'); // list, received
   const [submitting, setSubmitting] = useState(false);
+  const [focusedMissionId, setFocusedMissionId] = useState(null);
   
   // Withdrawal State
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -27,8 +65,12 @@ export default function Missions() {
   const [withdrawMethod, setWithdrawMethod] = useState('web'); // 'web' or 'bank'
   const [bankName, setBankName] = useState('');
   const [bankAccount, setBankAccount] = useState('');
-  const [email, setEmail] = useState(''); // Added email state
+  const [email, setEmail] = useState('');
   const [qrCodeImage, setQrCodeImage] = useState(null);
+
+  // Instruction Modal State
+  const [showInstruction, setShowInstruction] = useState(false);
+  const [instructionMission, setInstructionMission] = useState(null);
 
   const pickQrCode = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -64,35 +106,43 @@ export default function Missions() {
     }
   };
 
+  const clearFocus = () => {
+      setFocusedMissionId(null);
+  };
+
+  const handleLinkClick = async (mission) => {
+    try {
+      const res = await api.post('/user/mission/click', { missionId: mission._id });
+      if (res.data.success) {
+          Linking.openURL(mission.link);
+          setFocusedMissionId(mission._id);
+          fetchMissions(); // Refresh for clickedAt
+      } else {
+          Alert.alert('Lỗi', res.data.message || 'Lỗi khi ghi nhận click');
+      }
+    } catch (error) {
+       console.log("Click error", error);
+       Linking.openURL(mission.link);
+    }
+  };
+
   const handleAccept = async (missionId) => {
     try {
         const res = await api.post('/user/mission/accept', { missionId });
         if (res.data.success) {
             Alert.alert('Thành công', 'Đã nhận nhiệm vụ!');
+            setShowInstruction(false); // Close modal
             fetchMissions();
             setActiveTab('received');
         } else {
             Alert.alert('Lỗi', res.data.message);
         }
-    } catch (e) {
+    } catch (_e) {
         Alert.alert('Lỗi', 'Không thể nhận nhiệm vụ');
     }
   };
 
-  const handleDoMission = async (mission) => {
-    try {
-         // Record click
-         await api.post('/user/mission/click', { missionId: mission._id });
-         // Open Link
-         Linking.openURL(mission.link);
-    } catch (e) {
-        console.log("Click error", e);
-        Linking.openURL(mission.link); // Try opening anyway
-    }
-  };
-
   const pickImage = async (missionId) => {
-    // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Cần quyền truy cập', 'Rất tiếc, chúng tôi cần quyền truy cập thư viện ảnh để tải lên bằng chứng!');
@@ -101,7 +151,6 @@ export default function Missions() {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
       quality: 0.5,
     });
 
@@ -116,7 +165,6 @@ export default function Missions() {
           const formData = new FormData();
           formData.append('missionId', missionId);
           
-          // Append image
           const uriParts = asset.uri.split('.');
           const fileType = uriParts[uriParts.length - 1];
 
@@ -134,6 +182,7 @@ export default function Missions() {
 
           if (res.data.success) {
               Alert.alert('Thành công', 'Đã gửi bằng chứng thành công!');
+              clearFocus();
               fetchMissions();
           } else {
               Alert.alert('Lỗi', res.data.message);
@@ -154,8 +203,8 @@ export default function Missions() {
     }
 
     if (withdrawMethod === 'bank') {
-        if (!bankName || !bankAccount || !qrCodeImage) {
-            Alert.alert('Lỗi', 'Vui lòng điền tên ngân hàng, số tài khoản và tải ảnh QR');
+        if (!bankName || !bankAccount) {
+            Alert.alert('Lỗi', 'Vui lòng điền tên ngân hàng và số tài khoản');
             return;
         }
     }
@@ -170,16 +219,17 @@ export default function Missions() {
             formData.append('bankName', bankName);
             formData.append('bankAccount', bankAccount);
             if (email) {
-                formData.append('email', email); // Include email
+                formData.append('email', email);
             }
-            
-            const uriParts = qrCodeImage.uri.split('.');
-            const fileType = uriParts[uriParts.length - 1];
-            formData.append('qrCode', { // Corrected field name
-                uri: qrCodeImage.uri,
-                name: `qrcode.${fileType}`,
-                type: `image/${fileType}`,
-            });
+            if (qrCodeImage) {
+                 const uriParts = qrCodeImage.uri.split('.');
+                 const fileType = uriParts[uriParts.length - 1];
+                 formData.append('qrCode', {
+                    uri: qrCodeImage.uri,
+                    name: `qrcode.${fileType}`,
+                    type: `image/${fileType}`,
+                });
+            }
         }
 
         const res = await api.post('/user/mission/withdraw', formData, {
@@ -194,7 +244,7 @@ export default function Missions() {
             setBankAccount('');
             setEmail('');
             setQrCodeImage(null);
-            fetchMissions();
+            fetchMissions(); // Update balance
         } else {
              Alert.alert('Lỗi', res.data.message);
         }
@@ -212,7 +262,7 @@ export default function Missions() {
         const res = await api.post('/user/attendance');
         if (res.data.success) {
             Alert.alert('Điểm danh', res.data.message);
-            fetchMissions(); // Indirectly refresh
+            fetchMissions();
         } else {
              Alert.alert('Thông báo', res.data.message);
         }
@@ -224,9 +274,15 @@ export default function Missions() {
     }
   };
 
-  const filteredMissions = activeTab === 'list' 
+  const activeMission = missions.find(m => m._id === focusedMissionId);
+
+  const allFilteredMissions = activeTab === 'list' 
     ? missions.filter(m => m.status === 'available')
     : missions.filter(m => m.status !== 'available');
+
+  const filteredMissions = focusedMissionId 
+    ? (activeMission ? [activeMission] : allFilteredMissions)
+    : allFilteredMissions;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -235,48 +291,97 @@ export default function Missions() {
             <Image source={nhiemvuGif} style={{ width: 32, height: 32 }} resizeMode="contain" />
             <Text style={styles.headerTitle}>Nhiệm vụ</Text>
         </View>
-        <TouchableOpacity style={styles.withdrawBtn} onPress={() => setShowWithdraw(true)}>
-             <Ionicons name="wallet-outline" size={20} color="white" />
-             <Text style={styles.withdrawText}>{(user?.missionBalance || 0).toLocaleString()} đ</Text>
-        </TouchableOpacity>
+        <View style={{flexDirection: 'row', gap: 8}}>
+            <TouchableOpacity 
+                style={[styles.withdrawBtn, {backgroundColor: 'white', borderWidth: 1, borderColor: colors.border}]} 
+                onPress={() => {
+                   setInstructionMission(null);
+                   setShowInstruction(true);
+                }}
+            >
+                <Ionicons name="book-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.withdrawBtn} onPress={() => setShowWithdraw(true)}>
+                <Ionicons name="wallet-outline" size={20} color="white" />
+                <Text style={styles.withdrawText}>{(user?.missionBalance || 0).toLocaleString()} đ</Text>
+            </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
         
         {/* Attendance Banner */}
-        <View style={styles.attendanceCard}>
-             <View>
-                 <Text style={styles.attendanceTitle}>Điểm danh hàng ngày</Text>
-                 <Text style={styles.attendanceSub}>
-                    Chuỗi: <Text style={{color: '#f97316', fontWeight: 'bold'}}>{user?.attendance?.streak || 0} ngày</Text>
-                 </Text>
-             </View>
-             <TouchableOpacity style={styles.attendanceBtn} onPress={handleAttendance}>
-                 <Text style={styles.attendanceBtnText}>Điểm danh</Text>
-             </TouchableOpacity>
-        </View>
+        {!focusedMissionId && (
+            <View style={styles.attendanceCard}>
+                <View>
+                    <Text style={styles.attendanceTitle}>Điểm danh hàng ngày</Text>
+                    <Text style={styles.attendanceSub}>
+                        Chuỗi: <Text style={{color: '#f97316', fontWeight: 'bold'}}>{user?.attendance?.streak || 0} ngày</Text>
+                    </Text>
+                </View>
+                <TouchableOpacity style={styles.attendanceBtn} onPress={handleAttendance}>
+                    <Text style={styles.attendanceBtnText}>Điểm danh</Text>
+                </TouchableOpacity>
+            </View>
+        )}
 
-        <View style={styles.tabs}>
-           <TouchableOpacity 
-              style={[styles.tab, activeTab === 'list' && styles.activeTab]}
-              onPress={() => setActiveTab('list')}
-           >
-               <Text style={[styles.tabText, activeTab === 'list' && styles.activeTabText]}>Có sẵn</Text>
-           </TouchableOpacity>
-           <TouchableOpacity 
-              style={[styles.tab, activeTab === 'received' && styles.activeTab]}
-              onPress={() => setActiveTab('received')}
-           >
-               <Text style={[styles.tabText, activeTab === 'received' && styles.activeTabText]}>Của tôi</Text>
-           </TouchableOpacity>
-        </View>
+        {!focusedMissionId && (
+            <View style={styles.tabs}>
+            <TouchableOpacity 
+                style={[styles.tab, activeTab === 'list' && styles.activeTab]}
+                onPress={() => setActiveTab('list')}
+            >
+                <Text style={[styles.tabText, activeTab === 'list' && styles.activeTabText]}>Có sẵn</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+                style={[styles.tab, activeTab === 'received' && styles.activeTab]}
+                onPress={() => setActiveTab('received')}
+            >
+                <Text style={[styles.tabText, activeTab === 'received' && styles.activeTabText]}>Của tôi</Text>
+            </TouchableOpacity>
+            </View>
+        )}
+
+        {/* Focused Header */}
+        {focusedMissionId && (
+             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
+                 <TouchableOpacity onPress={clearFocus} style={{flexDirection: 'row', alignItems: 'center'}}>
+                     <Ionicons name="arrow-back" size={24} color={colors.primary} />
+                     <Text style={{color: colors.primary, fontWeight: 'bold', marginLeft: 4}}>Quay lại</Text>
+                 </TouchableOpacity>
+
+                 <View style={{flexDirection: 'row', gap: 8, alignItems: 'center'}}>
+                     <MissionTimer 
+                        clickedAt={activeMission?.clickedAt} 
+                        styles={styles}
+                        onExpire={() => {
+                            Alert.alert("Hết hạn", "Nhiệm vụ đã hết thời gian làm.");
+                            fetchMissions();
+                        }} 
+                     />
+                     <View style={styles.doingBadge}>
+                        <View style={styles.doingDot} />
+                        <Text style={styles.doingText}>ĐANG LÀM</Text>
+                     </View>
+                 </View>
+             </View>
+        )}
+
         {loading ? (
              <ActivityIndicator color={colors.primary} size="large" />
         ) : filteredMissions.length === 0 ? (
              <Text style={styles.emptyText}>Không có nhiệm vụ nào.</Text>
         ) : (
-             filteredMissions.map(mission => (
-                 <View key={mission._id} style={styles.card}>
+             filteredMissions.map(mission => {
+                 const isExpired = mission.clickedAt && mission.status !== 'approved' && mission.status !== 'pending' && 
+                              (Date.now() - new Date(mission.clickedAt).getTime() > 3 * 60 * 1000);
+                 
+                 return (
+                 <View key={mission._id} style={[
+                     styles.card,
+                     focusedMissionId === mission._id && { borderColor: '#ef4444', borderWidth: 1 }
+                 ]}>
                      <View style={styles.cardIcon}>
                          <Ionicons 
                             name={mission.type === 'like' ? 'thumbs-up' : mission.type === 'follow' ? 'person-add' : 'share-social'} 
@@ -287,50 +392,177 @@ export default function Missions() {
                      <View style={styles.cardContent}>
                          <Text style={styles.cardTitle}>{mission.title}</Text>
                          <Text style={styles.cardReward}>+{mission.reward?.toLocaleString()} đ</Text>
-                         {mission.status !== 'available' && (
-                             <Text style={[
-                                 styles.statusBadge, 
-                                 mission.status === 'approved' ? { color: colors.success } :
-                                 mission.status === 'rejected' ? { color: colors.danger } :
-                                 { color: colors.warning }
-                             ]}>
-                                 {mission.status.toUpperCase()}
-                             </Text>
+                         {mission.status !== 'available' && !isExpired && (
+                             <TouchableOpacity onPress={() => handleLinkClick(mission)}>
+                                <Text style={{color: '#3b82f6', fontSize: 12, textDecorationLine: 'underline'}}>Link nhiệm vụ</Text>
+                             </TouchableOpacity>
                          )}
                      </View>
                      
                      <View style={styles.actions}>
-                         {mission.status === 'available' && (
+                         {/* EXPIRED */}
+                         {isExpired && (
+                             <View style={[styles.statusTag, {backgroundColor: '#fef2f2', borderColor: '#fca5a5'}]}>
+                                 <Ionicons name="close-circle" size={14} color="#b91c1c" />
+                                 <Text style={{color: '#b91c1c', fontSize: 10, fontWeight: 'bold'}}>Thất bại</Text>
+                             </View>
+                         )}
+
+                         {/* AVAILABLE */}
+                         {!isExpired && mission.status === 'available' && (
                              <TouchableOpacity 
                                 style={styles.actionBtn}
-                                onPress={() => handleAccept(mission._id)}
+                                onPress={() => {
+                                    setInstructionMission(mission);
+                                    setShowInstruction(true);
+                                }}
                              >
+                                 <Ionicons name="add-circle-outline" size={16} color="white" style={{marginRight: 4}}/>
                                  <Text style={styles.actionBtnText}>Nhận</Text>
                              </TouchableOpacity>
                          )}
 
-                         {(mission.status === 'accepted' || mission.status === 'rejected') && (
-                             <View style={{ gap: 8 }}>
+                         {/* ACCEPTED / REJECTED */}
+                         {!isExpired && (mission.status === 'accepted' || mission.status === 'rejected') && (
+                             <View style={{ gap: 8, alignItems: 'flex-end' }}>
+                                 <View style={{flexDirection: 'row', gap: 6}}>
+                                     <TouchableOpacity 
+                                        style={[styles.actionBtn, { backgroundColor: colors.secondary, paddingHorizontal: 12 }]}
+                                        onPress={() => handleLinkClick(mission)}
+                                     >
+                                         <Ionicons name="open-outline" size={16} color="white" />
+                                     </TouchableOpacity>
+                                     <TouchableOpacity 
+                                        style={[styles.actionBtn, { paddingHorizontal: 12, backgroundColor: '#f3e8ff' }]}
+                                        onPress={() => {
+                                             setInstructionMission(mission);
+                                             setShowInstruction(true);
+                                        }}
+                                     >
+                                         <Ionicons name="book" size={16} color={colors.primary} />
+                                     </TouchableOpacity>
+                                 </View>
+                                 
                                  <TouchableOpacity 
-                                    style={[styles.actionBtn, { backgroundColor: colors.secondary }]}
-                                    onPress={() => handleDoMission(mission)}
-                                 >
-                                     <Text style={styles.actionBtnText}>Thực hiện</Text>
-                                 </TouchableOpacity>
-                                 <TouchableOpacity 
-                                    style={styles.actionBtn}
+                                    style={[styles.actionBtn, {width: '100%'}]}
                                     onPress={() => pickImage(mission._id)}
                                     disabled={submitting}
                                  >
-                                     {submitting ? <ActivityIndicator size="small" color="white"/> : <Text style={styles.actionBtnText}>Gửi duyệt</Text>}
+                                     {submitting ? <ActivityIndicator size="small" color="white"/> : (
+                                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                                            <Ionicons name="cloud-upload-outline" size={16} color="white" />
+                                            <Text style={styles.actionBtnText}>Gửi ảnh</Text>
+                                        </View>
+                                     )}
                                  </TouchableOpacity>
                              </View>
                          )}
+
+                         {/* PENDING */}
+                         {!isExpired && mission.status === 'pending' && (
+                             <View style={[styles.statusTag, {backgroundColor: '#fefce8', borderColor: '#fde047'}]}>
+                                 <Ionicons name="hourglass-outline" size={14} color="#a16207" />
+                                 <Text style={{color: '#a16207', fontSize: 10, fontWeight: 'bold'}}>Chờ duyệt 24h</Text>
+                             </View>
+                         )}
+
+                         {/* APPROVED */}
+                         {mission.status === 'approved' && (
+                             <View style={[styles.statusTag, {backgroundColor: '#f0fdf4', borderColor: '#86efac'}]}>
+                                 <Ionicons name="checkmark-circle" size={14} color="#15803d" />
+                                 <Text style={{color: '#15803d', fontSize: 10, fontWeight: 'bold'}}>Đã xong</Text>
+                             </View>
+                         )}
+
+                         {!isExpired && mission.status === 'rejected' && (
+                            <Text style={{color: '#ef4444', fontSize: 10, fontWeight: 'bold', marginTop: 4, textAlign: 'center'}}>Bị từ chối</Text>
+                         )}
                      </View>
                  </View>
-             ))
+             )})
         )}
       </ScrollView>
+
+      {/* Instruction Modal */}
+      <Modal visible={showInstruction} animationType="slide" presentationStyle="pageSheet">
+          <View style={[styles.container, {backgroundColor: colors.background}]}>
+              <View style={styles.header}>
+                  <Text style={styles.headerTitle}>Hướng dẫn làm nhiệm vụ</Text>
+                  <TouchableOpacity onPress={() => setShowInstruction(false)}>
+                      <Ionicons name="close-circle" size={28} color={colors.text} />
+                  </TouchableOpacity>
+              </View>
+              <ScrollView contentContainerStyle={{padding: 20}}>
+                  <View style={styles.stepCard}>
+                      <View style={styles.stepIndex}><Text style={styles.stepIndexText}>1</Text></View>
+                      <View style={{flex: 1}}>
+                          <Text style={[styles.stepTitle, {color: colors.text}]}>Truy cập liên kết</Text>
+                          <Text style={[styles.stepDesc, {color: colors.subtext}]}>
+                              Nhấn vào nút <Text style={{fontWeight: 'bold', color: colors.primary}}>"Link nhiệm vụ"</Text> hoặc <Text style={{fontWeight: 'bold', color: colors.primary}}>"Thực hiện"</Text> để mở trang web/ứng dụng cần tương tác.
+                              (Sẽ mở ứng dụng Facebook/TikTok/.. theo yêu cầu).
+                          </Text>
+                      </View>
+                  </View>
+
+                  <View style={styles.stepCard}>
+                      <View style={styles.stepIndex}><Text style={styles.stepIndexText}>2</Text></View>
+                      <View style={{flex: 1}}>
+                          <Text style={[styles.stepTitle, {color: colors.text}]}>Thực hiện tương tác</Text>
+                          <Text style={[styles.stepDesc, {color: colors.subtext}]}>
+                              Thực hiện đúng yêu cầu: <Text style={{fontWeight: 'bold', color: '#3b82f6'}}>Like</Text>, <Text style={{fontWeight: 'bold', color: '#db2777'}}>Follow</Text>, hoặc <Text style={{fontWeight: 'bold', color: '#7c3aed'}}>Share</Text> bài viết/trang cá nhân đó.
+                          </Text>
+                      </View>
+                  </View>
+
+                  <View style={styles.stepCard}>
+                      <View style={styles.stepIndex}><Text style={styles.stepIndexText}>3</Text></View>
+                      <View style={{flex: 1}}>
+                          <Text style={[styles.stepTitle, {color: colors.text}]}>Chụp ảnh bằng chứng</Text>
+                          <Text style={[styles.stepDesc, {color: colors.subtext}]}>
+                               Chụp màn hình điện thoại.
+                               {'\n'}- Phải thấy rõ <Text style={{color: '#ef4444', fontWeight: 'bold'}}>thanh trạng thái</Text> trên cùng (giờ, pin, sóng).
+                               {'\n'}- <Text style={{fontWeight: 'bold'}}>KHÔNG</Text> tải ảnh đã cắt (crop).
+                               {'\n'}- Ảnh phải chụp toàn bộ giao diện ứng dụng.
+                          </Text>
+                      </View>
+                  </View>
+
+                  <View style={[styles.stepCard, {backgroundColor: '#fef2f2', borderColor: '#fee2e2'}]}>
+                      <View style={{flex: 1}}>
+                          <Text style={[styles.stepTitle, {color: '#ef4444', flexDirection: 'row', alignItems: 'center', gap: 8}]}>
+                              <Ionicons name="warning" size={18} color="#ef4444"/> Lưu ý quan trọng
+                          </Text>
+                          <Text style={[styles.stepDesc, {color: '#b91c1c'}]}>
+                              - Không dùng ảnh cũ hoặc ảnh mạng. {'\n'}
+                              - Thời gian nộp bài phải trùng khớp với thời gian chụp. {'\n'}
+                              - Nếu phát hiện gian lận sẽ bị khóa tài khoản vĩnh viễn. {'\n'}
+                              - Mỗi nhiệm vụ có thời hạn 3 phút.
+                          </Text>
+                      </View>
+                  </View>
+
+                  <View style={{flexDirection: 'row', gap: 12, marginTop: 24}}>
+                      <TouchableOpacity 
+                        style={[styles.confirmBtn, {backgroundColor: colors.secondary, flex: 1}]}
+                        onPress={() => setShowInstruction(false)}
+                      >
+                          <Text style={[styles.confirmText, {color: colors.text}]}>
+                              {instructionMission && instructionMission.status === 'available' ? 'Hủy bỏ' : 'Đóng'}
+                          </Text>
+                      </TouchableOpacity>
+
+                      {instructionMission && instructionMission.status === 'available' && (
+                          <TouchableOpacity 
+                            style={[styles.confirmBtn, {flex: 1}]}
+                            onPress={() => handleAccept(instructionMission._id)}
+                          >
+                              <Text style={styles.confirmText}>Đồng ý và Tiếp tục</Text>
+                          </TouchableOpacity>
+                      )}
+                  </View>
+              </ScrollView>
+          </View>
+      </Modal>
 
       {/* Withdraw Modal */}
       <Modal visible={showWithdraw} transparent animationType="slide">
@@ -672,4 +904,97 @@ const getStyles = (colors) => StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 4,
+    borderWidth: 1,
+  },
+  timerNormal: {
+    backgroundColor: '#ffedd5',
+    borderColor: '#fed7aa',
+  },
+  timerUrgent: {
+    backgroundColor: '#dc2626',
+    borderColor: '#dc2626',
+  },
+  timerText: {
+    fontWeight: 'bold',
+    fontSize: 12,
+    fontVariant: ['tabular-nums'],
+  },
+  doingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#fee2e2',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  doingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#dc2626',
+  },
+  doingText: {
+    color: '#dc2626',
+    fontWeight: 'bold',
+    fontSize: 10,
+  },
+  stepCard: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+    alignItems: 'flex-start',
+  },
+  stepIndex: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepIndexText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  stepDesc: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  statusTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  stepPlaceholder: {
+      height: 150,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 48,
+      marginBottom: 24,
+  }
 });

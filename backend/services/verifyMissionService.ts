@@ -172,6 +172,25 @@ export const verifyMissionProof = async (
                 const { data: { text: trText } } = await worker.recognize(trBuffer);
                 console.log(`[OCR] Cropped Text (Top-Right): "${trText.trim()}"`);
                 combinedText += " " + trText;
+
+                // C. Top Left (Mobile Status Bar - iPhone/Android)
+                // Grab top-left 40% width and top 15% height
+                const tlWidth = Math.floor(metadata.width * 0.40);
+                const tlHeight = Math.floor(metadata.height * 0.15);
+                const tlLeft = 0;
+                const tlTop = 0;
+
+                const tlBuffer = await sharp(fileBuffer)
+                     .extract({ left: tlLeft, top: tlTop, width: tlWidth, height: tlHeight })
+                     .resize({ width: tlWidth * 2 }) // Upscale 2x
+                     .grayscale()
+                     .normalize()
+                     .toBuffer();
+                
+                const { data: { text: tlText } } = await worker.recognize(tlBuffer);
+                console.log(`[OCR] Cropped Text (Top-Left): "${tlText.trim()}"`);
+                combinedText += " " + tlText;
+
             }
         } catch (cropError) {
             console.error("[OCR] Crop Error:", cropError);

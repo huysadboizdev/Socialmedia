@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, Alert, Modal, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../service/userService';
@@ -72,7 +72,7 @@ export default function AdminOrders() {
                           } else {
                               Alert.alert("Thất bại", res.data.message);
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể cập nhật trạng thái");
                       }
                   }
@@ -103,7 +103,7 @@ export default function AdminOrders() {
                           } else {
                               Alert.alert("Thất bại", res.data.message);
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể xóa đơn hàng");
                       }
                   }

@@ -98,6 +98,14 @@ export default function AdminSidebar({ onClose }) {
         />
 
          <NavItem 
+          label="Báo Lỗi" 
+          to="/admin/reports" 
+          icon="flag" 
+          active={location.pathname === "/admin/reports"} 
+          onClick={handleItemClick}
+        />
+
+         <NavItem 
           label="Cài Đặt" 
           to="/admin/settings" 
           icon="settings" 

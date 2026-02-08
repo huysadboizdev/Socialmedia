@@ -77,7 +77,7 @@ export default function AdminMissions() {
                             Alert.alert("Thành công", "Đã xóa nhiệm vụ");
                             setMissions(missions.filter(m => m._id !== id));
                         }
-                    } catch(e) {
+                    } catch(_e) {
                          Alert.alert("Lỗi", "Đã có lỗi xảy ra");
                     }
                 }
@@ -139,7 +139,7 @@ export default function AdminMissions() {
         } else {
              Alert.alert("Thất bại", res.data.message || "Thao tác thất bại");
         }
-    } catch(e) {
+    } catch(_e) {
         Alert.alert("Lỗi", "Không thể lưu nhiệm vụ");
     }
   };
