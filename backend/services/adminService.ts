@@ -4,6 +4,7 @@ import transactionModel from '../models/transactionModel.js'
 import orderModel, { type OrderStatus } from '../models/orderModel.js'
 import missionModel from '../models/missionModel.js'
 import submissionModel from '../models/submissionModel.js'
+import notificationModel from '../models/notificationModel.js'
 import type { UpdateQuery, Types } from 'mongoose'
 
 export interface AdminLoginParams {
@@ -635,6 +636,47 @@ export const rejectUserSubmission = async (submissionId: string, note?: string) 
 }
 
 /**
+ * Fetch all reported orders
+ */
+export const fetchAllReportedOrders = async () => {
+    try {
+        const reports = await orderModel.find({ 
+            report: { $exists: true } 
+        }).populate('userId', 'username email').populate('service', 'name').sort({ 'report.createdAt': -1 });
+        return { success: true, reports };
+    } catch (error) {
+        throw new Error(`Error fetching reported orders: ${String(error)}`);
+    }
+};
+
+/**
+ * Reply to a report
+ */
+export const replyToReport = async (orderId: string, response: string, status: 'pending' | 'resolved') => {
+    try {
+        const order = await orderModel.findById(orderId);
+        if (!order || !order.report) {
+             throw new Error("Order or report not found");
+        }
+
+        order.report.adminResponse = response;
+        order.report.status = status;
+        await order.save();
+
+        // Create notification for user
+        await notificationModel.create({
+            userId: order.userId,
+            message: `Admin đã phản hồi báo cáo đơn hàng #${order._id.toString().slice(-6).toUpperCase()}: ${response}`,
+            type: 'admin_message'
+        });
+
+        return { success: true, message: "Reply sent successfully" };
+    } catch (error) {
+        throw new Error(`Error replying to report: ${String(error)}`);
+    }
+};
+
+/**
  * Fetch processed mission submissions (approved or rejected)
  */
 export const fetchSubmissionHistory = async () => {
@@ -672,6 +714,22 @@ export const approveWithdrawalRequest = async (transactionId: string) => {
 
     transaction.status = 'approved'
     await transaction.save()
+
+    // Send email notification
+    if (transaction.withdrawalDetails?.email) {
+        try {
+             // Dynamic import to avoid circular dependency if any, or just consistent with paymentController
+             const { sendWithdrawalApprovedNotification } = await import('./mailService.js');
+             await sendWithdrawalApprovedNotification(transaction.withdrawalDetails.email, {
+                bankName: transaction.withdrawalDetails.bankName ?? '',
+                bankAccount: transaction.withdrawalDetails.bankAccount ?? '',
+                amount: Math.abs(transaction.amount),
+                transactionId: transaction._id.toString()
+            });
+        } catch (error) {
+            console.error('Failed to send withdrawal approval email:', error);
+        }
+    }
 
     return { success: true, message: 'Withdrawal approved' }
 }

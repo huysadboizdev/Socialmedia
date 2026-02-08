@@ -43,6 +43,23 @@ const orderSchema = new Schema({
   orderDate: {
     type: Date,
     default: Date.now
+  },
+  report: {
+    message: String,
+    note: String,
+    status: {
+      type: String,
+      enum: ["pending", "resolved"],
+      default: "pending"
+    },
+    adminResponse: {
+      type: String,
+      default: ""
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
   }
 });
 

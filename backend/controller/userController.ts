@@ -61,8 +61,19 @@ export const updatePassword: RequestHandler = async (req, res) => {
 // service & order
 export const handleUserService: RequestHandler = async (req, res) => {
   try {
-    const { userId, action, serviceId, quantity, link, note, details } = req.body as { userId: string, action: string, serviceId: string, quantity: string | number, link?: string, note?: string, details?: Record<string, unknown> }
-    const result = await userService.handleService(userId, { action, serviceId, quantity: Number(quantity), link, note, details })
+    const { userId, action, serviceId, quantity, link, note, details, orderId, issue, reportNote } = req.body as { 
+      userId: string, 
+      action: string, 
+      serviceId: string, 
+      quantity: string | number, 
+      link?: string, 
+      note?: string, 
+      details?: Record<string, unknown>,
+      orderId?: string,
+      issue?: string,
+      reportNote?: string
+    }
+    const result = await userService.handleService(userId, { action, serviceId, quantity: Number(quantity), link, note, details, orderId, issue, reportNote })
     res.json(result)
   } catch (err: unknown) {
     res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })

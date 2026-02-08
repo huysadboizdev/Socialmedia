@@ -2,6 +2,7 @@
 import js from '@eslint/js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
+import reactPlugin from 'eslint-plugin-react'
 
 export default tseslint.config(
   {
@@ -12,8 +13,51 @@ export default tseslint.config(
   js.configs.recommended,
 
   // 🔴 CHỈ ÁP DỤNG CHO FILE TS
+  // 🟢 Áp dụng rules chung (console, unused vars, v.v.)
   {
-    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    files: ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx'],
+    rules: {
+      'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
+      'no-unused-vars': 'off', // Tắt rule gốc để dùng rule của TS hoặc xử lý riêng
+    },
+  },
+
+  // 🟡 Cấu hình riêng cho JS/JSX (không type-check khắt khe)
+  {
+    files: ['**/*.js', '**/*.jsx'],
+    plugins: {
+      react: reactPlugin,
+    },
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    rules: {
+      'react/jsx-uses-vars': 'error',
+      'react/jsx-uses-react': 'error',
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+
+  // 🔴 CHỈ ÁP DỤNG CHO FILE TS VỚI TYPE CHECKING KHẮT KHE
+  {
+    files: ['**/*.ts', '**/*.tsx'],
     extends: [
       ...tseslint.configs.strictTypeChecked,
       ...tseslint.configs.stylisticTypeChecked,
@@ -39,13 +83,10 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
-
-      'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/await-thenable': 'error',

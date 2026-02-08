@@ -71,7 +71,7 @@ export default function Sidebar({ onClose }) {
              <NavItem label="Nạp tiền tài khoản" to="/deposit" icon={naptienPng} active={location.pathname === "/deposit"} onClick={() => handleItemClick("Nạp tiền tài khoản")} isSubItem />
              <NavItem label="Lịch sử giao dịch" to="/history" icon={lichsuGif} active={location.pathname === "/history"} onClick={() => handleItemClick("Lịch sử giao dịch")} isSubItem />
              <NavItem label="Tất cả tiến trình" to="/all-orders" icon={allGif} active={location.pathname === "/all-orders"} onClick={() => handleItemClick("Tất cả tiến trình")} isSubItem />
-             <NavItem label="Dịch vụ & cấp bậc" icon={capbacGif} active={activeItem === "Dịch vụ & cấp bậc"} onClick={() => handleItemClick("Dịch vụ & cấp bậc")} isSubItem />
+             <NavItem label="Báo lỗi đơn hàng" to="/reports" icon={capbacGif} active={location.pathname === "/reports"} onClick={() => handleItemClick("Báo lỗi đơn hàng")} isSubItem />
              <NavItem label="Hỗ Trợ Khách Hàng" to="/support" icon={supportGif} active={location.pathname === "/support"} onClick={() => handleItemClick("Hỗ Trợ Khách Hàng")} isSubItem />
              <NavItem label="Điều khoản dịch vụ" to="/terms" icon={dieukhoanGif} active={location.pathname === "/terms"} onClick={() => handleItemClick("Điều khoản dịch vụ")} isSubItem />
            </div>

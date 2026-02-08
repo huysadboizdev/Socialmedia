@@ -80,7 +80,9 @@ export default function Home() {
                <img src={tongnapGif} alt="tongnap" className="w-12 h-12 object-contain" />
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">0</div>
+              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">
+                {(userData?.totalDeposit || 0).toLocaleString('vi-VN')}
+              </div>
               <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Tổng nạp</div>
             </div>
           </div>
@@ -90,7 +92,9 @@ export default function Home() {
                <img src={napthangGif} alt="napthang" className="w-12 h-12 object-contain" />
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">0 USD</div>
+              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">
+                {(userData?.monthlyDeposit || 0).toLocaleString('vi-VN')}
+              </div>
               <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Nạp tháng</div>
             </div>
           </div>
@@ -141,7 +145,7 @@ export default function Home() {
                 </div>
                  <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-orange-500 dark:text-orange-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">warning</span>
-                  <span>FaceBook CSKH Sub6Sao.Com : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
+                  <span>FaceBook CSKH HUYTICHXANH.Com : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
                 </div>
               </div>
             </div>

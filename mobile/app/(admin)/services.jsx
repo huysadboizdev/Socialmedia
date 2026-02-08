@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 export default function AdminServices() {
-  const { colors, theme } = useTheme();
-  const styles = getStyles(colors, theme);
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const router = useRouter();
   
   const [services, setServices] = useState([]);
@@ -18,7 +18,7 @@ export default function AdminServices() {
   
   // Filters
   const [filterPlatform, setFilterPlatform] = useState('All');
-  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterCategory] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
 
   // Edit/Add Modal State
@@ -84,7 +84,7 @@ export default function AdminServices() {
                         } else {
                             Alert.alert("Thất bại", res.data.message || "Không thể xóa");
                         }
-                    } catch(e) {
+                    } catch(_e) {
                          Alert.alert("Lỗi", "Đã có lỗi xảy ra");
                     }
                 }
@@ -148,7 +148,7 @@ export default function AdminServices() {
         } else {
              Alert.alert("Thất bại", res.data.message || "Thao tác thất bại");
         }
-    } catch(e) {
+    } catch(_e) {
         Alert.alert("Lỗi", "Không thể lưu dịch vụ");
     }
   };
@@ -400,7 +400,7 @@ export default function AdminServices() {
   );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
       flexDirection: 'row',

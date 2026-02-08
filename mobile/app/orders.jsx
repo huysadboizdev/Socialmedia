@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Image, Modal, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,7 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -53,14 +54,23 @@ export default function Orders() {
       }
   };
 
+  const getPlatformColor = (platform) => {
+      switch(platform) {
+          case 'Facebook': return '#1877F2';
+          case 'Instagram': return '#E1306C';
+          case 'TikTok': return '#000000'; // or white
+          default: return '#71717a';
+      }
+  };
+
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={() => setSelectedOrder(item)}>
       <View style={styles.cardHeader}>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
             <View style={[styles.platformBadge, { backgroundColor: getPlatformColor(item.service?.platform) }]}>
                 <Text style={styles.platformText}>{item.service?.platform || '?'}</Text>
             </View>
-            <Text style={styles.orderId}>#{item._id.slice(-6)}</Text>
+            <Text style={styles.orderId}>#{item._id.slice(-6).toUpperCase()}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
@@ -69,10 +79,16 @@ export default function Orders() {
       
       <Text style={styles.serviceName}>{item.service?.name || 'Dịch vụ đã xóa'}</Text>
       
+      {/* Target Link Preview */}
+      <View style={styles.linkPreview}>
+           <Ionicons name="link-outline" size={14} color={colors.subtext} />
+           <Text style={styles.linkText} numberOfLines={1}>{item.link || 'Không có link'}</Text>
+      </View>
+
       <View style={styles.detailsRow}>
           <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Số lượng</Text>
-              <Text style={styles.detailValue}>{item.quantity}</Text>
+              <Text style={styles.detailValue}>{item.quantity?.toLocaleString()}</Text>
           </View>
           <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Tổng tiền</Text>
@@ -83,17 +99,12 @@ export default function Orders() {
       <Text style={styles.date}>
           {item.createdAt ? formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: vi }) : ''}
       </Text>
-    </View>
+      
+      <View style={{position: 'absolute', bottom: 12, right: 12, opacity: 0.5}}>
+           <Ionicons name="chevron-forward" size={16} color={colors.subtext} />
+      </View>
+    </TouchableOpacity>
   );
-
-  const getPlatformColor = (platform) => {
-      switch(platform) {
-          case 'Facebook': return '#1877F2';
-          case 'Instagram': return '#E1306C';
-          case 'TikTok': return '#000000'; // or white
-          default: return '#71717a';
-      }
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -103,7 +114,7 @@ export default function Orders() {
         </TouchableOpacity>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
             <Image source={allGif} style={{ width: 28, height: 28 }} resizeMode="contain" />
-            <Text style={styles.headerTitle}>Tất cả tiến trình</Text>
+            <Text style={styles.headerTitle}>Tất cả đơn hàng</Text>
         </View>
         <View style={{width: 24}} /> 
       </View>
@@ -126,6 +137,110 @@ export default function Orders() {
             }
         />
       )}
+
+      {/* Detail Modal */}
+      <Modal visible={!!selectedOrder} animationType="slide" presentationStyle="pageSheet">
+          <View style={[styles.modalContainer, {backgroundColor: colors.background}]}>
+              {selectedOrder && (
+                  <>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
+                        <TouchableOpacity onPress={() => setSelectedOrder(null)}>
+                            <Ionicons name="close-circle" size={28} color={colors.text} />
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView contentContainerStyle={styles.modalContent}>
+                        
+                        <View style={styles.modalSection}>
+                             <Text style={[styles.modalLabel, {color: colors.subtext}]}>Mã đơn hàng</Text>
+                             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <Text style={[styles.modalValue, {color: colors.text, fontSize: 18, fontWeight: 'bold'}]}>
+                                    #{selectedOrder._id.slice(-6).toUpperCase()}
+                                </Text>
+                                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedOrder.status) + '20' }]}>
+                                    <Text style={[styles.statusText, { color: getStatusColor(selectedOrder.status) }]}>{selectedOrder.status}</Text>
+                                </View>
+                             </View>
+                             <Text style={{color: colors.subtext, fontSize: 12, marginTop: 4}}>
+                                 {selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString('vi-VN') : ''}
+                             </Text>
+                        </View>
+
+                        <View style={[styles.modalSection, {backgroundColor: colors.card, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border}]}>
+                             <Text style={[styles.modalLabel, {color: colors.subtext, marginBottom: 8}]}>Dịch vụ</Text>
+                             <Text style={{color: colors.primary, fontWeight: 'bold', fontSize: 16, marginBottom: 4}}>{selectedOrder.service?.name}</Text>
+                             <View style={{flexDirection: 'row', gap: 8}}>
+                                <View style={[styles.platformBadge, { backgroundColor: getPlatformColor(selectedOrder.service?.platform) }]}>
+                                    <Text style={styles.platformText}>{selectedOrder.service?.platform}</Text>
+                                </View>
+                                <View style={[styles.platformBadge, { backgroundColor: '#f4f4f5' }]}>
+                                    <Text style={[styles.platformText, {color: '#52525b'}]}>{selectedOrder.service?.category}</Text>
+                                </View>
+                             </View>
+                        </View>
+
+                        <View style={styles.modalSection}>
+                            <Text style={[styles.modalLabel, {color: colors.subtext}]}>Link/UID Mục tiêu</Text>
+                            <TouchableOpacity 
+                                style={[styles.linkBox, {backgroundColor: colors.card, borderColor: colors.border}]}
+                                onPress={() => Linking.openURL(selectedOrder.link)}
+                            >
+                                <Text style={{color: '#3b82f6', textDecorationLine: 'underline'}}>{selectedOrder.link || 'Không có link'}</Text>
+                                <Ionicons name="open-outline" size={16} color="#3b82f6" />
+                            </TouchableOpacity>
+                        </View>
+
+                         <View style={{flexDirection: 'row', gap: 12}}>
+                            <View style={[styles.modalSection, {flex: 1, backgroundColor: colors.card, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border}]}>
+                                <Text style={[styles.modalLabel, {color: colors.subtext}]}>Số lượng</Text>
+                                <Text style={{color: colors.text, fontSize: 16, fontWeight: 'bold'}}>{selectedOrder.quantity?.toLocaleString()}</Text>
+                            </View>
+                            <View style={[styles.modalSection, {flex: 1, backgroundColor: colors.card, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border}]}>
+                                <Text style={[styles.modalLabel, {color: colors.subtext}]}>Tổng tiền</Text>
+                                <Text style={{color: '#ef4444', fontSize: 16, fontWeight: 'bold'}}>{(selectedOrder.totalPrice || 0).toLocaleString()} đ</Text>
+                            </View>
+                         </View>
+
+                        {/* Note Section */}
+                        <View style={styles.modalSection}>
+                            <Text style={[styles.modalLabel, {color: colors.subtext}]}>Ghi chú</Text>
+                            <View style={[styles.noteBox, {backgroundColor: colors.card, borderColor: colors.border}]}>
+                                <Text style={{color: colors.text}}>
+                                    {selectedOrder.note || 'Không có ghi chú thêm.'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Report Button */}
+                        <TouchableOpacity 
+                            style={{
+                                backgroundColor: '#dc2626', // red
+                                padding: 14,
+                                borderRadius: 10,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                gap: 8,
+                                marginTop: 20
+                            }}
+                            onPress={() => {
+                                setSelectedOrder(null); // Close modal
+                                router.push({
+                                    pathname: '/report-order',
+                                    params: { orderId: selectedOrder._id }
+                                });
+                            }}
+                        >
+                            <Ionicons name="flag-outline" size={20} color="white" />
+                            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>Báo Lỗi Đơn Hàng</Text>
+                        </TouchableOpacity>
+
+                        <View style={{height: 40}} />
+                    </ScrollView>
+                  </>
+              )}
+          </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -186,6 +301,7 @@ const getStyles = (colors) => StyleSheet.create({
   orderId: {
     color: colors.subtext,
     fontSize: 12,
+    fontWeight: 'bold',
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -193,7 +309,7 @@ const getStyles = (colors) => StyleSheet.create({
     borderRadius: 8,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
@@ -201,6 +317,19 @@ const getStyles = (colors) => StyleSheet.create({
     color: colors.text,
     fontWeight: '600',
     fontSize: 15,
+  },
+  linkPreview: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.background,
+      padding: 8,
+      borderRadius: 6,
+  },
+  linkText: {
+      color: colors.subtext,
+      fontSize: 12,
+      flex: 1,
   },
   detailsRow: {
     flexDirection: 'row',
@@ -214,7 +343,7 @@ const getStyles = (colors) => StyleSheet.create({
       fontSize: 11,
   },
   detailValue: {
-      color: colors.text, // e4e4e7 -> text
+      color: colors.text, 
       fontWeight: '500',
   },
   date: {
@@ -228,5 +357,50 @@ const getStyles = (colors) => StyleSheet.create({
   },
   emptyText: {
     color: colors.subtext,
+  },
+  // Modal Styles
+  modalContainer: {
+      flex: 1,
+  },
+  modalHeader: {
+      padding: 16,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e4e4e7', // will overwrite with colors.border in component if needed but keeping simple for now
+  },
+  modalTitle: {
+      fontSize: 18, 
+      fontWeight: 'bold',
+      color: colors.text, 
+  },
+  modalContent: {
+      padding: 20,
+      gap: 20,
+  },
+  modalSection: {
+      gap: 4,
+  },
+  modalLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+  },
+  modalValue: {
+      fontSize: 14,
+  },
+  linkBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+  },
+  noteBox: {
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      minHeight: 80,
   }
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../service/userService';
@@ -28,8 +28,8 @@ export default function AdminSettings() {
       if (res.data.success && res.data.announcement) {
         setAnnouncement(res.data.announcement);
       }
-    } catch (error) {
-      console.error(error);
+    } catch (_error) {
+      console.error(_error);
       Alert.alert("Lỗi", "Không thể tải cài đặt");
     } finally {
       setLoading(false);
@@ -45,7 +45,7 @@ export default function AdminSettings() {
       } else {
         Alert.alert("Lỗi", res.data.message || "Cập nhật thất bại");
       }
-    } catch (error) {
+    } catch (_error) {
       Alert.alert("Lỗi", "Không thể lưu cài đặt");
     } finally {
       setSaving(false);
@@ -67,7 +67,7 @@ export default function AdminSettings() {
                           if (res.data.success) {
                               Alert.alert("Thành công", `Đã sửa xong ${res.data.fixed} tài khoản bị lỗi!`);
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể thực hiện");
                       }
                   }

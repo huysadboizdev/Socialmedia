@@ -54,7 +54,7 @@ export default function Deposit() {
                 setTimeLeft(null);
                 // Trigger balance refresh?? AuthContext might update if we re-fetch
             }
-        } catch (e) {
+        } catch (_e) {
             // ignore
         }
     };
@@ -335,14 +335,7 @@ const getStyles = (colors) => StyleSheet.create({
     fontSize: 16,
   },
   qrCard: {
-    backgroundColor: 'white', // QR Card usually needs to be light for contrast or specific design? Or maybe themed? 
-    // QR code image is usually black/white. The background should be light to ensure readability if transparent logic exists
-    // But here we are displaying an image.
-    // Let's keep it white for now as it simulates a printed paper or distinct card.
-    // Or if we want dark mode support, let's look at the content.
-    // The text inside is hardcoded colors in jsx or styles.
-    // Let's refactor this to be adaptive if possible, but the styles previously used 'white' background and specific dark text colors.
-    // If I change background to colors.card (dark), I must change text colors too.
+    // backgroundColor: 'white', // removed duplicate
     backgroundColor: colors.card,
     borderRadius: 20,
     padding: 20,

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, Image, TextInput, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, Image, Dimensions, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../service/userService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function AdminWithdrawals() {
   const { colors } = useTheme();
@@ -64,7 +64,7 @@ export default function AdminWithdrawals() {
                               Alert.alert("Thành công", "Đã duyệt yêu cầu rút tiền");
                               fetchWithdrawals();
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể duyệt yêu cầu");
                       }
                   }
@@ -89,7 +89,7 @@ export default function AdminWithdrawals() {
                               Alert.alert("Thành công", "Đã từ chối và hoàn tiền");
                               fetchWithdrawals();
                           }
-                      } catch (e) {
+                      } catch (_e) {
                           Alert.alert("Lỗi", "Không thể từ chối yêu cầu");
                       }
                   }

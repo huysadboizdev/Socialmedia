@@ -7,6 +7,7 @@ import missionModel from '../models/missionModel.js'
 import serviceModel from '../models/serviceModel.js'
 import orderModel from '../models/orderModel.js'
 import transactionModel from '../models/transactionModel.js'
+import notificationModel from '../models/notificationModel.js'
 import submissionModel from '../models/submissionModel.js'
 
 interface UpdateProfileParams {
@@ -22,6 +23,9 @@ interface HandleServiceParams {
   link?: string;
   note?: string;
   details?: Record<string, unknown>;
+  orderId?: string;
+  issue?: string;
+  reportNote?: string;
 }
 
 interface ChangePasswordParams {
@@ -181,10 +185,37 @@ const validateGmail = (email: string): boolean => {
 /**
  * Handle services and orders for user
  */
-export const handleService = async (userId: string, { action, serviceId, quantity = 1, link, note, details }: HandleServiceParams) => {
+export const handleService = async (userId: string, { action, serviceId, quantity = 1, link, note, details, orderId, issue, reportNote }: HandleServiceParams) => {
     if (action === 'getServices') {
         const services = await serviceModel.find()
         return { success: true, services }
+    }
+
+    if (action === 'reportOrder') {
+        if (!orderId) return { success: false, message: 'Order ID is required' }
+        if (!issue) return { success: false, message: 'Issue is required' }
+
+        const order = await orderModel.findOne({ _id: orderId, userId })
+        if (!order) return { success: false, message: 'Order not found' }
+
+        order.set('report', {
+            message: issue,
+            note: reportNote,
+            status: 'pending',
+            createdAt: new Date()
+        })
+        
+        await order.save()
+        
+        return { success: true, message: 'Báo lỗi thành công! Admin sẽ kiểm tra sớm nhất.' }
+    }
+
+    if (action === 'getReportedOrders') {
+        const orders = await orderModel.find({ 
+            userId, 
+            report: { $exists: true } 
+        }).populate('service').sort({ 'report.createdAt': -1 })
+        return { success: true, orders }
     }
 
     if (action === 'createOrder') {
@@ -252,12 +283,48 @@ export const handleService = async (userId: string, { action, serviceId, quantit
             createdAt: new Date()
         })
 
-        return { success: true, order, balance: user.balance }
+        return { success: true, message: 'Đặt đơn hàng thành công!', order }
     }
 
     if (action === 'getOrderHistory') {
         const orders = await orderModel.find({ userId }).populate('service')
         return { success: true, orders }
+    }
+
+    if (action === 'getNotifications') {
+        const notifications = await notificationModel.find({ userId }).sort({ createdAt: -1 }).limit(20);
+        const unreadCount = await notificationModel.countDocuments({ userId, isRead: false });
+        return { success: true, notifications, unreadCount };
+    }
+
+    if (action === 'markNotificationRead') {
+         if (!details?.notificationId) {
+             // If no specific ID, mark all as read
+             await notificationModel.updateMany({ userId, isRead: false }, { isRead: true });
+             return { success: true, message: 'Marked all as read' };
+         } else {
+             await notificationModel.findByIdAndUpdate(details.notificationId, { isRead: true });
+             return { success: true, message: 'Marked as read' };
+         }
+    }
+
+    if (action === 'reportOrder') {
+        if (!details?.orderId) return { success: false, message: 'Order ID is required' }
+        if (!details.issue) return { success: false, message: 'Issue is required' }
+
+        const order = await orderModel.findOne({ _id: details.orderId, userId })
+        if (!order) return { success: false, message: 'Order not found' }
+
+        order.set('report', {
+            message: details.issue,
+            note: details.reportNote,
+            status: 'pending',
+            createdAt: new Date()
+        })
+        
+        await order.save()
+        
+        return { success: true, message: 'Báo lỗi thành công! Admin sẽ kiểm tra sớm nhất.' }
     }
 
     return { success: false, message: 'Invalid action' }
@@ -728,6 +795,14 @@ export const withdrawMissionBalance = async (
             status: 'approved',
             createdAt: new Date()
         })
+
+        // Update deposit stats (Total & Monthly)
+        try {
+            const { updateUserDepositStats } = await import('./adminService.js');
+            await updateUserDepositStats(userId, amount);
+        } catch (error) {
+            console.error("Failed to update deposit stats during mission withdrawal:", error);
+        }
 
         return { 
             success: true, 

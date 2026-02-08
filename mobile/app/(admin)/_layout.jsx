@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function AdminLayout() {
   const { user, isLoading } = useContext(AuthContext);
   const router = useRouter();
-  const { colors, theme } = useTheme();
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'admin')) {

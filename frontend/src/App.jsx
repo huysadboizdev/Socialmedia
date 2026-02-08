@@ -14,6 +14,7 @@ const DailyTask = lazy(() => import("./pages/DailyTask"))
 const Deposit = lazy(() => import("./pages/Deposit"))
 const TransactionHistory = lazy(() => import("./pages/TransactionHistory"))
 const AllOrders = lazy(() => import("./pages/AllOrders"))
+const ReportHistory = lazy(() => import("./pages/ReportHistory"))
 const FacebookLike = lazy(() => import("./pages/facebook/FacebookLike"));
 const FacebookFollow = lazy(() => import("./pages/facebook/FacebookFollow"));
 const FacebookShare = lazy(() => import("./pages/facebook/FacebookShare"));
@@ -40,6 +41,7 @@ const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"))
 const AdminMissions = lazy(() => import("./pages/admin/AdminMissions"))
 const AdminMissionRequests = lazy(() => import("./pages/admin/AdminMissionRequests"))
 const AdminWithdrawals = lazy(() => import("./pages/admin/AdminWithdrawals"))
+const AdminReports = lazy(() => import("./pages/admin/AdminReports"))
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"))
 const AdminDeposits = lazy(() => import("./pages/admin/AdminDeposits"))
 
@@ -76,6 +78,7 @@ function App() {
             <Route path="/deposit" element={<Deposit />} />
             <Route path="/history" element={<TransactionHistory />} />
             <Route path="/all-orders" element={<AllOrders />} />
+            <Route path="/reports" element={<ReportHistory />} />
             <Route path="/service/facebook-like" element={<FacebookLike />} />
             <Route path="/service/facebook-follow" element={<FacebookFollow />} />
             <Route path="/service/facebook-share" element={<FacebookShare />} />
@@ -102,6 +105,7 @@ function App() {
             <Route path="/admin/missions" element={<AdminMissions />} />
             <Route path="/admin/mission-requests" element={<AdminMissionRequests />} />
             <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+            <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
         </Routes>

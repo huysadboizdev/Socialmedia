@@ -277,3 +277,21 @@ export const getAllDeposits: RequestHandler = async (_req, res) => {
         res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
     }
 }
+export const getReportedOrders: RequestHandler = async (_req, res) => {
+    try {
+        const result = await adminService.fetchAllReportedOrders()
+        res.json(result)
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
+export const replyReport: RequestHandler = async (req, res) => {
+    try {
+        const { orderId, response, status } = req.body as { orderId: string, response: string, status: 'pending' | 'resolved' }
+        const result = await adminService.replyToReport(orderId, response, status)
+        res.json(result)
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}

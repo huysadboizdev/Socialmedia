@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,6 @@ export default function AdminDashboard() {
     systemBalance: 0
   });
   const [recentActivity, setRecentActivity] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchStats = async () => {
@@ -64,10 +63,9 @@ export default function AdminDashboard() {
             const combined = [...orders, ...deposits].sort((a, b) => b.date - a.date).slice(0, 10);
             setRecentActivity(combined);
         }
-    } catch (e) {
-        console.error("Error fetching stats:", e);
+    } catch (_e) {
+        console.error("Error fetching stats:", _e);
     } finally {
-        setLoading(false);
         setRefreshing(false);
     }
   };
