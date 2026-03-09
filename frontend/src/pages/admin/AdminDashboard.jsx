@@ -203,6 +203,31 @@ const AdminDashboard = () => {
                 </p>
               </CardContent>
             </Card>
+            <Card className='hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer' onClick={() => window.location.href = '/admin/chat'}>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                <CardTitle className='text-sm font-medium'>
+                  Hỗ Trợ Khách Hàng
+                </CardTitle>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4 text-muted-foreground"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold'>Chat</div>
+                <p className='text-xs text-muted-foreground'>
+                  Xem và trả lời tin nhắn
+                </p>
+              </CardContent>
+            </Card>
           </div>
           <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-7'>
             <Card className='col-span-4'>

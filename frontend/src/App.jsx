@@ -44,6 +44,7 @@ const AdminWithdrawals = lazy(() => import("./pages/admin/AdminWithdrawals"))
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"))
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"))
 const AdminDeposits = lazy(() => import("./pages/admin/AdminDeposits"))
+const AdminChat = lazy(() => import("./pages/admin/AdminChat"))
 
 function App() {
   return (
@@ -107,6 +108,7 @@ function App() {
             <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/chat" element={<AdminChat />} />
           </Route>
         </Routes>
       </Suspense>

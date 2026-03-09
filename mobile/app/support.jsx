@@ -46,6 +46,14 @@ export default function Support() {
             </Text>
 
             <View style={styles.contactOptions}>
+                {/* Chat */}
+                <TouchableOpacity style={styles.option} onPress={() => router.push('/chat-admin')}>
+                    <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                         <Ionicons name="chatbubbles" size={24} color="white" />
+                    </View>
+                    <Text style={styles.optionText}>Chat trực tuyến</Text>
+                </TouchableOpacity>
+
                 {/* Zalo */}
                 <TouchableOpacity style={styles.option} onPress={() => handleContact('zalo')}>
                     <Image source={zaloGif} style={{ width: 40, height: 40, borderRadius: 8 }} resizeMode="cover" />
@@ -56,14 +64,6 @@ export default function Support() {
                 <TouchableOpacity style={styles.option} onPress={() => handleContact('facebook')}>
                     <Image source={fbGif} style={{ width: 40, height: 40, borderRadius: 8 }} resizeMode="cover" />
                     <Text style={styles.optionText}>Facebook</Text>
-                </TouchableOpacity>
-
-                {/* Telegram */}
-                <TouchableOpacity style={styles.option} onPress={() => handleContact('telegram')}>
-                    <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: '#0088cc', alignItems: 'center', justifyContent: 'center' }}>
-                         <Ionicons name="paper-plane" size={24} color="white" />
-                    </View>
-                    <Text style={styles.optionText}>Telegram</Text>
                 </TouchableOpacity>
             </View>
         </View>

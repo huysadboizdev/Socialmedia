@@ -49,7 +49,7 @@ const MissionTimer = ({ clickedAt, onExpire, styles }) => {
 };
 
 export default function Missions() {
-  const { user } = useContext(AuthContext);
+  const { user, refreshUser } = useContext(AuthContext);
   const { colors } = useTheme();
   const styles = getStyles(colors);
 
@@ -79,7 +79,7 @@ export default function Missions() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.7,
     });
@@ -114,7 +114,12 @@ export default function Missions() {
     try {
       const res = await api.post('/user/mission/click', { missionId: mission._id });
       if (res.data.success) {
-          Linking.openURL(mission.link);
+          const supported = await Linking.canOpenURL(mission.link);
+          if (supported) {
+              await Linking.openURL(mission.link);
+          } else {
+              Alert.alert('Lỗi', 'Không thể mở liên kết này trên thiết bị của bạn: ' + mission.link);
+          }
           setFocusedMissionId(mission._id);
           fetchMissions(); // Refresh for clickedAt
       } else {
@@ -122,7 +127,14 @@ export default function Missions() {
       }
     } catch (error) {
        console.log("Click error", error);
-       Linking.openURL(mission.link);
+       try {
+           const supported = await Linking.canOpenURL(mission.link);
+           if (supported) {
+               await Linking.openURL(mission.link);
+           }
+       } catch (err) {
+           console.log("Linking error fallback", err);
+       }
     }
   };
 
@@ -150,7 +162,7 @@ export default function Missions() {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.5,
     });
 
@@ -184,6 +196,8 @@ export default function Missions() {
               Alert.alert('Thành công', 'Đã gửi bằng chứng thành công!');
               clearFocus();
               fetchMissions();
+              // Refresh user balance if context provides a refresh function
+              if (typeof refreshUser === 'function') refreshUser();
           } else {
               Alert.alert('Lỗi', res.data.message);
           }

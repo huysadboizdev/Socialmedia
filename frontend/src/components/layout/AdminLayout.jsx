@@ -2,15 +2,17 @@ import AdminSidebar from "./AdminSidebar"
 import Header from "./Header"
 import { useState } from "react"
 import { Outlet } from "react-router-dom"
+import useAdminChat from "../../hooks/useAdminChat"
 
 export default function AdminLayout() {
   const [open, setOpen] = useState(false)
+  const { unreadCount } = useAdminChat(); // Poll for unread messages
 
   return (
     <div className="h-screen flex bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
       {/* Sidebar desktop */}
       <aside className="hidden xl:block w-72 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 h-full shrink-0">
-        <AdminSidebar />
+        <AdminSidebar unreadChatCount={unreadCount} />
       </aside>
 
       {/* Sidebar mobile */}
@@ -21,7 +23,7 @@ export default function AdminLayout() {
             onClick={() => setOpen(false)}
           />
           <aside className="relative w-72 h-full bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 animate-in slide-in-from-left duration-300">
-            <AdminSidebar onClose={() => setOpen(false)} />
+            <AdminSidebar onClose={() => setOpen(false)} unreadChatCount={unreadCount} />
           </aside>
         </div>
       )}

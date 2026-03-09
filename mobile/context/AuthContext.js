@@ -1,7 +1,6 @@
-
 import React, { createContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { loginUser, registerUser, getUserInfo } from '../service/userService';
+import { loginUser, registerUser, getUserInfo, getMessages } from '../service/userService';
 
 export const AuthContext = createContext();
 
@@ -9,13 +8,84 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [lastMessage, setLastMessage] = useState(null);
+
+    const unreadIntervalRef = React.useRef(null);
+
+    const fetchUnreadCount = async () => {
+        try {
+            const token = await SecureStore.getItemAsync('token');
+            const storedUser = await SecureStore.getItemAsync('user');
+            if (!token || !storedUser) return;
+            
+            const parsedUser = JSON.parse(storedUser);
+
+            if (parsedUser.role === 'admin') {
+                // Admin logic: fetch conversations and sum unread counts
+                const { getConversations } = require('../service/userService');
+                const res = await getConversations();
+
+                if (res.success && res.data) {
+                    const conversations = res.data;
+                    let totalUnread = 0;
+                    let latestMsg = null;
+
+                    for (const conv of conversations) {
+                        totalUnread += conv.unreadCount || 0;
+                        if (conv.lastMessage && conv.lastMessage.sender !== 'admin') {
+                            if (!latestMsg || new Date(conv.lastMessage.createdAt) > new Date(latestMsg.createdAt)) {
+                                latestMsg = { ...conv.lastMessage, username: conv.username };
+                            }
+                        }
+                    }
+
+                    if (latestMsg && (!lastMessage || latestMsg._id !== lastMessage._id)) {
+                        if (totalUnread > unreadCount) {
+                            setLastMessage(latestMsg);
+                        }
+                    }
+
+                    setUnreadCount(totalUnread);
+                }
+            } else {
+                // Regular user logic
+                const res = await getMessages(parsedUser._id);
+            
+                if (res.success && res.data) {
+                    const messages = res.data;
+                    const unread = messages.filter(m => m.sender === 'admin' && !m.isRead).length;
+                    
+                    const latestAdminMsg = [...messages].reverse().find(m => m.sender === 'admin');
+                    if (latestAdminMsg && (!lastMessage || latestAdminMsg._id !== lastMessage._id)) {
+                        if (unread > unreadCount) {
+                            setLastMessage(latestAdminMsg);
+                        }
+                    }
+                    
+                    setUnreadCount(unread);
+                }
+            }
+        } catch (error) {
+            console.log('Error fetching unread count', error);
+        }
+    };
 
     useEffect(() => {
         checkLoginStatus();
     }, []);
 
-    // Routing logic moved to app/_layout.jsx to avoid conflicts
-
+    useEffect(() => {
+        if (user) {
+            // Poll for unread messages every 3 seconds when logged in (both roles)
+            unreadIntervalRef.current = setInterval(fetchUnreadCount, 3000);
+            fetchUnreadCount();
+        } else {
+            clearInterval(unreadIntervalRef.current);
+            setUnreadCount(0);
+        }
+        return () => clearInterval(unreadIntervalRef.current);
+    }, [user]);
 
     const checkLoginStatus = async () => {
         try {
@@ -43,11 +113,11 @@ export const AuthProvider = ({ children }) => {
                         // Update stored user
                         await SecureStore.setItemAsync('user', JSON.stringify(res.user));
                     }
-                } catch (e) {
+                } catch (_e) {
                     console.log('Token valid but getUserInfo failed, using stored user if available');
                 }
             }
-        } catch (error) {
+        } catch (_error) {
             console.log('Not logged in or token expired');
             await SecureStore.deleteItemAsync('token');
             await SecureStore.deleteItemAsync('user');
@@ -140,6 +210,7 @@ export const AuthProvider = ({ children }) => {
             await SecureStore.deleteItemAsync('token');
             await SecureStore.deleteItemAsync('user');
             setUser(null);
+            setUnreadCount(0);
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
@@ -165,7 +236,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, register, logout, isInitialized, setToken }}>
+        <AuthContext.Provider value={{ user, isLoading, login, register, logout, isInitialized, setToken, unreadCount, refreshUnreadCount: fetchUnreadCount, lastMessage, setLastMessage, refreshUser: checkLoginStatus }}>
             {children}
         </AuthContext.Provider>
     );
