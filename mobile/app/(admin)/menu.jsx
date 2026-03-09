@@ -19,7 +19,8 @@ export default function AdminMenu() {
     { title: 'Quản Lý Nhiệm Vụ', icon: 'checkbox-outline', route: '/(admin)/missions', color: '#ef4444' },
     { title: 'Duyệt Nhiệm Vụ', icon: 'fact-check-outline', route: '/(admin)/mission-requests', color: '#ec4899' },
     { title: 'Duyệt Rút Tiền', icon: 'cash-outline', route: '/(admin)/withdrawals', color: '#6366f1' },
-    { title: 'Quản Lý Báo Lỗi', icon: 'flag-outline', route: '/(admin)/reports', color: '#f59e0b' },
+    { title: 'Quản Lý Báo Lỗi', icon: 'alert-circle-outline', route: '/(admin)/reports', color: '#f59e0b' },
+    { title: 'Tin Nhắn Hỗ Trợ', icon: 'chatbubbles-outline', route: '/(admin)/chats', color: '#3b82f6' },
     { title: 'Cài Đặt Hệ Thống', icon: 'settings-outline', route: '/(admin)/settings', color: '#64748b' },
   ];
 

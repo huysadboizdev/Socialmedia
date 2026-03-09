@@ -9,7 +9,8 @@ export default function NavItem({
   hasSubmenu,
   isOpen,
   onClick,
-  isSubItem // NEW: prop for sub-menu items
+  isSubItem, // NEW: prop for sub-menu items
+  ...props
 }) {
   const isImage =
     typeof icon === "string" &&
@@ -25,7 +26,7 @@ export default function NavItem({
         transition-all duration-300
         cursor-pointer select-none
         ${active
-          ? "bg-violet-100/80 text-violet-600 font-bold shadow-sm scale-[1.02] -translate-y-[1px]"
+          ? "bg-violet-100/80 text-violet-600 font-bold shadow-sm scale-[1.02] -translate-y-px"
           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
         }
       `}
@@ -42,7 +43,7 @@ export default function NavItem({
       {/* ICON (material | png | gif) */}
       {icon && (
         <div className={`
-          flex-shrink-0 transition-transform duration-300
+          shrink-0 transition-transform duration-300
           ${active ? "scale-110" : "group-hover:scale-110"}
         `}>
           {isImage ? (
@@ -76,6 +77,13 @@ export default function NavItem({
       <span className={`flex-1 text-[13.5px] tracking-wide transition-colors ${active ? "font-bold" : "font-medium"}`}>
         {label}
       </span>
+
+      {/* BADGE */}
+      {props.badge > 0 && (
+        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+          {props.badge}
+        </span>
+      )}
 
       {/* SERVICE ARROW */}
       {isService && (

@@ -87,6 +87,9 @@ export default function AdminLayout() {
       <Tabs.Screen name="mission-requests" options={{ href: null }} />
       <Tabs.Screen name="withdrawals" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="chats" options={{ href: null }} />
+      <Tabs.Screen name="chat/[id]" options={{ href: null }} />
+      <Tabs.Screen name="reports" options={{ href: null }} />
     </Tabs>
   );
 }

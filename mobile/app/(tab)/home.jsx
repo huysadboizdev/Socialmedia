@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
 import { getUserInfo } from '../../service/userService';
 import { AuthContext } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -13,7 +14,7 @@ import napthangGif from '../../assets/napthang.gif';
 import capbacGif from '../../assets/capbac.gif';
 
 export default function Home() {
-  const { user } = useContext(AuthContext);
+  const { user, unreadCount } = useContext(AuthContext);
   const { colors } = useTheme();
   const styles = getStyles(colors);
   
@@ -80,9 +81,21 @@ export default function Home() {
                 <Text style={styles.greeting}>Xin chào,</Text>
                 <Text style={styles.username}>{displayUser?.username || 'Thành viên'}</Text>
             </View>
-            <TouchableOpacity style={styles.notiBtn}>
-                <Ionicons name="notifications-outline" size={24} color="white" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Link href="/chat-admin" asChild>
+                    <TouchableOpacity style={styles.notiBtn}>
+                        <Ionicons name="chatbubbles-outline" size={24} color={colors.text} />
+                        {unreadCount > 0 && (
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </Link>
+                <TouchableOpacity style={styles.notiBtn}>
+                    <Ionicons name="notifications-outline" size={24} color={colors.text} />
+                </TouchableOpacity>
+            </View>
         </View>
 
         {/* Stats Grid */}
@@ -221,6 +234,24 @@ const getStyles = (colors) => StyleSheet.create({
       padding: 8,
       backgroundColor: colors.card,
       borderRadius: 12,
+      position: 'relative',
+  },
+  badge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      backgroundColor: '#ef4444', // red-500
+      borderRadius: 10,
+      minWidth: 18,
+      height: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 4,
+  },
+  badgeText: {
+      color: 'white',
+      fontSize: 10,
+      fontWeight: 'bold',
   },
   statsGrid: {
     flexDirection: 'row',

@@ -1,8 +1,12 @@
+import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { AuthProvider, AuthContext } from "../context/AuthContext";
 import { ThemeProvider } from "../context/ThemeContext";
 import { useContext, useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import NotificationOverlay from "../components/NotificationOverlay";
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -60,26 +64,33 @@ const RootLayoutNav = () => {
     }
 
   return (
-    <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(admin)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tab)" options={{ headerShown: false }} />
-        <Stack.Screen name="history" options={{ headerShown: false }} />
-        <Stack.Screen name="orders" options={{ headerShown: false }} />
-        <Stack.Screen name="support" options={{ headerShown: false }} />
-        <Stack.Screen name="terms" options={{ headerShown: false }} />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+        <NotificationOverlay />
+        <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(admin)" />
+            <Stack.Screen name="(tab)" />
+            <Stack.Screen name="history" />
+            <Stack.Screen name="orders" />
+            <Stack.Screen name="support" />
+            <Stack.Screen name="terms" />
+            <Stack.Screen name="chat-admin" />
+            <Stack.Screen name="report-order" />
+        </Stack>
+    </GestureHandlerRootView>
   );
 }
 
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-        <AuthProvider>
-            <RootLayoutNav />
-        </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+        <ThemeProvider>
+            <AuthProvider>
+                <RootLayoutNav />
+            </AuthProvider>
+        </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

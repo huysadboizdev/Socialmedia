@@ -2,6 +2,7 @@ import Sidebar from "./Sidebar"
 import Header from "./Header"
 import { useState } from "react"
 import { Outlet } from "react-router-dom"
+import ChatWidget from "../common/ChatWidget"
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false)
@@ -9,7 +10,7 @@ export default function AppLayout() {
   return (
     <div className="h-screen flex bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
       {/* Sidebar desktop */}
-      <aside className="hidden xl:block w-72 bg-white dark:bg-slate-900 border-r dark:border-slate-800 h-full flex-shrink-0">
+      <aside className="hidden xl:block w-72 bg-white dark:bg-slate-900 border-r dark:border-slate-800 h-full shrink-0">
         <Sidebar />
       </aside>
 
@@ -32,6 +33,7 @@ export default function AppLayout() {
         <main className="flex-1 overflow-y-auto w-full custom-scrollbar bg-slate-50 dark:bg-slate-950">
           <Outlet />
         </main>
+        <ChatWidget />
       </div>
     </div>
   )

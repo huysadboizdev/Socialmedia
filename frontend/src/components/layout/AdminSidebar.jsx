@@ -2,7 +2,7 @@ import React from 'react';
 import NavItem from "@/components/ui/NavItem"
 import { useLocation } from "react-router-dom"
 
-export default function AdminSidebar({ onClose }) {
+export default function AdminSidebar({ onClose, unreadChatCount }) {
   const location = useLocation();
 
   const handleItemClick = () => {
@@ -111,6 +111,17 @@ export default function AdminSidebar({ onClose }) {
           icon="settings" 
           active={location.pathname === "/admin/settings"} 
           onClick={handleItemClick}
+        />
+
+         <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-bold mt-4">Communication</div>
+
+         <NavItem 
+          label="Chat Hỗ Trợ" 
+          to="/admin/chat" 
+          icon="chat" 
+          active={location.pathname === "/admin/chat"} 
+          onClick={handleItemClick}
+          badge={unreadChatCount}
         />
 
         <div className="mt-auto pt-4">
