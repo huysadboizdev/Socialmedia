@@ -21,6 +21,7 @@ import adminRouter from './routes/adminRoute.js'
 import paymentRouter from './routes/paymentRoute.js'
 import googleRouter from './routes/authGoogle.js'
 import messageRouter from './routes/messageRoutes.js'
+import auth2faRouter from './routes/auth2faRoute.js'
 const app = express()
 
 // middlewares
@@ -53,6 +54,7 @@ app.use('/api/user', userRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/payment', paymentRouter)
 app.use('/api/message', messageRouter)
+app.use('/api/user/2fa', auth2faRouter)
 
 const PORT = process.env.PORT ?? 4000
 

@@ -3,6 +3,7 @@ import Header from "./Header"
 import { useState } from "react"
 import { Outlet } from "react-router-dom"
 import ChatWidget from "../common/ChatWidget"
+import TwoFactorPromptModal from "../common/TwoFactorPromptModal"
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false)
@@ -34,6 +35,7 @@ export default function AppLayout() {
           <Outlet />
         </main>
         <ChatWidget />
+        <TwoFactorPromptModal />
       </div>
     </div>
   )

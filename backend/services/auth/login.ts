@@ -60,6 +60,12 @@ const login = async ({ email, password }: LoginParams) => {
     process.env.ACCESS_TOKEN_SECRET ?? 'secret'
   )
 
+  // Reset 2FA verification status on login to force fresh verification
+  if (user.is2FAEnabled) {
+    user.is2FAVerified = false;
+    await user.save();
+  }
+
   // Exclude password from user object
   const { password: _, ...userData } = user.toObject()
 
