@@ -13,6 +13,7 @@ import submissionModel from '../models/submissionModel.js'
 interface UpdateProfileParams {
   username?: string;
   fullName?: string;
+  email?: string;
   imageFile?: Express.Multer.File;
 }
 
@@ -91,10 +92,25 @@ export const getInfo = async (userId: string) => {
 /**
  * Update user profile
  */
-export const updateProfile = async (userId: string, { username, fullName, imageFile }: UpdateProfileParams) => {
+export const updateProfile = async (userId: string, { username, fullName, email, imageFile }: UpdateProfileParams) => {
     const updateData: Partial<IUser> = {}
     if (username) updateData.username = username
     if (fullName) updateData.fullName = fullName
+    
+    if (email) {
+        const trimmedEmail = email.trim()
+        if (!validateEmail(trimmedEmail)) {
+            throw new Error('Địa chỉ email không hợp lệ.')
+        }
+        
+        // Check if email already exists for another user
+        const existingUser = await userModel.findOne({ email: trimmedEmail, _id: { $ne: userId } })
+        if (existingUser) {
+            throw new Error('Email này đã được sử dụng bởi tài khoản khác')
+        }
+        
+        updateData.email = trimmedEmail
+    }
 
     if (imageFile) {
         try {
@@ -128,6 +144,7 @@ export const updateProfile = async (userId: string, { username, fullName, imageF
              }
         }
     }
+    
 
     const updatedUser = await userModel.findByIdAndUpdate(userId, updateData, { new: true })
     return { success: true, user: updatedUser }
@@ -158,7 +175,10 @@ export const changePassword = async (userId: string, { oldPassword, newPassword1
     return { success: true }
 }
 
-const validateServiceLink = (link: string, platform: string, category: string, name: string): { valid: boolean; message?: string } => {
+/**
+ * Validate service link based on platform and type
+ */
+function validateServiceLink(link: string, platform: string, category: string, name: string): { valid: boolean; message?: string } {
     if (!link) return { valid: false, message: 'Link không được để trống' };
     
     let isPlatformValid = false;
@@ -227,9 +247,10 @@ const validateServiceLink = (link: string, platform: string, category: string, n
     return { valid: true };
 }
 
-const validateGmail = (email: string): boolean => {
+function validateEmail(email: string): boolean {
     if (!email) return false;
-    return email.toLowerCase().endsWith('@gmail.com');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
 }
 
 /**
@@ -295,14 +316,14 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         if (link) {
             const validation = validateServiceLink(link, service.platform, service.category, service.name);
             if (!validation.valid) {
-                return { success: false, message: validation.message || `Link ${service.platform} không hợp lệ!` };
+                return { success: false, message: validation.message ?? `Link ${service.platform} không hợp lệ!` };
             }
         }
 
         if (service.category === 'Tích Xanh') {
             const blueTickDetails = details as { username?: string };
             const username = blueTickDetails.username;
-            if (typeof username !== 'string' || !validateGmail(username)) {
+            if (typeof username !== 'string' || !validateEmail(username)) {
                 return { success: false, message: 'Dịch vụ Tích Xanh yêu cầu tài khoản Gmail (@gmail.com)!' }
             }
         }
@@ -428,7 +449,7 @@ export const handleService = async (userId: string, { action, serviceId, quantit
                 await notificationModel.create({
                     userId: adminUser._id,
                     type: 'warning',
-                    message: `[REPORT] Người dùng vừa báo lỗi đơn hàng ${order._id.toString()}: ${String(details.issue)}`,
+                    message: `[REPORT] Người dùng vừa báo lỗi đơn hàng ${order._id.toString()}: ${details.issue}`,
                     isRead: false,
                     createdAt: new Date()
                 })
@@ -465,7 +486,7 @@ export const depositRequest = async (userId: string, amount: number, content?: s
             await notificationModel.create({
                 userId: adminUser._id,
                 type: 'info',
-                message: `[DEPOSIT] Người dùng ${user?.username || 'ẩn danh'} vừa yêu cầu nạp ${amount.toLocaleString('vi-VN')} đ`,
+                message: `[DEPOSIT] Người dùng ${user?.username ?? 'ẩn danh'} vừa yêu cầu nạp ${amount.toLocaleString('vi-VN')} đ`,
                 isRead: false,
                 createdAt: new Date()
             })

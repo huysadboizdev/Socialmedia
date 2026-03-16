@@ -126,3 +126,51 @@ export const sendWithdrawalApprovedNotification = async (
     return { success: false, error };
   }
 };
+
+export const send2FACode = async (
+  toEmail: string,
+  code: string
+): Promise<{ success: boolean; message?: string; error?: unknown }> => {
+  const emailUser = process.env.MAIL_USER ?? process.env.EMAIL_USER;
+  const emailPass = process.env.MAIL_PASSWORD ?? process.env.EMAIL_PASS;
+
+  if (!emailUser || !emailPass) {
+    console.warn("Email credentials missing in .env. Skipping email notification.");
+    return { success: false, message: "Email configuration missing" };
+  }
+
+  const mailOptions = {
+    from: `"HUYTICHXANH" <${emailUser}>`,
+    to: toEmail,
+    subject: 'Mã Xác Minh 2FA',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+        <h2 style="color: #007bff; text-align: center;">Mã Xác Minh 2FA Của Bạn</h2>
+        <p>Xin chào,</p>
+        <p>Bạn đang thực hiện yêu cầu xác minh bảo mật. Vui lòng sử dụng mã dưới đây để tiếp tục:</p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333;">${code}</span>
+        </div>
+
+        <p style="color: #dc3545; background-color: #f8d7da; padding: 10px; border-radius: 5px; border-left: 5px solid #f5c6cb;">
+          <strong>Lưu ý:</strong> Mã này có hiệu lực trong vòng 5 phút. Không chia sẻ mã này với bất kỳ ai, kể cả nhân viên hỗ trợ.
+        </p>
+
+        <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #999; text-align: center;">Đây là email tự động, vui lòng không trả lời email này.</p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('2FA Email sent: ' + info.response);
+    return { success: true, message: 'Email sent' };
+  } catch (error) {
+    console.error('Error sending 2FA email:', error);
+    return { success: false, error };
+  }
+};
+

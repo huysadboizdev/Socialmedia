@@ -42,7 +42,10 @@ const register = async ({ username, email, password_1, password_2 }: RegisterPar
   const newUser = await userModel.create({
     username,
     email,
-    password: hashed
+    password: hashed,
+    is2FAEnabled: true,
+    twoFactorMethod: 'email',
+    is2FAVerified: false
   })
 
   return { success: true, user: { id: newUser._id } }

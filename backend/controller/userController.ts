@@ -37,10 +37,11 @@ export const getUser: RequestHandler = async (req, res) => {
 // update profile
 export const updateProfile: RequestHandler = async (req, res) => {
   try {
-    const { username, fullName } = req.body as { username?: string, fullName?: string }
+    const { username, fullName, email } = req.body as { username?: string, fullName?: string, email?: string }
     const userId = req.authUserId ?? (req.body as { userId: string }).userId
     const imageFile = req.file
-    const result = await userService.updateProfile(userId, { username, fullName, imageFile })
+
+    const result = await userService.updateProfile(userId, { username, fullName, email, imageFile })
     res.json(result)
   } catch (err: unknown) {
     res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })

@@ -28,6 +28,7 @@ const userSchema = new Schema(
     twoFactorMethod: { type: String, enum: ['none', 'email', 'authenticator'], default: 'none' },
     twoFactorSecret: { type: String },
     twoFactorExpires: { type: Date },
+    is2FAVerified: { type: Boolean, default: false },
     role: { type: String, enum: ['user', 'admin'], default: 'user' }
   },
   { timestamps: true }

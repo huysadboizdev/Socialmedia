@@ -1,16 +1,19 @@
 import AppLayout from "@/components/layout/AppLayout";
 import SharinganLoader from "@/components/common/SharinganLoader";
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function Profile() {
-  const [activeTab, setActiveTab] = useState("info");
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab || "info");
   const [saving, setSaving] = useState(false);
   const [userData, setUserData] = useState(null);
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
 
@@ -20,6 +23,12 @@ export default function Profile() {
   const [verifyCode, setVerifyCode] = useState("");
   const [isPendingEmail, setIsPendingEmail] = useState(false);
   const [tempSecret, setTempSecret] = useState("");
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     fetchUserData();
@@ -37,6 +46,7 @@ export default function Profile() {
       if (res.data.success) {
         setUserData(res.data.user);
         setFullName(res.data.user.fullName || "");
+        setEmail(res.data.user.email || "");
         setPreviewImage(res.data.user.image || null);
         setTwoFactorMethod(res.data.user.is2FAEnabled ? res.data.user.twoFactorMethod : "none");
       }
@@ -72,6 +82,7 @@ export default function Profile() {
       }
   };
 
+  // Handle 2FA Verification
   const handleVerifySetup2FA = async () => {
       if (!verifyCode) return toast.error("Vui lòng nhập mã xác nhận");
       try {
@@ -101,7 +112,6 @@ export default function Profile() {
   };
 
   const handleDisable2FA = async () => {
-      // Đầu tiên gọi API không truyền code để bắt đầu flow (để lấy email otp nếu method=email)
       try {
           setSaving(true);
           const token = localStorage.getItem("token");
@@ -148,6 +158,7 @@ export default function Profile() {
       
       const formData = new FormData();
       formData.append("fullName", fullName);
+      formData.append("email", email);
       if (selectedImage) {
         formData.append("image", selectedImage);
       }
@@ -164,6 +175,8 @@ export default function Profile() {
 
       if (res.data.success) {
         setUserData(prev => ({ ...prev, ...res.data.user }));
+        setFullName(res.data.user.fullName);
+        setEmail(res.data.user.email);
         setPreviewImage(res.data.user.image);
         setSelectedImage(null);
         toast.success("Cập nhật thông tin thành công!");
@@ -193,7 +206,7 @@ export default function Profile() {
   return (
     <>
       {saving && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[9999]">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-9999">
           <SharinganLoader size={140} />
         </div>
       )}
@@ -314,9 +327,13 @@ export default function Profile() {
                         {/* Email */}
                         <div className="space-y-2">
                           <label className="text-[13px] font-bold text-gray-700 dark:text-slate-300">Địa chỉ Email:</label>
-                          <div className="w-full px-5 py-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-gray-600 dark:text-slate-400 font-medium text-sm transition-colors">
-                            {userData?.email || "..."}
-                          </div>
+                          <input 
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Cập nhật email (Gmail)..."
+                            className="w-full px-5 py-3.5 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-gray-700 dark:text-slate-100 font-medium text-sm transition-all focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 outline-none"
+                          />
                         </div>
 
                         {/* Tài khoản */}
@@ -424,103 +441,107 @@ export default function Profile() {
                               <div className="mt-6 border-t border-emerald-200/50 dark:border-slate-700 pt-6">
                                    <p className="text-sm text-gray-600 dark:text-slate-400 mb-4">Để tắt tính năng này, bạn cần nhập mã xác nhận hiện tại.</p>
                                    
-                                   {isPendingEmail && userData.twoFactorMethod === 'email' && (
-                                       <div className="mb-4 text-sm text-orange-600 font-medium">Mã uỷ quyền tắt 2FA đã được gửi về email của bạn!</div>
-                                   )}
-                                   
-                                   <div className="flex items-center gap-3 max-w-sm">
-                                         <input 
-                                             type="text" 
-                                             placeholder="Nhập mã xác nhận..." 
-                                             value={verifyCode}
-                                             onChange={(e) => setVerifyCode(e.target.value)}
-                                             className="flex-1 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/10 font-medium"
-                                         />
-                                         <button 
-                                             onClick={handleDisable2FA}
-                                             disabled={saving}
-                                             className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
-                                         >Tắt 2FA</button>
+                                   <div className="flex flex-col sm:flex-row gap-3">
+                                         {!isPendingEmail ? (
+                                              <button 
+                                                  onClick={handleDisable2FA}
+                                                  disabled={saving}
+                                                  className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+                                              >
+                                                   {saving ? "Đang gửi..." : "Gửi mã về Email"}
+                                              </button>
+                                         ) : (
+                                              <>
+                                                  <input 
+                                                      type="text" 
+                                                      placeholder="Nhập mã xác nhận..." 
+                                                      value={verifyCode}
+                                                      onChange={(e) => setVerifyCode(e.target.value)}
+                                                      className="flex-1 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/10 font-medium"
+                                                  />
+                                                  <button 
+                                                      onClick={handleDisable2FA}
+                                                      disabled={saving || !verifyCode}
+                                                      className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap"
+                                                  >
+                                                      Tắt 2FA
+                                                  </button>
+                                              </>
+                                         )}
                                    </div>
+                                   {isPendingEmail && (
+                                         <p className="text-xs text-orange-600 mt-3 font-medium">Mã đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.</p>
+                                   )}
                               </div>
                           </div>
                        ) : (
                           <div className="space-y-6">
                              {!qrCodeData && !isPendingEmail ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     {/* EMAIL PROVIDER OPTION */}
-                                     <div className="border-2 border-slate-100 dark:border-slate-800 p-5 rounded-2xl hover:border-violet-300 dark:hover:border-violet-700 transition cursor-pointer" onClick={() => handleGenerate2FA('email')}>
-                                         <div className="flex justify-between items-start mb-4">
-                                             <div className="size-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                                                <span className="material-symbols-outlined">mail</span>
-                                             </div>
-                                         </div>
-                                         <h4 className="font-bold text-gray-800 dark:text-slate-200 text-base mb-1">Qua Email</h4>
-                                         <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">Nhận mã xác nhận qua địa chỉ email liên kết tài khoản.</p>
-                                         <button className="mt-4 text-violet-600 dark:text-violet-400 text-sm font-bold">Cài đặt ngay &rarr;</button>
-                                     </div>
+                                 <div className="flex flex-col items-center justify-center py-10 text-center">
+                                      <div className="size-20 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6">
+                                          <span className="material-symbols-outlined text-4xl">security</span>
+                                      </div>
+                                      <h4 className="font-bold text-gray-800 dark:text-slate-100 text-xl mb-2">Bật bảo mật 2 lớp (2FA)</h4>
+                                      <p className="text-sm text-gray-500 dark:text-slate-400 max-w-sm mb-8">
+                                          Sử dụng Email để nhận mã xác thực mỗi khi thực hiện các giao dịch quan trọng hoặc thay đổi cấu hình tài khoản.
+                                      </p>
+                                      <button 
+                                          onClick={() => handleGenerate2FA('email')}
+                                          disabled={saving}
+                                          className="px-10 py-4 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-violet-500/20 active:scale-95 disabled:opacity-50"
+                                      >
+                                          {saving ? "Đang xử lý..." : "Kích hoạt qua Email"}
+                                      </button>
+                                 </div>
+                              ) : (
+                                 <div className="bg-slate-50 dark:bg-slate-800/40 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                                      <div className="flex relative justify-between items-center mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
+                                           <div className="font-bold text-lg text-gray-800 dark:text-slate-200">
+                                               {twoFactorMethod === 'email' ? 'Xác minh Email' : 'Quét Mã Trình Xác Thực'}
+                                           </div>
+                                           <button onClick={() => { setQrCodeData(''); setIsPendingEmail(false); setTwoFactorMethod('none'); setVerifyCode(''); }} className="text-gray-400 hover:text-gray-800 dark:hover:text-slate-100 transition px-2">Hủy</button>
+                                      </div>
 
-                                     {/* APP PROVIDER OPTION */}
-                                     <div className="border-2 border-slate-100 dark:border-slate-800 p-5 rounded-2xl hover:border-orange-300 dark:hover:border-orange-700 transition cursor-pointer" onClick={() => handleGenerate2FA('authenticator')}>
-                                         <div className="flex justify-between items-start mb-4">
-                                             <div className="size-10 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                                                <span className="material-symbols-outlined">qr_code_scanner</span>
-                                             </div>
-                                         </div>
-                                         <h4 className="font-bold text-gray-800 dark:text-slate-200 text-base mb-1">Google / Authy App</h4>
-                                         <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">Sử dụng ứng dụng Authenticator để lấy mã nhanh chóng, tiện lợi.</p>
-                                         <button className="mt-4 text-violet-600 dark:text-violet-400 text-sm font-bold">Cài đặt ngay &rarr;</button>
-                                     </div>
-                                </div>
-                             ) : (
-                                <div className="bg-slate-50 dark:bg-slate-800/40 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-                                     <div className="flex relative justify-between items-center mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
-                                          <div className="font-bold text-lg text-gray-800 dark:text-slate-200">
-                                              {twoFactorMethod === 'email' ? 'Xác minh Email' : 'Quét Mã Trình Xác Thực'}
+                                      <div className="flex flex-col items-center">
+                                          {qrCodeData && (
+                                             <>
+                                               <p className="text-sm text-gray-600 dark:text-slate-400 mb-6 text-center">Sử dụng ứng dụng Google Authenticator hoặc Authy quét mã QR bên dưới.</p>
+                                               <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200 mb-4">
+                                                   <img src={qrCodeData} alt="QR Code" className="w-48 h-48" />
+                                               </div>
+                                               <div className="text-xs text-gray-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-900 px-3 py-1 rounded max-w-full truncate selec-all">Key: {tempSecret}</div>
+                                             </>
+                                          )}
+
+                                          {isPendingEmail && (
+                                               <div className="text-center w-full my-6">
+                                                    <div className="mx-auto size-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 my-auto flex items-center justify-center">
+                                                         <span className="material-symbols-outlined text-3xl">mark_email_read</span>
+                                                    </div>
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-slate-300">Chúng tôi đã gửi 1 mã 6 chữ số tới <span className="font-bold">{userData?.email}</span></p>
+                                                    <p className="text-xs text-gray-500 mt-1">Mã có hiệu lực trong vòng 10 phút. Vui lòng kiểm tra hộp thư.</p>
+                                               </div>
+                                          )}
+
+                                          <div className="w-full max-w-sm mt-8 space-y-4">
+                                             <input 
+                                                 className="w-full text-center tracking-[0.5em] font-bold text-xl py-4 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-violet-500 outline-none text-slate-800 dark:text-slate-100 uppercase"
+                                                 maxLength={6}
+                                                 placeholder="000000"
+                                                 value={verifyCode}
+                                                 onChange={(e) => setVerifyCode(e.target.value)}
+                                             />
+                                             <button 
+                                                 className="w-full py-4 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.3)] bg-linear-to-r from-violet-600 to-indigo-600 text-white font-bold text-[15px] hover:opacity-90 transition disabled:opacity-50"
+                                                 onClick={handleVerifySetup2FA}
+                                                 disabled={saving || !verifyCode}
+                                             >
+                                                 Kích hoạt 2FA
+                                             </button>
                                           </div>
-                                          <button onClick={() => { setQrCodeData(''); setIsPendingEmail(false); setTwoFactorMethod('none'); setVerifyCode(''); }} className="text-gray-400 hover:text-gray-800 dark:hover:text-slate-100 transition px-2">Hủy</button>
-                                     </div>
-
-                                     <div className="flex flex-col items-center">
-                                         {qrCodeData && (
-                                            <>
-                                              <p className="text-sm text-gray-600 dark:text-slate-400 mb-6 text-center">Sử dụng ứng dụng Google Authenticator hoặc Authy quét mã QR bên dưới.</p>
-                                              <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-200 mb-4">
-                                                  <img src={qrCodeData} alt="QR Code" className="w-48 h-48" />
-                                              </div>
-                                              <div className="text-xs text-gray-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-900 px-3 py-1 rounded max-w-full truncate selec-all">Key: {tempSecret}</div>
-                                            </>
-                                         )}
-
-                                         {isPendingEmail && (
-                                              <div className="text-center w-full my-6">
-                                                   <div className="mx-auto size-16 mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 my-auto flex items-center justify-center">
-                                                        <span className="material-symbols-outlined text-3xl">mark_email_read</span>
-                                                   </div>
-                                                   <p className="text-sm font-medium text-gray-700 dark:text-slate-300">Chúng tôi đã gửi 1 mã 6 chữ số tới <span className="font-bold">{userData?.email}</span></p>
-                                                   <p className="text-xs text-gray-500 mt-1">Mã có hiệu lực trong vòng 10 phút. Vui lòng kiểm tra hộp thư.</p>
-                                              </div>
-                                         )}
-
-                                         <div className="w-full max-w-sm mt-8 space-y-4">
-                                            <input 
-                                                className="w-full text-center tracking-[0.5em] font-bold text-xl py-4 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-violet-500 outline-none text-slate-800 dark:text-slate-100 uppercase"
-                                                maxLength={6}
-                                                placeholder="000000"
-                                                value={verifyCode}
-                                                onChange={(e) => setVerifyCode(e.target.value)}
-                                            />
-                                            <button 
-                                                className="w-full py-4 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.3)] bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-[15px] hover:opacity-90 transition disabled:opacity-50"
-                                                onClick={handleVerifySetup2FA}
-                                                disabled={saving || !verifyCode}
-                                            >
-                                                Kích hoạt 2FA
-                                            </button>
-                                         </div>
-                                     </div>
-                                </div>
-                             )}
+                                      </div>
+                                 </div>
+                              )}
                           </div>
                        )}
                     </div>

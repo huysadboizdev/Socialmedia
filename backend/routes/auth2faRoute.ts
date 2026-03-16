@@ -1,6 +1,6 @@
 import express from 'express';
 import { generate2FA, verifySetup2FA, disable2FA, verify2FACode } from '../controller/auth2faController.js';
-import { authUser } from '../middleware/auth.js';
+import authUser from '../middlewares/authUser.js';
 
 const router = express.Router();
 
