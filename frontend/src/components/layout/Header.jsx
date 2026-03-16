@@ -10,6 +10,7 @@ import {
 import { useState, useEffect } from "react"
 import LogoutModal from "../common/LogoutModal"
 import NotificationDropdown from "../common/NotificationDropdown"
+import AdminNotificationDropdown from "../common/AdminNotificationDropdown"
 import { useNavigate, useLocation } from "react-router-dom"
 
 export default function Header({ onMenu }) {
@@ -132,7 +133,7 @@ export default function Header({ onMenu }) {
             </span>
           </button>
           
-          <NotificationDropdown />
+          {location.pathname.startsWith('/admin') ? <AdminNotificationDropdown /> : <NotificationDropdown />}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

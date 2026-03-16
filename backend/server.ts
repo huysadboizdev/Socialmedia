@@ -21,7 +21,6 @@ import adminRouter from './routes/adminRoute.js'
 import paymentRouter from './routes/paymentRoute.js'
 import googleRouter from './routes/authGoogle.js'
 import messageRouter from './routes/messageRoutes.js'
-
 const app = express()
 
 // middlewares

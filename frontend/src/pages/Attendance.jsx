@@ -31,16 +31,23 @@ export default function Attendance() {
         
         if (res.data.success) {
            const { attendance } = res.data.user;
-           // Calculate local state based on attendance data
+             // Calculate local state based on attendance data
            if (attendance) {
-             const lastDate = attendance.lastDate ? new Date(attendance.lastDate) : null;
              let isToday = false;
+             const lastDate = attendance.lastDate ? new Date(attendance.lastDate) : null;
+             
+             // Get current time in Vietnam timezone
+             const nowStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
+             const vnNow = new Date(nowStr);
              
              if (lastDate) {
-               const now = new Date();
-               if (lastDate.getDate() === now.getDate() && 
-                   lastDate.getMonth() === now.getMonth() && 
-                   lastDate.getFullYear() === now.getFullYear()) {
+               // Get lastDate in Vietnam timezone
+               const lastStr = lastDate.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
+               const vnLast = new Date(lastStr);
+               
+               if (vnLast.getDate() === vnNow.getDate() && 
+                   vnLast.getMonth() === vnNow.getMonth() && 
+                   vnLast.getFullYear() === vnNow.getFullYear()) {
                  isToday = true;
                }
              }
@@ -65,14 +72,11 @@ export default function Attendance() {
              // If lastDate was today, current is streak.
              
              let computedStreak = attendance.streak || 0;
-             if (!isToday && lastDate) { // Check if broken
-                 const now = new Date();
-                 const todayTs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-                 const lastTs = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()).getTime();
-                 const oneDay = 24 * 60 * 60 * 1000;
-                 
-                 if (todayTs - lastTs > oneDay) {
-                    computedStreak = 0; // Will reset to 1 on claim
+             if (lastDate) { 
+                 const lastStr = lastDate.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
+                 const vnLast = new Date(lastStr);
+                 if (vnNow.getMonth() !== vnLast.getMonth() || vnNow.getFullYear() !== vnLast.getFullYear()) {
+                    computedStreak = 0; // Reset on new month
                  }
              }
 
@@ -233,17 +237,17 @@ export default function Attendance() {
           {/* Action Button */}
           <button 
             onClick={handleClaim}
-            disabled={claimedToday || loading}
+            disabled={claimedToday || streak >= 7 || loading}
             className={`
               w-full md:w-auto px-24 py-6 rounded-[35px] font-bold text-xl tracking-tight
               transition-all duration-500 active:scale-[0.98]
-              ${claimedToday 
+              ${(claimedToday || streak >= 7)
                 ? "bg-[#edf2f7] dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed" 
                 : "bg-gradient-to-r from-[#FFB6C1] to-[#FF69B4] text-white shadow-xl shadow-pink-200 dark:shadow-none hover:shadow-2xl hover:-translate-y-1"
               }
             `}
           >
-            {loading ? "Đang tải..." : claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh ngay"}
+            {loading ? "Đang tải..." : streak >= 7 ? "Hẹn tháng sau nhé!" : claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh ngay"}
           </button>
 
         </div>

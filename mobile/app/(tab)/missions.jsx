@@ -331,7 +331,7 @@ export default function Missions() {
                 <View>
                     <Text style={styles.attendanceTitle}>Điểm danh hàng ngày</Text>
                     <Text style={styles.attendanceSub}>
-                        Chuỗi: <Text style={{color: '#f97316', fontWeight: 'bold'}}>{user?.attendance?.streak || 0} ngày</Text>
+                        Tháng này: <Text style={{color: '#f97316', fontWeight: 'bold'}}>{user?.attendance?.streak || 0}/7 lần</Text>
                     </Text>
                 </View>
                 <TouchableOpacity style={styles.attendanceBtn} onPress={handleAttendance}>

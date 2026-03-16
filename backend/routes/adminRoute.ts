@@ -30,7 +30,9 @@ import {
     getAllDeposits,
     editUser,
     getReportedOrders,
-    replyReport
+    replyReport,
+    getAdminNotifications,
+    markAdminNotificationRead
 } from '../controller/adminController.js'
 import { updateAnnouncement } from '../controller/settingController.js'
 
@@ -76,5 +78,9 @@ adminRouter.post('/announcement', updateAnnouncement)
 // reports
 adminRouter.get('/reports', getReportedOrders)
 adminRouter.post('/reply-report', replyReport)
+
+// notifications
+adminRouter.get('/notifications', getAdminNotifications)
+adminRouter.post('/notifications/read', markAdminNotificationRead)
 
 export default adminRouter

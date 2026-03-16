@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { validateLink, validateGmail } from '@/lib/validation';
+import OrderSuccessModal from '@/components/common/OrderSuccessModal';
 
 const FacebookBlue = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [formData, setFormData] = useState({
     targetUrl: '',
@@ -94,7 +96,8 @@ const FacebookBlue = () => {
       }
 
       if (res.data.success) {
-        toast.success('Đặt dịch vụ thành công!', { id: 'order-toast' });
+        toast.dismiss('order-toast');
+        setShowSuccessModal(true);
         setFormData({
           targetUrl: '',
           username: '',
@@ -325,6 +328,7 @@ const FacebookBlue = () => {
           </div>
         </div>
       </div>
+      <OrderSuccessModal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} />
     </div>
   );
 };

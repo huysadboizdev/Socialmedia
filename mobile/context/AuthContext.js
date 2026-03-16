@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { loginUser, registerUser, getUserInfo, getMessages } from '../service/userService';
+import { loginUser, registerUser, getUserInfo, getMessages, setCachedToken } from '../service/userService';
 
 export const AuthContext = createContext();
 
@@ -10,24 +10,22 @@ export const AuthProvider = ({ children }) => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [lastMessage, setLastMessage] = useState(null);
+    const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
     const unreadIntervalRef = React.useRef(null);
+    const notifiedMessageIdRef = React.useRef(null);
 
     const fetchUnreadCount = async () => {
         try {
-            const token = await SecureStore.getItemAsync('token');
-            const storedUser = await SecureStore.getItemAsync('user');
-            if (!token || !storedUser) return;
+            if (!user) return;
             
-            const parsedUser = JSON.parse(storedUser);
+            if (user.role === 'admin') {
+                // Admin logic: fetch conversations and sum unread counts + notifications
+                const { getConversations, getNotifications } = require('../service/userService');
+                const [convRes, notifRes] = await Promise.all([getConversations(), getNotifications(user._id)]);
 
-            if (parsedUser.role === 'admin') {
-                // Admin logic: fetch conversations and sum unread counts
-                const { getConversations } = require('../service/userService');
-                const res = await getConversations();
-
-                if (res.success && res.data) {
-                    const conversations = res.data;
+                if (convRes.success && convRes.data) {
+                    const conversations = convRes.data;
                     let totalUnread = 0;
                     let latestMsg = null;
 
@@ -35,32 +33,59 @@ export const AuthProvider = ({ children }) => {
                         totalUnread += conv.unreadCount || 0;
                         if (conv.lastMessage && conv.lastMessage.sender !== 'admin') {
                             if (!latestMsg || new Date(conv.lastMessage.createdAt) > new Date(latestMsg.createdAt)) {
-                                latestMsg = { ...conv.lastMessage, username: conv.username };
+                                latestMsg = { ...conv.lastMessage, username: conv.username, isChat: true };
                             }
                         }
                     }
 
-                    if (latestMsg && (!lastMessage || latestMsg._id !== lastMessage._id)) {
-                        if (totalUnread > unreadCount) {
-                            setLastMessage(latestMsg);
+                    // Check for new notifications (e.g. Orders)
+                    let latestNotif = null;
+                    if (notifRes.success && notifRes.notifications) {
+                        const unreadNotifs = notifRes.notifications.filter(n => !n.isRead);
+                        setUnreadNotifCount(unreadNotifs.length);
+                        
+                        if (unreadNotifs.length > 0) {
+                            latestNotif = unreadNotifs[0]; // Assuming sorted by createdAt descending
+                            
+                            if (latestNotif.message?.includes('[ORDER]')) {
+                                latestNotif.isOrder = true;
+                            } else if (latestNotif.message?.includes('[DEPOSIT]')) {
+                                latestNotif.isDeposit = true;
+                            } else if (latestNotif.message?.includes('[REPORT]')) {
+                                latestNotif.isReport = true;
+                            } else {
+                                latestNotif.isSystem = true;
+                            }
                         }
+                    }
+
+                    // Determine the absolute latest event to show in the overlay
+                    let absoluteLatest = null;
+                    if (latestMsg && latestNotif) {
+                        absoluteLatest = new Date(latestMsg.createdAt) > new Date(latestNotif.createdAt) ? latestMsg : latestNotif;
+                    } else {
+                        absoluteLatest = latestMsg || latestNotif;
+                    }
+
+                    if (absoluteLatest && absoluteLatest._id !== notifiedMessageIdRef.current) {
+                        notifiedMessageIdRef.current = absoluteLatest._id;
+                        setLastMessage(absoluteLatest);
                     }
 
                     setUnreadCount(totalUnread);
                 }
             } else {
                 // Regular user logic
-                const res = await getMessages(parsedUser._id);
+                const res = await getMessages(user._id);
             
                 if (res.success && res.data) {
                     const messages = res.data;
                     const unread = messages.filter(m => m.sender === 'admin' && !m.isRead).length;
                     
                     const latestAdminMsg = [...messages].reverse().find(m => m.sender === 'admin');
-                    if (latestAdminMsg && (!lastMessage || latestAdminMsg._id !== lastMessage._id)) {
-                        if (unread > unreadCount) {
-                            setLastMessage(latestAdminMsg);
-                        }
+                    if (latestAdminMsg && latestAdminMsg._id !== notifiedMessageIdRef.current) {
+                        notifiedMessageIdRef.current = latestAdminMsg._id;
+                        setLastMessage(latestAdminMsg);
                     }
                     
                     setUnreadCount(unread);
@@ -93,6 +118,8 @@ export const AuthProvider = ({ children }) => {
             const storedUser = await SecureStore.getItemAsync('user');
             
             if (token) {
+                setCachedToken(token); // Add token to memory
+                
                 // If we have a stored user, use it first (especially for admin)
                 if (storedUser) {
                     const parsedUser = JSON.parse(storedUser);
@@ -119,6 +146,7 @@ export const AuthProvider = ({ children }) => {
             }
         } catch (_error) {
             console.log('Not logged in or token expired');
+            setCachedToken(null);
             await SecureStore.deleteItemAsync('token');
             await SecureStore.deleteItemAsync('user');
         } finally {
@@ -132,6 +160,7 @@ export const AuthProvider = ({ children }) => {
             const data = await loginUser(email, password);
             if (data.success) {
                 await SecureStore.setItemAsync('token', data.token);
+                setCachedToken(data.token);
                 
                 // IMPORTANT: Save user data immediately
                 if (data.user) {
@@ -173,6 +202,7 @@ export const AuthProvider = ({ children }) => {
                     const fakeToken = 'admin-bypass-token-client-side'; // Note: API calls will likely fail without real token
                     
                     await SecureStore.setItemAsync('token', fakeToken);
+                    setCachedToken(fakeToken);
                     await SecureStore.setItemAsync('user', JSON.stringify(adminUser));
                     setUser(adminUser);
                     return { success: true };
@@ -207,6 +237,7 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         setIsLoading(true);
         try {
+            setCachedToken(null);
             await SecureStore.deleteItemAsync('token');
             await SecureStore.deleteItemAsync('user');
             setUser(null);
@@ -221,6 +252,7 @@ export const AuthProvider = ({ children }) => {
     const setToken = async (token) => {
         try {
             await SecureStore.setItemAsync('token', token);
+            setCachedToken(token);
             // Try to get user info, if fails/admin issue, assume no user? 
             // setToken is rarely used manually, mostly for dev.
             const res = await getUserInfo();
@@ -236,7 +268,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, register, logout, isInitialized, setToken, unreadCount, refreshUnreadCount: fetchUnreadCount, lastMessage, setLastMessage, refreshUser: checkLoginStatus }}>
+        <AuthContext.Provider value={{ user, isLoading, login, register, logout, isInitialized, setToken, unreadCount, unreadNotifCount, refreshUnreadCount: fetchUnreadCount, lastMessage, setLastMessage, refreshUser: checkLoginStatus }}>
             {children}
         </AuthContext.Provider>
     );

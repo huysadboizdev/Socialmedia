@@ -1,7 +1,7 @@
 import { Tabs, useRouter } from "expo-router";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, Platform } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { Ionicons } from '@expo/vector-icons';
 
@@ -31,8 +31,8 @@ export default function AdminLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: 60,
-          paddingBottom: 8,
+          height: Platform.OS === 'ios' ? 85 : 65,
+          paddingBottom: Platform.OS === 'ios' ? 25 : 10,
           paddingTop: 8,
         },
         tabBarActiveTintColor: colors.primary,

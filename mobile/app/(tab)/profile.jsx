@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import api from '../../service/userService';
 
 // Assets
 import lichsuGif from '../../assets/lichsugd.gif';
@@ -40,16 +41,24 @@ export default function Profile() {
   const handleUpdateProfile = async () => {
     setLoading(true);
     try {
-        // Simulate API update for now or implement verified endpoint
-        // const res = await axios.put(...)
-        
-        // For MVP, just alert
-        setTimeout(() => {
-             Alert.alert('Sắp ra mắt', 'Tính năng cập nhật hồ sơ đang được hoàn thiện.');
-             setLoading(false);
-        }, 1000);
-    } catch (_e) {
-        Alert.alert('Lỗi', 'Không thể cập nhật hồ sơ');
+        const formData = new FormData();
+        formData.append("fullName", fullName);
+
+        const res = await api.put('/user/profile', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            }
+        });
+
+        if (res.data.success) {
+            Alert.alert('Thành công', 'Cập nhật thông tin thành công!');
+            setUserData(prev => ({ ...prev, fullName }));
+        } else {
+            Alert.alert('Lỗi', res.data.message || 'Cập nhật thất bại');
+        }
+    } catch (e) {
+        Alert.alert('Lỗi', e.response?.data?.message || 'Không thể cập nhật hồ sơ');
+    } finally {
         setLoading(false);
     }
   };
@@ -60,14 +69,26 @@ export default function Profile() {
         return;
     }
     setLoading(true);
-    // Simulate API
-    setTimeout(() => {
+    try {
+        const res = await api.put('/user/password', {
+             oldPassword: currentPassword,
+             newPassword1: newPassword,
+             newPassword2: confirmPassword
+        });
+
+        if (res.data.success) {
+             Alert.alert('Thành công', 'Đổi mật khẩu thành công');
+             setCurrentPassword('');
+             setNewPassword('');
+             setConfirmPassword('');
+        } else {
+             Alert.alert('Lỗi', res.data.message || 'Mật khẩu hiện tại không đúng');
+        }
+    } catch (e) {
+        Alert.alert('Lỗi', e.response?.data?.message || 'Không thể đổi mật khẩu');
+    } finally {
         setLoading(false);
-        Alert.alert('Thành công', 'Đổi mật khẩu thành công');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-    }, 1500);
+    }
   };
 
   const handleLogout = async () => {
