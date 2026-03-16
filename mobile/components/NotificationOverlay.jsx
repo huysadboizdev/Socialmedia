@@ -113,6 +113,22 @@ export default function NotificationOverlay() {
 
     if (!visible || !lastMessage) return null;
 
+    const getNotificationProps = (msg) => {
+        if (msg?.isOrder) return { icon: 'cart', color: '#f59e0b', title: 'Đơn hàng mới', route: '/(admin)/orders' };
+        if (msg?.isDeposit) return { icon: 'wallet', color: '#10b981', title: 'Yêu cầu nạp tiền', route: '/(admin)/deposits' };
+        if (msg?.isReport) return { icon: 'alert-circle', color: '#ef4444', title: 'Báo lỗi dịch vụ', route: '/(admin)/reports' };
+        if (msg?.isSystem) return { icon: 'notifications', color: '#64748b', title: 'Thông báo hệ thống', route: null };
+        return { 
+            icon: 'chatbubble-ellipses', // Android Default
+            iconIos: 'person', // iOS Default
+            color: '#3b82f6', 
+            title: user?.role === 'admin' ? (msg?.username || 'User') : 'Admin',
+            route: user?.role === 'admin' ? '/(admin)/chats' : '/chat-admin'
+        };
+    };
+
+    const notifProps = getNotificationProps(lastMessage);
+
     return (
         <View style={styleSheet.container} pointerEvents="box-none">
             {Platform.OS === 'ios' ? (
@@ -120,23 +136,23 @@ export default function NotificationOverlay() {
                     <TouchableOpacity 
                         style={styleSheet.islandContent}
                         onPress={() => {
-                            if (user && user.role === 'admin') {
-                                router.push(`/(admin)/chat/${lastMessage?.userId}?username=${lastMessage?.username || 'User'}`);
-                            } else {
-                                router.push('/chat-admin');
+                            if (notifProps.route) {
+                                router.push(notifProps.route);
                             }
                             setVisible(false);
                             setLastMessage(null);
                         }}
                     >
                         <View style={styleSheet.islandHeader}>
-                            <View style={styleSheet.avatarSmall}>
-                                <Ionicons name="person" size={14} color="white" />
+                            <View style={[styleSheet.avatarSmall, { backgroundColor: notifProps.color }]}>
+                                <Ionicons name={notifProps.iconIos || notifProps.icon} size={14} color="white" />
                             </View>
-                            <Text style={styleSheet.adminName}>{user?.role === 'admin' ? (lastMessage?.username || 'User') : 'Admin'}</Text>
+                            <Text style={styleSheet.adminName}>
+                                {notifProps.title}
+                            </Text>
                         </View>
                         <Text style={styleSheet.islandMsg} numberOfLines={2}>
-                            {lastMessage?.content || ''}
+                            {lastMessage.isOrder || lastMessage.isDeposit || lastMessage.isReport || lastMessage.isSystem ? lastMessage.message : lastMessage?.content || ''}
                         </Text>
                     </TouchableOpacity>
                 </Animated.View>
@@ -146,17 +162,15 @@ export default function NotificationOverlay() {
                         <TouchableOpacity 
                             style={styleSheet.bubbleContent}
                             onPress={() => {
-                                if (user && user.role === 'admin') {
-                                    router.push(`/(admin)/chat/${lastMessage?.userId}?username=${lastMessage?.username || 'User'}`);
-                                } else {
-                                    router.push('/chat-admin');
+                                if (notifProps.route) {
+                                    router.push(notifProps.route);
                                 }
                                 setVisible(false);
                                 setLastMessage(null);
                             }}
                         >
-                            <View style={styleSheet.bubbleInner}>
-                                <Ionicons name="chatbubble-ellipses" size={24} color="white" />
+                            <View style={[styleSheet.bubbleInner, { backgroundColor: notifProps.color }]}>
+                                <Ionicons name={notifProps.icon} size={24} color="white" />
                                 <View style={styleSheet.bubbleDot} />
                             </View>
                         </TouchableOpacity>

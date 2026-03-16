@@ -3,6 +3,12 @@ import * as SecureStore from 'expo-secure-store';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+let cachedToken = null;
+
+export const setCachedToken = (token) => {
+    cachedToken = token;
+};
+
 // Debugging: Check actual URL being used
 console.log('Current API_URL:', API_URL);
 
@@ -19,7 +25,16 @@ const api = axios.create({
 // Add a request interceptor to add the token to requests
 api.interceptors.request.use(
     async (config) => {
-        const token = await SecureStore.getItemAsync('token');
+        let token = cachedToken;
+        if (!token) {
+            try {
+                token = await SecureStore.getItemAsync('token');
+                if (token) cachedToken = token;
+            } catch (e) {
+                console.log('SecureStore read error in background:', e);
+            }
+        }
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -113,6 +128,31 @@ export const sendAdminMessage = async (messageData) => {
     try {
         // messageData should contain { userId, content, replyTo }
         const response = await api.post('/message/send', { ...messageData, sender: 'admin' });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const getNotifications = async (userId) => {
+    try {
+        const response = await api.post('/user/service', {
+            action: 'getNotifications',
+            userId
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const markNotificationRead = async (userId, notificationId) => {
+    try {
+        const response = await api.post('/user/service', {
+            action: 'markNotificationRead',
+            userId,
+            details: { notificationId }
+        });
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;

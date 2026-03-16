@@ -295,3 +295,22 @@ export const replyReport: RequestHandler = async (req, res) => {
         res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
     }
 }
+
+export const getAdminNotifications: RequestHandler = async (_req, res) => {
+    try {
+        const result = await adminService.getAdminNotifications()
+        res.json(result)
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
+export const markAdminNotificationRead: RequestHandler = async (req, res) => {
+    try {
+        const { notificationId } = req.body as { notificationId?: string }
+        const result = await adminService.markAdminNotificationRead(notificationId)
+        res.json(result)
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}

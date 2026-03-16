@@ -22,7 +22,7 @@ interface HandleServiceParams {
   quantity?: number;
   link?: string;
   note?: string;
-  details?: Record<string, unknown>;
+  details?: Record<string, unknown> & { twoFactorCode?: string; notificationId?: string; orderId?: string; issue?: string; reportNote?: string };
   orderId?: string;
   issue?: string;
   reportNote?: string;
@@ -158,23 +158,73 @@ export const changePassword = async (userId: string, { oldPassword, newPassword1
     return { success: true }
 }
 
-const validateServiceLink = (link: string, platform: string): boolean => {
-    if (!link) return false;
-    let pattern;
+const validateServiceLink = (link: string, platform: string, category: string, name: string): { valid: boolean; message?: string } => {
+    if (!link) return { valid: false, message: 'Link không được để trống' };
+    
+    let isPlatformValid = false;
     switch (platform.toLowerCase()) {
         case 'facebook':
-            pattern = /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com)\/.*$/i;
+            isPlatformValid = /^(https?:\/\/)?(www\.|m\.)?(facebook\.com|fb\.com|fb\.watch)\/.*$/i.test(link);
             break;
         case 'instagram':
-            pattern = /^(https?:\/\/)?(www\.)?(instagram\.com)\/.*$/i;
+            isPlatformValid = /^(https?:\/\/)?(www\.)?(instagram\.com)\/.*$/i.test(link);
             break;
         case 'tiktok':
-            pattern = /^(https?:\/\/)?(www\.)?(tiktok\.com|vt\.tiktok\.com)\/.*$/i;
+            isPlatformValid = /^(https?:\/\/)?(www\.|vt\.)?(tiktok\.com)\/.*$/i.test(link);
             break;
         default:
-            return true;
+            isPlatformValid = true;
     }
-    return pattern.test(link);
+
+    if (!isPlatformValid) {
+        return { valid: false, message: `Link ${platform} không hợp lệ!` };
+    }
+
+    const text = `${category} ${name}`.toLowerCase();
+    let requiredType: 'post' | 'profile' | 'any' = 'any';
+    
+    if (text.includes('follow') || text.includes('theo dõi') || text.includes('sub') || text.includes('tích xanh') || text.includes('thành viên') || text.includes('member')) {
+        requiredType = 'profile';
+    } else if (text.includes('like') || text.includes('share') || text.includes('chia sẻ') || text.includes('comment') || text.includes('bình luận') || text.includes('view') || text.includes('lượt xem') || text.includes('tym') || text.includes('mắt') || text.includes('cảm xúc')) {
+        requiredType = 'post';
+    }
+
+    if (requiredType === 'any') return { valid: true };
+
+    const linkLower = link.toLowerCase();
+
+    if (platform.toLowerCase() === 'facebook') {
+        const postRegex = /\/(posts|videos|video\.php|photo\.php|photo|permalink\.php|story\.php|reel|watch|p|share)\/?|\?.*fbid=|fb\.watch/i;
+        const isPostLink = postRegex.test(linkLower);
+        
+        if (requiredType === 'post' && !isPostLink) {
+            return { valid: false, message: 'Vui lòng nhập link bài viết hoặc video (không sử dụng link trang cá nhân/Fanpage).' };
+        }
+        if (requiredType === 'profile' && isPostLink) {
+            return { valid: false, message: 'Vui lòng nhập link trang cá nhân hoặc Fanpage (không sử dụng link bài viết).' };
+        }
+    } else if (platform.toLowerCase() === 'tiktok') {
+        const isVideoLink = /\/video\//i.test(linkLower) || /vt\.tiktok\.com/i.test(linkLower);
+        const isProfileLink = /\/@/i.test(linkLower) && !isVideoLink;
+
+        if (requiredType === 'post' && !isVideoLink) {
+            return { valid: false, message: 'Vui lòng nhập link video TikTok (ví dụ: tiktok.com/@user/video/123 hoặc vt.tiktok.com/...)' };
+        }
+        if (requiredType === 'profile' && !isProfileLink) {
+            return { valid: false, message: 'Vui lòng nhập link kênh TikTok (ví dụ: tiktok.com/@user).' };
+        }
+    } else if (platform.toLowerCase() === 'instagram') {
+        const isPostLink = /\/(p|reel|tv)\//i.test(linkLower);
+        
+        if (requiredType === 'post' && !isPostLink) {
+            return { valid: false, message: 'Vui lòng nhập link bài viết/Reels Instagram (ví dụ: instagram.com/p/123).' };
+        }
+        if (requiredType === 'profile' && isPostLink) {
+            return { valid: false, message: 'Vui lòng nhập link trang cá nhân Instagram (không sử dụng link bài viết).' };
+        }
+    }
+
+    return { valid: true };
 }
 
 const validateGmail = (email: string): boolean => {
@@ -206,6 +256,21 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         })
         
         await order.save()
+
+        try {
+            const adminUser = await userModel.findOne({ role: 'admin' })
+            if (adminUser) {
+                await notificationModel.create({
+                    userId: adminUser._id,
+                    type: 'warning',
+                    message: `[REPORT] Người dùng vừa báo lỗi đơn hàng ${order._id.toString()}: ${issue}`,
+                    isRead: false,
+                    createdAt: new Date()
+                })
+            }
+        } catch (notifErr) {
+            console.error("Failed to notify admin of report", notifErr)
+        }
         
         return { success: true, message: 'Báo lỗi thành công! Admin sẽ kiểm tra sớm nhất.' }
     }
@@ -227,8 +292,11 @@ export const handleService = async (userId: string, { action, serviceId, quantit
             return { success: false, message: 'Dịch vụ này đang bảo trì, vui lòng quay lại sau!' }
         }
 
-        if (link && !validateServiceLink(link, service.platform)) {
-            return { success: false, message: `Link ${service.platform} không hợp lệ!` }
+        if (link) {
+            const validation = validateServiceLink(link, service.platform, service.category, service.name);
+            if (!validation.valid) {
+                return { success: false, message: validation.message || `Link ${service.platform} không hợp lệ!` };
+            }
         }
 
         if (service.category === 'Tích Xanh') {
@@ -283,6 +351,22 @@ export const handleService = async (userId: string, { action, serviceId, quantit
             createdAt: new Date()
         })
 
+        // Notify admin about the new order
+        try {
+            const adminUser = await userModel.findOne({ role: 'admin' });
+            if (adminUser) {
+                await notificationModel.create({
+                    userId: adminUser._id,
+                    type: 'info',
+                    message: `[ORDER] Người dùng ${user.username || 'ẩn danh'} vừa đặt đơn ${service.platform}, ${service.category}: ${service.name} (SL: ${quantity})`,
+                    isRead: false,
+                    createdAt: new Date()
+                });
+            }
+        } catch (notifErr) {
+            console.error("Failed to notify admin of new order", notifErr);
+        }
+
         return { success: true, message: 'Đặt đơn hàng thành công!', order }
     }
 
@@ -292,15 +376,29 @@ export const handleService = async (userId: string, { action, serviceId, quantit
     }
 
     if (action === 'getNotifications') {
-        const notifications = await notificationModel.find({ userId }).sort({ createdAt: -1 }).limit(20);
-        const unreadCount = await notificationModel.countDocuments({ userId, isRead: false });
+        let actualUserId = userId;
+        if (userId === 'admin') {
+             const adminUser = await userModel.findOne({ role: 'admin' });
+             if (adminUser) actualUserId = adminUser._id.toString();
+             else return { success: true, notifications: [], unreadCount: 0 };
+        }
+
+        const notifications = await notificationModel.find({ userId: actualUserId }).sort({ createdAt: -1 }).limit(20);
+        const unreadCount = await notificationModel.countDocuments({ userId: actualUserId, isRead: false });
         return { success: true, notifications, unreadCount };
     }
 
     if (action === 'markNotificationRead') {
+         let actualUserId = userId;
+         if (userId === 'admin') {
+              const adminUser = await userModel.findOne({ role: 'admin' });
+              if (adminUser) actualUserId = adminUser._id.toString();
+              else return { success: false, message: 'Admin not found' };
+         }
+
          if (!details?.notificationId) {
              // If no specific ID, mark all as read
-             await notificationModel.updateMany({ userId, isRead: false }, { isRead: true });
+             await notificationModel.updateMany({ userId: actualUserId, isRead: false }, { isRead: true });
              return { success: true, message: 'Marked all as read' };
          } else {
              await notificationModel.findByIdAndUpdate(details.notificationId, { isRead: true });
@@ -323,6 +421,21 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         })
         
         await order.save()
+
+        try {
+            const adminUser = await userModel.findOne({ role: 'admin' })
+            if (adminUser) {
+                await notificationModel.create({
+                    userId: adminUser._id,
+                    type: 'warning',
+                    message: `[REPORT] Người dùng vừa báo lỗi đơn hàng ${order._id.toString()}: ${String(details.issue)}`,
+                    isRead: false,
+                    createdAt: new Date()
+                })
+            }
+        } catch (notifErr) {
+            console.error("Failed to notify admin of report", notifErr)
+        }
         
         return { success: true, message: 'Báo lỗi thành công! Admin sẽ kiểm tra sớm nhất.' }
     }
@@ -344,6 +457,23 @@ export const depositRequest = async (userId: string, amount: number, content?: s
         balanceType: 'profile',
         status: 'pending'
     })
+
+    try {
+        const user = await userModel.findById(userId)
+        const adminUser = await userModel.findOne({ role: 'admin' })
+        if (adminUser) {
+            await notificationModel.create({
+                userId: adminUser._id,
+                type: 'info',
+                message: `[DEPOSIT] Người dùng ${user?.username || 'ẩn danh'} vừa yêu cầu nạp ${amount.toLocaleString('vi-VN')} đ`,
+                isRead: false,
+                createdAt: new Date()
+            })
+        }
+    } catch (notifErr) {
+        console.error("Failed to notify admin of deposit", notifErr)
+    }
+
     return { success: true }
 }
 
@@ -425,12 +555,25 @@ export const checkAttendance = async (userId: string) => {
     user.attendance ??= { lastDate: null, streak: 0 }
 
     const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    
+    // Parse the date as UTC but set it to the numbers of Vietnam Time
+    const vnNowString = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+    const vnNow = new Date(vnNowString)
+    
+    const today = new Date(vnNow.getFullYear(), vnNow.getMonth(), vnNow.getDate()).getTime()
     
     let lastCheckIn = 0
+    let lastCheckInMonth = -1
+    let lastCheckInYear = -1
+    
     if (user.attendance.lastDate) {
         const last = new Date(user.attendance.lastDate)
-        lastCheckIn = new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime()
+        const vnLastString = last.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+        const vnLast = new Date(vnLastString)
+        
+        lastCheckIn = new Date(vnLast.getFullYear(), vnLast.getMonth(), vnLast.getDate()).getTime()
+        lastCheckInMonth = vnLast.getMonth()
+        lastCheckInYear = vnLast.getFullYear()
     }
 
     // Check if already checked in today
@@ -438,20 +581,18 @@ export const checkAttendance = async (userId: string) => {
         return { success: false, message: 'Bạn đã điểm danh hôm nay rồi!' }
     }
 
-    const ONE_DAY = 24 * 60 * 60 * 1000
-    // Check if consecutive day (allow checking in anytime the next day)
-    // If last checkin was yesterday (today - lastCheckIn === ONE_DAY)
-    if (lastCheckIn === today - ONE_DAY) {
-        user.attendance.streak += 1
-    } else {
-        // Missed a day or first time
-        user.attendance.streak = 1
+    // Check if it's a new month to reset the streak
+    if (lastCheckIn !== 0 && (vnNow.getMonth() !== lastCheckInMonth || vnNow.getFullYear() !== lastCheckInYear)) {
+        user.attendance.streak = 0
     }
 
-    // Cycle reset after 7 days
-    if (user.attendance.streak > 7) {
-        user.attendance.streak = 1
+    // Cannot check in more than 7 times a month
+    if (user.attendance.streak >= 7) {
+        return { success: false, message: 'Bạn đã điểm danh tối đa 7 lần trong tháng này. Vui lòng quay lại vào tháng sau!' }
     }
+
+    // Increment check-in count for the month
+    user.attendance.streak += 1
 
     const rewards: Record<number, number | undefined> = {
         1: 100,
@@ -475,7 +616,7 @@ export const checkAttendance = async (userId: string) => {
         userId: new Types.ObjectId(userId),
         amount: rewardAmount,
         type: 'attendance',
-        description: `Điểm danh thành công (Ngày ${user.attendance.streak})`,
+        description: `Điểm danh thành công (Ngày ${user.attendance.streak}/7)`,
         oldBalance: user.missionBalance - rewardAmount,
         newBalance: user.missionBalance,
         balanceType: 'mission',
@@ -750,7 +891,7 @@ export const withdrawMissionBalance = async (
     userId: string, 
     amount: number, 
     method: 'web' | 'bank' = 'web',
-    details?: { bankName?: string; bankAccount?: string; qrCodeFile?: Express.Multer.File; email?: string }
+    details?: { bankName?: string; bankAccount?: string; qrCodeFile?: Express.Multer.File; email?: string, twoFactorCode?: string }
 ) => {
     if (amount < 10000) return { success: false, message: 'Số tiền rút tối thiểu là 10.000 đ' }
 

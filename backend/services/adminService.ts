@@ -783,3 +783,28 @@ export const fetchAllDeposits = async () => {
     
     return { success: true, deposits }
 }
+
+/**
+ * Admin Notifications
+ */
+export const getAdminNotifications = async () => {
+    const adminUser = await userModel.findOne({ role: 'admin' })
+    if (!adminUser) return { success: true, notifications: [], unreadCount: 0 }
+    
+    const notifications = await notificationModel.find({ userId: adminUser._id }).sort({ createdAt: -1 }).limit(20)
+    const unreadCount = await notificationModel.countDocuments({ userId: adminUser._id, isRead: false })
+    return { success: true, notifications, unreadCount }
+}
+
+export const markAdminNotificationRead = async (notificationId?: string) => {
+    const adminUser = await userModel.findOne({ role: 'admin' })
+    if (!adminUser) return { success: false, message: 'Admin not found' }
+
+    if (!notificationId) {
+        await notificationModel.updateMany({ userId: adminUser._id, isRead: false }, { isRead: true })
+        return { success: true, message: 'Marked all as read' }
+    } else {
+        await notificationModel.findByIdAndUpdate(notificationId, { isRead: true })
+        return { success: true, message: 'Marked as read' }
+    }
+}

@@ -155,7 +155,7 @@ export default function ChatDetailAdmin() {
             >
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <TouchableOpacity onPress={() => router.push('/(admin)/chats')} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <View style={styles.headerInfo}>

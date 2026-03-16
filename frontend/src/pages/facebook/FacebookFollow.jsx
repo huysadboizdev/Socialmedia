@@ -3,11 +3,13 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
 import { validateLink } from '@/lib/validation';
+import OrderSuccessModal from '@/components/common/OrderSuccessModal';
 
 const FacebookFollow = () => {
   const [activeTab, setActiveTab] = useState('create');
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedServer, setSelectedServer] = useState('');
   const [formData, setFormData] = useState({
     link: '',
@@ -105,7 +107,8 @@ const FacebookFollow = () => {
       }
 
       if (res.data.success) {
-        toast.success('Tạo đơn hàng thành công!', { id: 'order-toast' });
+        toast.dismiss('order-toast');
+        setShowSuccessModal(true);
         setFormData({ link: '', quantity: '', discount: '', note: '' });
       } else {
         toast.error(res.data.message || 'Lỗi khi tạo đơn hàng', { id: 'order-toast' });
@@ -326,6 +329,7 @@ const FacebookFollow = () => {
           </div>
         )}
       </div>
+      <OrderSuccessModal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} />
     </div>
   );
 };

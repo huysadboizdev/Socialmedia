@@ -1,14 +1,11 @@
-import type { Document, InferSchemaType } from "mongoose";
 import mongoose, { Schema } from "mongoose";
-
-const userSchema = new Schema(
-  {
+const userSchema = new Schema({
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     fullName: { type: String },
-    password: { 
-      type: String, 
-      required: function(this: IUser) { return !this.googleId; } 
+    password: {
+        type: String,
+        required: function () { return !this.googleId; }
     },
     googleId: { type: String },
     balance: { type: Number, default: 0 },
@@ -21,20 +18,10 @@ const userSchema = new Schema(
     monthlyDeposit: { type: Number, default: 0 },
     lastDepositMonth: { type: Number, default: null },
     attendance: {
-      lastDate: { type: Date, default: null },
-      streak: { type: Number, default: 0 }
+        lastDate: { type: Date, default: null },
+        streak: { type: Number, default: 0 }
     },
-    is2FAEnabled: { type: Boolean, default: false },
-    twoFactorMethod: { type: String, enum: ['none', 'email', 'authenticator'], default: 'none' },
-    twoFactorSecret: { type: String },
-    twoFactorExpires: { type: Date },
     role: { type: String, enum: ['user', 'admin'], default: 'user' }
-  },
-  { timestamps: true }
-);
-
-type UserRecord = InferSchemaType<typeof userSchema>;
-export interface IUser extends UserRecord, Document {}
-
-const userModel = mongoose.model<IUser>("user", userSchema);
+}, { timestamps: true });
+const userModel = mongoose.model("user", userSchema);
 export default userModel;
