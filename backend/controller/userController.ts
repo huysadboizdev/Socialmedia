@@ -89,7 +89,7 @@ export const requestDeposit: RequestHandler = async (req, res) => {
     const result = await userService.depositRequest(userId, Number(amount), content)
     return res.json(result)
   } catch (err: unknown) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
   }
 }
 
@@ -136,7 +136,7 @@ export const attendance: RequestHandler = async (req, res) => {
     const result = await userService.checkAttendance(userId)
     res.json(result)
   } catch (err: unknown) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
   }
 }
 
@@ -216,6 +216,17 @@ export const getTransactionHistory: RequestHandler = async (req, res) => {
         }
         const { type } = req.query as { type?: string }
         const result = await userService.getTransactions(userId, type)
+        res.json(result)
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        res.status(500).json({ success: false, message: errorMessage })
+    }
+}
+
+// get leaderboard
+export const getLeaderboard: RequestHandler = async (_req, res) => {
+    try {
+        const result = await userService.getLeaderboardStats()
         res.json(result)
     } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : String(err)

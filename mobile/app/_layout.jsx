@@ -77,6 +77,7 @@ const RootLayoutNav = () => {
             <Stack.Screen name="terms" />
             <Stack.Screen name="chat-admin" />
             <Stack.Screen name="report-order" />
+            <Stack.Screen name="leaderboard" />
         </Stack>
     </GestureHandlerRootView>
   );

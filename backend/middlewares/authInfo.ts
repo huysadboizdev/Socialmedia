@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 import userModel, { type IUser } from '../models/userModel.js';
 
 interface TokenPayload {
-    _id: string;
+    _id?: string;
+    id?: string;
 }
 
 export const authenticateUser = async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
@@ -16,7 +17,17 @@ export const authenticateUser = async (req: Request & { user?: IUser }, res: Res
         }
 
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET ?? 'secret') as TokenPayload;
-        const user = await userModel.findById(decoded._id).select("-password");
+        
+        // Handle both older tokens and legacy 'admin' string
+        let targetId = decoded._id ?? decoded.id;
+        if (targetId === 'admin') {
+            const adminDoc = await userModel.findOne({ role: 'admin' });
+            if (adminDoc) {
+                targetId = adminDoc._id.toString();
+            }
+        }
+
+        const user = await userModel.findById(targetId).select("-password");
 
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });

@@ -506,10 +506,6 @@ export const adjustUserBalance = async (userId: string, amount: number) => {
     })
     await transaction.save()
 
-    // Update deposit stats if adding money
-    if (amount > 0) {
-        await updateUserDepositStats(userId, amount)
-    }
 
     return { 
         success: true, 
@@ -612,8 +608,6 @@ export const approveUserSubmission = async (submissionId: string) => {
             createdAt: new Date()
         })
 
-        // Update deposit stats for mission reward
-        await updateUserDepositStats(user._id, mission.reward || 0)
     }
 
     return { success: true, message: 'Mission approved and reward sent' }

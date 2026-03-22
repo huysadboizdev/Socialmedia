@@ -80,7 +80,7 @@ export default function Sidebar({ onClose }) {
         <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-4">Kiếm Tiền Miễn Phí</div>
         <NavItem label="Nhiệm vụ Hàng Ngày" to="/daily-task" icon={nhiemvuGif} active={location.pathname === "/daily-task"} onClick={() => handleItemClick("Nhiệm vụ Hàng Ngày")} />
         <NavItem label="Điểm Danh Hàng Ngày" to="/attendance" icon={diemanhGif} active={location.pathname === "/attendance"} onClick={() => handleItemClick("Điểm Danh Hàng Ngày")} />
-        <NavItem label="Bảng Đua Top Nạp Tiền" icon={tongnapGif} active={activeItem === "Bảng Đua Top Nạp Tiền"} onClick={() => handleItemClick("Bảng Đua Top Nạp Tiền")} />
+        <NavItem label="Bảng Đua Top Nạp Tiền" to="/leaderboard" icon={tongnapGif} active={location.pathname === "/leaderboard"} onClick={() => handleItemClick("Bảng Đua Top Nạp Tiền")} />
        
 
         <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-4">Services</div>

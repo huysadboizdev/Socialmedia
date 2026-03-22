@@ -57,7 +57,9 @@ export default function TwoFactorPromptModal() {
     const isSensitive = sensitiveRoutes.some(route => location.pathname.startsWith(route));
     
     if (isSensitive) {
-      check2FAStatus();
+      void (async () => {
+        await check2FAStatus();
+      })();
     }
   }, [location.pathname]);
 

@@ -32,9 +32,10 @@ import {
     getReportedOrders,
     replyReport,
     getAdminNotifications,
-    markAdminNotificationRead
+    markAdminNotificationRead,
+    runDepositFix
 } from '../controller/adminController.js'
-import { updateAnnouncement } from '../controller/settingController.js'
+import { updateAnnouncement, updateMembershipConfig, getMembershipConfig } from '../controller/settingController.js'
 
 const adminRouter = express.Router()
 
@@ -71,9 +72,12 @@ adminRouter.get('/withdrawals', getWithdrawals)
 adminRouter.post('/withdraw/approve', approveWithdrawal)
 adminRouter.post('/withdraw/reject', rejectWithdrawal)
 adminRouter.post('/fix-balances', runBalanceFix)
+adminRouter.post('/fix-deposits', runDepositFix)
 
 // settings
 adminRouter.post('/announcement', updateAnnouncement)
+adminRouter.post('/membership-config', updateMembershipConfig)
+adminRouter.get('/membership-config', getMembershipConfig)
 
 // reports
 adminRouter.get('/reports', getReportedOrders)

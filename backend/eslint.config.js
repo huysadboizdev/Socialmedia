@@ -2,14 +2,37 @@
 import js from '@eslint/js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'node_modules', 'build', 'public'],
+    ignores: [
+      'dist', 
+      'node_modules', 
+      'build', 
+      'public',
+      '**/checkDB.js',
+      '**/checkDBNative.js',
+      '**/createAdmin.js',
+      '**/run_migration.js'
+    ],
   },
 
-  // JS cơ bản (áp dụng cho eslint.config.js)
-  js.configs.recommended,
+  // JS cơ bản (áp dụng cho eslint.config.js and other scripts)
+  {
+    files: ['**/*.js'],
+    ...js.configs.recommended,
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 
   // 🔴 CHỈ ÁP DỤNG CHO FILE TS
   {
@@ -25,7 +48,7 @@ export default tseslint.config(
       },
       parserOptions: {
         project: ['./tsconfig.json'],
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
       },
     },
     rules: {

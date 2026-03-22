@@ -17,14 +17,33 @@ const AdminSettings = () => {
     ]
   });
 
+  const [membershipConfig, setMembershipConfig] = useState({
+    tiers: [
+      { name: 'Thành viên', threshold: 0, discount: 0 },
+      { name: 'Cộng tác viên', threshold: 5000000, discount: 0.1 },
+      { name: 'Nhà phân phối', threshold: 20000000, discount: 0.3 }
+    ]
+  });
+  const [savingMembership, setSavingMembership] = useState(false);
+
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/user/announcement`);
-        if (res.data.success && res.data.announcement) {
-          setAnnouncement(res.data.announcement);
+        const token = localStorage.getItem("token");
+        const [annRes, memRes] = await Promise.all([
+          axios.get(`${API_URL}/api/user/announcement`),
+          axios.get(`${API_URL}/api/admin/membership-config`, {
+             headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+
+        if (annRes.data.success && annRes.data.announcement) {
+          setAnnouncement(annRes.data.announcement);
+        }
+        if (memRes.data.success && memRes.data.config) {
+          setMembershipConfig(memRes.data.config);
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
@@ -34,6 +53,45 @@ const AdminSettings = () => {
     };
     fetchSettings();
   }, [API_URL]);
+
+  const handleUpdateTier = (index, field, value) => {
+    const newTiers = [...membershipConfig.tiers];
+    newTiers[index][field] = value;
+    setMembershipConfig({ ...membershipConfig, tiers: newTiers });
+  };
+
+  const handleAddTier = () => {
+    setMembershipConfig({
+      ...membershipConfig,
+      tiers: [...membershipConfig.tiers, { name: 'Cấp bậc mới', threshold: 0, discount: 0 }]
+    });
+  };
+
+  const handleRemoveTier = (index) => {
+    const newTiers = membershipConfig.tiers.filter((_, i) => i !== index);
+    setMembershipConfig({ ...membershipConfig, tiers: newTiers });
+  };
+
+  const handleSaveMembership = async () => {
+    setSavingMembership(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API_URL}/api/admin/membership-config`, 
+        { value: membershipConfig },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        toast.success("Cập nhật cấp bậc thành công!");
+      } else {
+        toast.error(res.data.message || "Cập nhật thất bại");
+      }
+    } catch (error) {
+      toast.error("Lỗi kết nối máy chủ");
+      console.error(error);
+    } finally {
+      setSavingMembership(false);
+    }
+  };
 
   const handleUpdateItem = (index, field, value) => {
     const newItems = [...announcement.items];
@@ -178,15 +236,86 @@ const AdminSettings = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-50 cursor-not-allowed">
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Cài đạt SEO (Coming Soon)</h3>
-              <p className="text-sm text-slate-500">Sẽ sớm có tính năng chỉnh sửa meta tags, keywords.</p>
+      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+              <span className="material-symbols-outlined text-2xl">military_tech</span>
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Cấu hình Cấp bậc & Chiết khấu</h3>
           </div>
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Cài đặt Thanh Toán (Coming Soon)</h3>
-              <p className="text-sm text-slate-500">Sẽ sớm có tính năng chỉnh sửa thông tin chuyển khoản.</p>
-          </div>
+          <button
+            onClick={handleSaveMembership}
+            disabled={savingMembership}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-6 rounded-xl transition-all flex items-center gap-2"
+          >
+            {savingMembership ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : null}
+            Lưu Cấu Hình
+          </button>
+        </div>
+
+        <div className="space-y-4">
+            <div className="grid grid-cols-12 gap-4 mb-2 px-2 text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                <div className="col-span-4">Tên Cấp Bậc</div>
+                <div className="col-span-4">Mốc Nạp (VNĐ)</div>
+                <div className="col-span-3">Giảm Giá (%)</div>
+                <div className="col-span-1 text-center">Xóa</div>
+            </div>
+
+            <div className="space-y-3">
+                {membershipConfig.tiers.map((tier, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-3 items-center group">
+                        <div className="col-span-4">
+                            <input
+                                type="text"
+                                value={tier.name}
+                                onChange={(e) => handleUpdateTier(idx, 'name', e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                placeholder="VD: Cộng tác viên"
+                            />
+                        </div>
+                        <div className="col-span-4">
+                            <input
+                                type="text"
+                                value={tier.threshold.toLocaleString('vi-VN')}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    handleUpdateTier(idx, 'threshold', parseInt(val) || 0);
+                                }}
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            />
+                        </div>
+                        <div className="col-span-3">
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={tier.discount * 100}
+                                    onChange={(e) => handleUpdateTier(idx, 'discount', (parseFloat(e.target.value) || 0) / 100)}
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-8 py-3 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">%</span>
+                            </div>
+                        </div>
+                        <div className="col-span-1 flex justify-center">
+                            <button 
+                                onClick={() => handleRemoveTier(idx)}
+                                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-xl">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <button 
+                onClick={handleAddTier}
+                className="mt-4 w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400 hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all font-medium flex items-center justify-center gap-2"
+            >
+                <span className="material-symbols-outlined">add_circle</span>
+                Thêm Cấp Bậc Mới
+            </button>
+        </div>
       </div>
 
       <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-2xl p-6">
