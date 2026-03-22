@@ -20,19 +20,30 @@ const login = async ({ email, password }: LoginParams) => {
   const adminPassword = process.env.ADMIN_PASSWORD
 
   if (email === adminEmail && password === adminPassword) {
+    // Check if admin user already exists in database
+    let admin = await userModel.findOne({ email: adminEmail, role: 'admin' })
+    admin ??= await userModel.create({
+        username: 'Admin',
+        email: adminEmail,
+        role: 'admin',
+        balance: 999999999,
+        missionBalance: 0,
+        password: await bcrypt.hash(adminPassword || 'admin', 10) // Store hashed password anyway
+    });
+
     const token = jwt.sign(
-      { id: 'admin', role: 'admin' },
-      process.env.ACCESS_TOKEN_SECRET ?? 'secret'
+      { id: admin._id, role: 'admin' },
+      process.env.ACCESS_TOKEN_SECRET ??= 'secret'
     )
     return {
       success: true,
       token,
       user: {
-        _id: 'admin',
-        username: 'Admin',
-        email: adminEmail,
+        _id: admin._id,
+        username: admin.username,
+        email: admin.email,
         role: 'admin',
-        balance: 999999999
+        balance: admin.balance
       }
     }
   }
@@ -57,14 +68,8 @@ const login = async ({ email, password }: LoginParams) => {
 
   const token = jwt.sign(
     { id: user._id },
-    process.env.ACCESS_TOKEN_SECRET ?? 'secret'
+    process.env.ACCESS_TOKEN_SECRET ??= 'secret'
   )
-
-  // Reset 2FA verification status on login to force fresh verification
-  if (user.is2FAEnabled) {
-    user.is2FAVerified = false;
-    await user.save();
-  }
 
   // Exclude password from user object
   const { password: _, ...userData } = user.toObject()

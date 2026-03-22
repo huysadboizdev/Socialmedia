@@ -14,7 +14,8 @@ import {
   acceptMission,
   withdrawMissionBalance,
   getTransactionHistory,
-  clickMission
+  clickMission,
+  getLeaderboard
 } from '../controller/userController.js'
 import { getAnnouncement as fetchAnnouncement } from '../controller/settingController.js'
 import upload from '../middlewares/multer.js'
@@ -47,6 +48,7 @@ userRouter.get('/missions/completed', authUser, check2FA, getCompletedMissions)
 // attendance
 userRouter.post('/attendance', authUser, check2FA, attendance)
 userRouter.get('/transactions', authUser, check2FA, getTransactionHistory)
+userRouter.get('/leaderboard', getLeaderboard)
 
 // public
 userRouter.get('/announcement', fetchAnnouncement)

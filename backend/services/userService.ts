@@ -9,6 +9,59 @@ import orderModel from '../models/orderModel.js'
 import transactionModel from '../models/transactionModel.js'
 import notificationModel from '../models/notificationModel.js'
 import submissionModel from '../models/submissionModel.js'
+import settingModel from '../models/settingModel.js'
+
+function getISOWeek(date: Date) {
+  const d = new Date(date.getTime());
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getFullYear()}-W${weekNo}`;
+}
+
+function maskName(name: string): string {
+  if (!name) return 'Ẩn danh';
+  const parts = name.split(' ');
+  if (parts.length === 1) {
+    const s = parts[0] ?? '';
+    return s.length > 2 ? `${s.substring(0, 2)}${'*'.repeat(s.length - 2)}` : `${s}*`;
+  }
+  return parts.map((p, i) => {
+    if (i === parts.length - 1) return p; // Keep last name
+    return p.length > 1 ? `${p.charAt(0)}${'*'.repeat(p.length - 1)}` : p;
+  }).join(' ');
+}
+
+function maskAmount(amount: number): string {
+  const s = amount.toLocaleString('vi-VN');
+  if (s.length <= 3) return `**${s}`;
+  return `**${s.substring(2)}`;
+}
+
+/**
+ * Get user membership rank and discount based on dynamic config
+ */
+export function getUserRank(totalDeposit: number, config?: { tiers: { name: string, threshold: number, discount: number }[] }) {
+  const defaultTiers = [
+    { name: 'Nhà phân phối', threshold: 20000000, discount: 0.3 },
+    { name: 'Cộng tác viên', threshold: 5000000, discount: 0.1 },
+    { name: 'Thành viên', threshold: 0, discount: 0 }
+  ];
+
+  const tiers = config?.tiers ?? defaultTiers;
+  
+  // Sort tiers by threshold descending to find the highest match
+  const sortedTiers = [...tiers].sort((a, b) => b.threshold - a.threshold);
+  
+  for (const tier of sortedTiers) {
+    if (totalDeposit >= tier.threshold) {
+      return { name: tier.name, discount: tier.discount };
+    }
+  }
+
+  return { name: 'Thành viên', discount: 0 };
+}
 
 interface UpdateProfileParams {
   username?: string;
@@ -86,7 +139,20 @@ export const getInfo = async (userId: string) => {
         }
     }
 
-    return { success: true, user }
+    const [rankConfig] = await Promise.all([
+        settingModel.findOne({ key: 'membershipConfig' }),
+        checkAttendance(userId)
+    ]);
+    const rank = getUserRank(user.totalDeposit, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+    
+    return { 
+        success: true, 
+        user: { 
+            ...user.toObject(), 
+            rankName: rank.name,
+            rankDiscount: rank.discount
+        } 
+    }
 }
 
 /**
@@ -258,8 +324,48 @@ function validateEmail(email: string): boolean {
  */
 export const handleService = async (userId: string, { action, serviceId, quantity = 1, link, note, details, orderId, issue, reportNote }: HandleServiceParams) => {
     if (action === 'getServices') {
-        const services = await serviceModel.find()
-        return { success: true, services }
+        const [services, user, rankConfig] = await Promise.all([
+            serviceModel.find().lean(),
+            userModel.findById(userId),
+            settingModel.findOne({ key: 'membershipConfig' })
+        ]);
+        
+        let discountPctPercent = 0;
+        const rank = getUserRank(user?.totalDeposit ?? 0, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+        discountPctPercent = rank.discount * 100;
+
+        try {
+             // Weekly TOP Reward Discount (20%)
+             const weeklyWinner = await settingModel.findOne({ key: 'weeklyTopWinner' });
+             if (weeklyWinner?.value) {
+                 const winnerVal = weeklyWinner.value as { userId: string, forWeek: string };
+                 if (winnerVal.userId === userId) {
+                     const currentWeek = getISOWeek(new Date());
+                     if (winnerVal.forWeek === currentWeek) {
+                         discountPctPercent = Math.max(discountPctPercent, 20);
+                     }
+                 }
+             }
+        } catch (err) {
+             console.error("Error fetching weekly discount", err);
+        }
+
+        const rankDisplay = rank.name;
+
+        if (discountPctPercent > 0) {
+             const discountedServices = services.map(s => {
+                  const safePrice = s.price || 0;
+                  return {
+                      ...s,
+                      originalPrice: safePrice,
+                      price: safePrice - Math.floor(safePrice * (discountPctPercent / 100)),
+                      name: `[Giảm ${discountPctPercent}%] ` + s.name
+                  };
+             });
+             return { success: true, services: discountedServices, discountPct: discountPctPercent, rankName: rankDisplay }
+        }
+
+        return { success: true, services, rankName: rankDisplay };
     }
 
     if (action === 'reportOrder') {
@@ -328,7 +434,10 @@ export const handleService = async (userId: string, { action, serviceId, quantit
             }
         }
 
-        const user = await userModel.findById(userId)
+        const [user, rankConfig] = await Promise.all([
+            userModel.findById(userId),
+            settingModel.findOne({ key: 'membershipConfig' })
+        ])
         if (!user) return { success: false, message: 'User not found' }
 
         if (service.category !== 'Tích Xanh') {
@@ -341,7 +450,34 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         }
 
         const totalPrice = service.price * quantity
-        if ((user.balance || 0) < totalPrice) {
+        let finalPrice = totalPrice;
+
+        // Apply Highest Discount (Tiered Membership vs Weekly Reward)
+        let discountPercent = 0;
+        
+        // 1. Tiered Membership Discount
+        const rank = getUserRank(user.totalDeposit, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+        discountPercent = Math.max(discountPercent, rank.discount);
+
+        // 2. Weekly Top Reward (20%)
+        try {
+            const weeklyWinner = await settingModel.findOne({ key: 'weeklyTopWinner' });
+            const winnerVal = weeklyWinner?.value as { userId: string, forWeek: string } | undefined;
+            if (winnerVal?.userId === userId) {
+                const currentWeek = getISOWeek(new Date());
+                if (winnerVal.forWeek === currentWeek) {
+                    discountPercent = Math.max(discountPercent, 0.2);
+                }
+            }
+        } catch (err) {
+            console.error("Error applying weekly discount in order", err);
+        }
+
+        if (discountPercent > 0) {
+            finalPrice = totalPrice - Math.floor(totalPrice * discountPercent);
+        }
+
+        if ((user.balance || 0) < finalPrice) {
             return { success: false, message: 'Số dư tài khoản không đủ. Vui lòng nạp thêm!' }
         }
 
@@ -349,23 +485,23 @@ export const handleService = async (userId: string, { action, serviceId, quantit
             userId,
             service: serviceId,
             quantity,
-            totalPrice,
+            totalPrice: finalPrice,
             link: link ?? "",
             note: note ?? "",
             details: details ?? {},
             status: 'Pending'
         })
 
-        user.balance = (user.balance || 0) - totalPrice
+        user.balance = (user.balance || 0) - finalPrice
         await user.save()
 
         // Create transaction record for the payment
         await transactionModel.create({
             userId,
-            amount: -totalPrice,
+            amount: -finalPrice,
             type: 'payment',
             description: `Thanh toán đơn hàng: ${service.name}`,
-            oldBalance: user.balance + totalPrice,
+            oldBalance: user.balance + finalPrice,
             newBalance: user.balance,
             balanceType: 'profile',
             status: 'approved',
@@ -958,13 +1094,6 @@ export const withdrawMissionBalance = async (
             createdAt: new Date()
         })
 
-        // Update deposit stats (Total & Monthly)
-        try {
-            const { updateUserDepositStats } = await import('./adminService.js');
-            await updateUserDepositStats(userId, amount);
-        } catch (error) {
-            console.error("Failed to update deposit stats during mission withdrawal:", error);
-        }
 
         return { 
             success: true, 
@@ -1053,3 +1182,104 @@ export const getTransactions = async (userId: string, type?: string) => {
     const transactions = await transactionModel.find(query).sort({ createdAt: -1 })
     return { success: true, transactions }
 }
+
+/**
+ * Leaderboard & Weekly Reward Logic
+ */
+export const getLeaderboardStats = async () => {
+  const now = new Date();
+  const currentWeekId = getISOWeek(now);
+
+  // 1. Ensure Weekly Winner logic (Reward starts in current week based on previous week's performance)
+  try {
+    const winnerRecord = await settingModel.findOne({ key: 'weeklyTopWinner' });
+    const winnerVal = winnerRecord?.value as { forWeek: string } | undefined;
+    if (!winnerRecord || winnerVal?.forWeek !== currentWeekId) {
+      // Monday 00:00 of current week
+      const day = now.getDay() || 7;
+      const currentMonday = new Date(now);
+      currentMonday.setHours(0, 0, 0, 0);
+      currentMonday.setDate(now.getDate() - (day - 1));
+
+      // Previous Monday
+      const lastMonday = new Date(currentMonday);
+      lastMonday.setDate(currentMonday.getDate() - 7);
+
+      // Previous Sunday 23:59:59
+      const lastSunday = new Date(currentMonday);
+      lastSunday.setMilliseconds(-1);
+
+      const topPrevWeek = await transactionModel.aggregate([
+        { $match: { type: 'deposit', status: 'approved', createdAt: { $gte: lastMonday, $lte: lastSunday } } },
+        { $group: { _id: '$userId', total: { $sum: '$amount' } } },
+        { $sort: { total: -1 } },
+        { $limit: 1 }
+      ]);
+
+      const topPrevWeekResult = topPrevWeek[0] as { _id: Types.ObjectId, total: number } | undefined;
+      if (topPrevWeekResult) {
+        const winner = await userModel.findById(topPrevWeekResult._id);
+        if (winner) {
+          await settingModel.findOneAndUpdate(
+            { key: 'weeklyTopWinner' },
+            {
+              value: {
+                userId: winner._id.toString(),
+                fullName: winner.fullName ?? winner.username,
+                amount: topPrevWeekResult.total,
+                forWeek: currentWeekId
+              }
+            },
+            { upsert: true }
+          );
+        }
+      } else {
+        await settingModel.findOneAndUpdate(
+          { key: 'weeklyTopWinner' },
+          { value: { userId: '', forWeek: currentWeekId } },
+          { upsert: true }
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Error updating weekly winner", err);
+  }
+
+  // 2. Aggregate Leaderboard (Monthly & Quarterly)
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const quarterMonth = Math.floor(now.getMonth() / 3);
+  const startOfQuarter = new Date(now.getFullYear(), quarterMonth * 3, 1);
+
+  const [monthlyLeaders, quarterlyLeaders] = await Promise.all([
+    transactionModel.aggregate([
+      { $match: { type: 'deposit', status: 'approved', createdAt: { $gte: startOfMonth } } },
+      { $group: { _id: '$userId', total: { $sum: '$amount' } } },
+      { $sort: { total: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+      { $unwind: '$user' }
+    ]),
+    transactionModel.aggregate([
+      { $match: { type: 'deposit', status: 'approved', createdAt: { $gte: startOfQuarter } } },
+      { $group: { _id: '$userId', total: { $sum: '$amount' } } },
+      { $sort: { total: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+      { $unwind: '$user' }
+    ])
+  ]);
+
+  const formatRow = (row: { total: number, user: { fullName?: string, username: string } }) => ({
+    name: maskName(row.user.fullName ?? row.user.username),
+    amount: maskAmount(row.total),
+    rawAmount: row.total
+  });
+  return {
+    success: true,
+    monthly: monthlyLeaders.map(formatRow),
+    quarterly: quarterlyLeaders.map(formatRow),
+    currentMonth: now.getMonth() + 1,
+    currentQuarter: quarterMonth + 1
+  };
+};
+

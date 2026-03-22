@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express'
 import * as adminService from '../services/adminService.js'
+import { recalculateAllUserDepositStats } from '../services/migrationService.js'
 
 export const login_admin: RequestHandler = async (req, res) => {
     try {
@@ -263,6 +264,15 @@ export const rejectWithdrawal: RequestHandler = async (req, res) => {
 export const runBalanceFix: RequestHandler = async (_req, res) => {
     try {
         const result = await adminService.fixCorruptedBalances()
+        res.json(result)
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })
+    }
+}
+
+export const runDepositFix: RequestHandler = async (_req, res) => {
+    try {
+        const result = await recalculateAllUserDepositStats()
         res.json(result)
     } catch (error: unknown) {
         res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) })

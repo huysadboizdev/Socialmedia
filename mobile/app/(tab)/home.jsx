@@ -139,7 +139,7 @@ export default function Home() {
                     <Image source={capbacGif} style={{ width: 32, height: 32 }} resizeMode="contain" />
                 </View>
                 <View>
-                    <Text style={styles.statValue}>Thành viên</Text>
+                    <Text style={styles.statValue}>{displayUser?.rankName || 'Thành viên'}</Text>
                     <Text style={styles.statLabel}>Cấp bậc</Text>
                 </View>
             </View>
@@ -164,6 +164,13 @@ export default function Home() {
                     <Ionicons name="ribbon-outline" size={16} color="#facc15" style={styles.infoIcon} />
                     <Text style={styles.infoText}>Cảm Ơn Bạn Đã Chọn: <Text style={styles.highlightText}>HUYTICHXANH</Text></Text>
                 </View>
+
+                <Link href="/leaderboard" asChild>
+                    <TouchableOpacity style={styles.infoRow}>
+                        <Ionicons name="trophy-outline" size={16} color="#fbbf24" style={styles.infoIcon} />
+                        <Text style={styles.infoText}>Bảng Đua Top Nạp Tiền: <Text style={styles.linkText}>Xem Ngay</Text></Text>
+                    </TouchableOpacity>
+                </Link>
             </View>
 
             <View style={[styles.infoBox, { backgroundColor: 'rgba(34, 211, 238, 0.15)', borderColor: 'rgba(34, 211, 238, 0.3)' }]}>

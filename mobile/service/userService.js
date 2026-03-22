@@ -159,4 +159,41 @@ export const markNotificationRead = async (userId, notificationId) => {
     }
 };
 
+export const getLeaderboard = async () => {
+    try {
+        const response = await api.get('/user/leaderboard');
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// --- 2FA APIS ---
+export const generate2FA = async (method) => {
+    try {
+        const response = await api.post('/auth2fa/generate', { method });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const verifySetup2FA = async (code) => {
+    try {
+        const response = await api.post('/auth2fa/verify-setup', { code });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const disable2FA = async (code = null) => {
+    try {
+        const response = await api.post('/auth2fa/disable', { code });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
 export default api;

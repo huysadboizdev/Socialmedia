@@ -13,6 +13,7 @@ const Attendance = lazy(() => import("./pages/Attendance"))
 const DailyTask = lazy(() => import("./pages/DailyTask"))
 const Deposit = lazy(() => import("./pages/Deposit"))
 const TransactionHistory = lazy(() => import("./pages/TransactionHistory"))
+const Leaderboard = lazy(() => import("./pages/Leaderboard"))
 const AllOrders = lazy(() => import("./pages/AllOrders"))
 const ReportHistory = lazy(() => import("./pages/ReportHistory"))
 const FacebookLike = lazy(() => import("./pages/facebook/FacebookLike"));
@@ -77,6 +78,7 @@ function App() {
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/daily-task" element={<DailyTask />} />
             <Route path="/deposit" element={<Deposit />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/history" element={<TransactionHistory />} />
             <Route path="/all-orders" element={<AllOrders />} />
             <Route path="/reports" element={<ReportHistory />} />

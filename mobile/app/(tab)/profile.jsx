@@ -12,6 +12,7 @@ import lichsuGif from '../../assets/lichsugd.gif';
 import allGif from '../../assets/alll_list.gif';
 import supportGif from '../../assets/supportusser.gif';
 import dieukhoanGif from '../../assets/dieukhoan.gif';
+import { generate2FA, verifySetup2FA, disable2FA } from '../../service/userService';
 
 export default function Profile() {
   const { user, logout } = useContext(AuthContext);
@@ -19,7 +20,7 @@ export default function Profile() {
   const router = useRouter();
   const styles = getStyles(colors);
   
-  const [activeTab, setActiveTab] = useState('info'); // info, password
+  const [activeTab, setActiveTab] = useState('info'); // info, 2fa, password
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState(user);
   
@@ -30,6 +31,10 @@ export default function Profile() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // 2FA States
+  const [isPendingEmail, setIsPendingEmail] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -86,6 +91,75 @@ export default function Profile() {
         }
     } catch (e) {
         Alert.alert('Lỗi', e.response?.data?.message || 'Không thể đổi mật khẩu');
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleGenerate2FA = async (method) => {
+    setLoading(true);
+    try {
+        const res = await generate2FA(method);
+        if (res.success) {
+            setIsPendingEmail(true);
+            Alert.alert('Thành công', res.message);
+        } else {
+            Alert.alert('Lỗi', res.message || "Lỗi tạo 2FA");
+        }
+    } catch (error) {
+        Alert.alert('Lỗi', error.message || "Lỗi tạo 2FA");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleVerifySetup2FA = async () => {
+    if (!verifyCode) return Alert.alert('Lỗi', "Vui lòng nhập mã xác nhận");
+    setLoading(true);
+    try {
+        const res = await verifySetup2FA(verifyCode);
+        if (res.success) {
+            Alert.alert('Thành công', res.message);
+            setIsPendingEmail(false);
+            setVerifyCode("");
+            // Refresh user data to update UI
+            const refreshRes = await api.get('/user/me');
+            if (refreshRes.data.success) {
+                setUserData(refreshRes.data.user);
+            }
+        } else {
+            Alert.alert('Lỗi', res.message || "Mã không hợp lệ");
+        }
+    } catch (error) {
+        Alert.alert('Lỗi', error.message || "Mã không hợp lệ");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleDisable2FAAction = async () => {
+    setLoading(true);
+    try {
+        const res = await disable2FA(verifyCode || null);
+        if (res.success) {
+            if (res.pendingEmail) {
+                setIsPendingEmail(true);
+                Alert.alert('Thông báo', res.message);
+            } else {
+                Alert.alert('Thành công', res.message);
+                setIsPendingEmail(false);
+                setVerifyCode("");
+                // Refresh user data to update UI
+                const refreshRes = await api.get('/user/me');
+                if (refreshRes.data.success) {
+                    setUserData(refreshRes.data.user);
+                }
+            }
+        } else {
+            Alert.alert('Lỗi', res.message || "Lỗi thao tác 2FA");
+        }
+    } catch (error) {
+        Alert.alert('Lỗi', error.message || "Lỗi thao tác 2FA");
     } finally {
         setLoading(false);
     }
@@ -199,10 +273,16 @@ export default function Profile() {
                 <Text style={[styles.tabText, activeTab === 'info' && styles.activeTabText]}>Thông tin</Text>
             </TouchableOpacity>
             <TouchableOpacity 
+                style={[styles.tab, activeTab === '2fa' && styles.activeTab]}
+                onPress={() => setActiveTab('2fa')}
+            >
+                <Text style={[styles.tabText, activeTab === '2fa' && styles.activeTabText]}>Bảo vệ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
                 style={[styles.tab, activeTab === 'password' && styles.activeTab]}
                 onPress={() => setActiveTab('password')}
             >
-                <Text style={[styles.tabText, activeTab === 'password' && styles.activeTabText]}>Bảo mật</Text>
+                <Text style={[styles.tabText, activeTab === 'password' && styles.activeTabText]}>Mật khẩu</Text>
             </TouchableOpacity>
         </View>
 
@@ -244,6 +324,102 @@ export default function Profile() {
                 >
                     {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Lưu thay đổi</Text>}
                 </TouchableOpacity>
+            </View>
+        ) : activeTab === '2fa' ? (
+            <View style={styles.formSection}>
+                <View style={[styles.infoBox, { backgroundColor: userData?.is2FAEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                        <Ionicons 
+                            name={userData?.is2FAEnabled ? "shield-checkmark" : "shield-outline"} 
+                            size={24} 
+                            color={userData?.is2FAEnabled ? colors.success : colors.primary} 
+                        />
+                        <Text style={[styles.infoTitle, { color: userData?.is2FAEnabled ? colors.success : colors.primary, marginBottom: 0 }]}>
+                            {userData?.is2FAEnabled ? "Đã bật bảo mật 2 lớp" : "Chưa bật bảo mật 2 lớp"}
+                        </Text>
+                    </View>
+                    <Text style={[styles.infoText, { fontSize: 12, opacity: 0.7 }]}>
+                        {userData?.is2FAEnabled 
+                            ? `Tài khoản của bạn đang được bảo vệ bằng mã xác nhận gửi qua email: ${userData.email}`
+                            : "Sử dụng Email để nhận mã xác thực mỗi khi thực hiện các giao dịch quan trọng hoặc thay đổi cấu hình tài khoản."}
+                    </Text>
+                </View>
+
+                {userData?.is2FAEnabled ? (
+                    <View style={{ gap: 16, marginTop: 12 }}>
+                        {!isPendingEmail ? (
+                            <TouchableOpacity 
+                                style={[styles.saveButton, { backgroundColor: colors.card, borderEndWidth: 1, borderColor: colors.danger }]}
+                                onPress={handleDisable2FAAction}
+                                disabled={loading}
+                            >
+                                <Text style={[styles.saveButtonText, { color: colors.danger }]}>Tắt 2FA qua Email</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Nhập mã xác nhận để tắt 2FA</Text>
+                                    <TextInput 
+                                        style={styles.input}
+                                        value={verifyCode}
+                                        onChangeText={setVerifyCode}
+                                        placeholder="000000"
+                                        keyboardType="number-pad"
+                                        maxLength={6}
+                                        placeholderTextColor={colors.subtext}
+                                    />
+                                </View>
+                                <TouchableOpacity 
+                                    style={[styles.saveButton, { backgroundColor: colors.danger }]}
+                                    onPress={handleDisable2FAAction}
+                                    disabled={loading || !verifyCode}
+                                >
+                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Xác nhận tắt 2FA</Text>}
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
+                ) : (
+                    <View style={{ gap: 16, marginTop: 12 }}>
+                        {!isPendingEmail ? (
+                            <TouchableOpacity 
+                                style={styles.saveButton}
+                                onPress={() => handleGenerate2FA('email')}
+                                disabled={loading}
+                            >
+                                {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Kích hoạt 2FA qua Email</Text>}
+                            </TouchableOpacity>
+                        ) : (
+                            <>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Nhập mã OTP gửi tới Email</Text>
+                                    <TextInput 
+                                        style={styles.input}
+                                        value={verifyCode}
+                                        onChangeText={setVerifyCode}
+                                        placeholder="000000"
+                                        keyboardType="number-pad"
+                                        maxLength={6}
+                                        placeholderTextColor={colors.subtext}
+                                    />
+                                </View>
+                                <TouchableOpacity 
+                                    style={styles.saveButton}
+                                    onPress={handleVerifySetup2FA}
+                                    disabled={loading || !verifyCode}
+                                >
+                                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Kích hoạt ngay</Text>}
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={() => setIsPendingEmail(false)}
+                                    style={{ alignSelf: 'center' }}
+                                >
+                                    <Text style={{ color: colors.subtext, fontSize: 12 }}>Hủy bỏ</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
+                )}
             </View>
         ) : (
             <View style={styles.formSection}>
@@ -482,5 +658,20 @@ const getStyles = (colors) => StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     fontWeight: '500',
+  },
+  infoBox: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  infoText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
   },
 });

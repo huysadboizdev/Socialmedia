@@ -104,7 +104,7 @@ export default function Home() {
                <img src={capbacGif} alt="capbac" className="w-12 h-12 object-contain" />
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">Thành viên</div>
+              <div className="text-3xl font-bold text-gray-800 dark:text-slate-100">{userData?.rankName || 'Thành viên'}</div>
               <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Cấp bậc</div>
             </div>
           </div>

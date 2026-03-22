@@ -1,8 +1,10 @@
 import type { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import userModel from '../models/userModel.js'
 
 interface TokenDecode {
-    id: string;
+    id?: string;
+    _id?: string;
 }
 
 interface AuthRequest extends Request {
@@ -30,14 +32,24 @@ const authUser = async (req: Request, res: Response, next: NextFunction) => {
         }
 
         const token_decode = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET ?? 'secret') as TokenDecode
+        
+        // Handle both id and _id formats
+        let targetId = token_decode.id ?? token_decode._id;
 
-        if (!token_decode.id) {
+        if (!targetId) {
             return res.json({ success: false, message: "Invalid Token Payload" })
         }
 
+        if (targetId === 'admin') {
+            const adminDoc = await userModel.findOne({ role: 'admin' });
+            if (adminDoc) {
+                targetId = adminDoc._id.toString();
+            }
+        }
+
         req.body ??= {};
-        (req.body as { userId: string }).userId = token_decode.id;
-        (req as AuthRequest).authUserId = token_decode.id // Backup for multer
+        (req.body as { userId: string }).userId = targetId;
+        (req as AuthRequest).authUserId = targetId // Backup for multer
 
         // Add a dummy await to satisfy lint if no async work is done, 
         // but normally we might check if user still exists in DB

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import userModel from './models/userModel.js';
 
 async function run() {
-    await mongoose.connect(process.env.MONGODB_URI as string);
+    await mongoose.connect(process.env.MONGODB_URI ?? '');
     const adminCount = await userModel.countDocuments({ role: 'admin' });
     if (adminCount === 0) {
         const newAdmin = new userModel({
@@ -22,4 +22,4 @@ async function run() {
     process.exit(0);
 }
 
-run();
+void run();

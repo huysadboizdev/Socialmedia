@@ -220,7 +220,7 @@ export default function AdminDashboard() {
                     <StatCard 
                         title="Tổng Lượt Click" 
                         value={(analytics.totalClicks || 0).toLocaleString()}
-                        icon="mouse-outline" 
+                        icon="pulse-outline" 
                         color="#ec4899" // Pink
                         subtext="Lượt truy cập"
                     />

@@ -29,3 +29,22 @@ export const listSettings = async (_req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) });
   }
 };
+
+export const getMembershipConfig = async (_req: Request, res: Response) => {
+  try {
+    const value = await settingService.getSetting('membershipConfig');
+    return res.json({ success: true, config: value });
+  } catch (error: unknown) {
+    return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) });
+  }
+};
+
+export const updateMembershipConfig = async (req: Request, res: Response) => {
+  try {
+    const { value } = req.body as { value: unknown };
+    const result = await settingService.updateSetting('membershipConfig', value, 'Membership tiers and discounts configuration');
+    return res.json(result);
+  } catch (error: unknown) {
+    return res.status(500).json({ success: false, message: error instanceof Error ? error.message : String(error) });
+  }
+};
