@@ -28,6 +28,7 @@ export default function AdminUsers() {
   // Balance Modal State
   const [balanceModalVisible, setBalanceModalVisible] = useState(false);
   const [adjustAmount, setAdjustAmount] = useState('');
+  const [bonusPercent, setBonusPercent] = useState('0');
 
   const fetchUsers = async () => {
     try {
@@ -118,6 +119,7 @@ export default function AdminUsers() {
   const openBalanceModal = (user) => {
     setSelectedUser(user);
     setAdjustAmount('');
+    setBonusPercent('0');
     setBalanceModalVisible(true);
   };
 
@@ -128,8 +130,14 @@ export default function AdminUsers() {
         return;
     }
     
+    const bonus = parseInt(bonusPercent) || 0;
+    
     try {
-        const res = await api.post('/admin/adjust-balance', { userId: selectedUser._id, amount });
+        const res = await api.post('/admin/adjust-balance', { 
+            userId: selectedUser._id, 
+            amount,
+            bonusPercent: bonus
+        });
         if (res.data.success) {
              setUsers(users.map(u => u._id === selectedUser._id ? { ...u, balance: res.data.newBalance } : u));
              setBalanceModalVisible(false);
@@ -327,6 +335,18 @@ export default function AdminUsers() {
                 <Text style={{ textAlign: 'center', fontSize: 12, color: colors.subtext, marginTop: 8, marginBottom: 24 }}>
                     Dương (+) để cộng, Âm (-) để trừ
                 </Text>
+
+                <View style={[styles.inputGroup, { marginBottom: 24 }]}>
+                    <Text style={[styles.label, { textAlign: 'center' }]}>% Khuyến mãi (nếu cộng tiền)</Text>
+                    <TextInput 
+                        style={[styles.input, { textAlign: 'center', fontWeight: 'bold' }]} 
+                        placeholder="0" 
+                        placeholderTextColor={colors.subtext}
+                        value={bonusPercent} 
+                        onChangeText={setBonusPercent} 
+                        keyboardType="numeric"
+                    />
+                </View>
 
                 <View style={styles.modalButtons}>
                      <TouchableOpacity style={styles.cancelButton} onPress={() => setBalanceModalVisible(false)}>

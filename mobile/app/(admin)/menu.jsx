@@ -15,7 +15,10 @@ export default function AdminMenu() {
 
   const menuItems = [
     { title: 'Quản Lý Dịch Vụ', icon: 'layers-outline', route: '/(admin)/services', color: '#8b5cf6' },
+    { title: 'Quản Lý Đơn Hàng', icon: 'cart-outline', route: '/(admin)/orders', color: '#f59e0b' },
     { title: 'Quản Lý Nạp Tiền', icon: 'wallet-outline', route: '/(admin)/deposits', color: '#10b981' },
+    { title: 'Quản Lý Người Dùng', icon: 'people-outline', route: '/(admin)/users', color: '#3b82f6' },
+    { title: 'Quản Lý Mã Giảm Giá', icon: 'ticket-outline', route: '/(admin)/coupons', color: '#db2777' },
     { title: 'Quản Lý Nhiệm Vụ', icon: 'checkbox-outline', route: '/(admin)/missions', color: '#ef4444' },
     { title: 'Duyệt Nhiệm Vụ', icon: 'fact-check-outline', route: '/(admin)/mission-requests', color: '#ec4899' },
     { title: 'Duyệt Rút Tiền', icon: 'cash-outline', route: '/(admin)/withdrawals', color: '#6366f1' },

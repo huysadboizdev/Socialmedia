@@ -35,13 +35,15 @@ import {
     markAdminNotificationRead,
     runDepositFix
 } from '../controller/adminController.js'
-import { updateAnnouncement, updateMembershipConfig, getMembershipConfig } from '../controller/settingController.js'
+import { updateAnnouncement, getMembershipConfig, updateMembershipConfig, getDepositBonus, updateDepositBonus } from '../controller/settingController.js'
+import { createCoupon, listCoupons, deleteCoupon, updateCouponStatus, updateCoupon } from '../controller/couponController.js'
+import authAdmin from '../middlewares/authAdmin.js'
 
 const adminRouter = express.Router()
 
 adminRouter.get('/stats', getDashboardStats)
 adminRouter.post('/add-service', addService)
-adminRouter.post('/edit-service', editService) 
+adminRouter.post('/edit-service', editService)
 adminRouter.post('/delete-service', deleteService)
 adminRouter.get('/list', listService)
 adminRouter.get('/all-user', getAllUser)
@@ -78,6 +80,15 @@ adminRouter.post('/fix-deposits', runDepositFix)
 adminRouter.post('/announcement', updateAnnouncement)
 adminRouter.post('/membership-config', updateMembershipConfig)
 adminRouter.get('/membership-config', getMembershipConfig)
+adminRouter.get('/deposit-bonus', authAdmin, getDepositBonus)
+adminRouter.post('/deposit-bonus', authAdmin, updateDepositBonus)
+
+// Coupon routes
+adminRouter.post('/coupons', authAdmin, createCoupon)
+adminRouter.get('/coupons', authAdmin, listCoupons)
+adminRouter.delete('/coupons/:id', authAdmin, deleteCoupon)
+adminRouter.put('/coupons/:id/status', authAdmin, updateCouponStatus)
+adminRouter.put('/coupons/:id', authAdmin, updateCoupon)
 
 // reports
 adminRouter.get('/reports', getReportedOrders)

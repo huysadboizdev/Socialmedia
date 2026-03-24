@@ -10,6 +10,7 @@ const ConfirmDialog = ({
     cancelText = 'Hủy',
     type = 'info', // 'info', 'danger', 'success'
     showInput = false,
+    inputType = 'text',
     inputPlaceholder = 'Nhập lý do...',
     confirmLoading = false
 }) => {
@@ -54,13 +55,26 @@ const ConfirmDialog = ({
                     </p>
 
                     {showInput && (
-                        <div className="w-full mb-6">
-                            <textarea
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                placeholder={inputPlaceholder}
-                                className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm min-h-[80px] resize-none text-slate-700 dark:text-slate-200"
-                            />
+                        <div className="w-full mb-6 text-left">
+                            <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase ml-1">
+                                {inputPlaceholder}
+                            </label>
+                            {inputType === 'number' ? (
+                                <input
+                                    type="number"
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder="0"
+                                    className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm text-slate-700 dark:text-slate-200 font-bold"
+                                />
+                            ) : (
+                                <textarea
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder={inputPlaceholder}
+                                    className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm min-h-[80px] resize-none text-slate-700 dark:text-slate-200"
+                                />
+                            )}
                         </div>
                     )}
 

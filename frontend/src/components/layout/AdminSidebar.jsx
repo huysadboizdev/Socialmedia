@@ -65,6 +65,14 @@ export default function AdminSidebar({ onClose, unreadChatCount }) {
           onClick={handleItemClick}
         />
 
+         <NavItem 
+           label="Mã Giảm Giá" 
+           to="/admin/coupons" 
+           icon="confirmation_number" 
+           active={location.pathname === "/admin/coupons"} 
+           onClick={handleItemClick}
+         />
+
         <NavItem 
           label="Nạp Tiền" 
           to="/admin/deposits" 

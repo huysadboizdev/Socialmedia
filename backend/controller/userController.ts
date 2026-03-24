@@ -62,7 +62,7 @@ export const updatePassword: RequestHandler = async (req, res) => {
 // service & order
 export const handleUserService: RequestHandler = async (req, res) => {
   try {
-    const { userId, action, serviceId, quantity, link, note, details, orderId, issue, reportNote } = req.body as { 
+    const { userId, action, serviceId, quantity, link, note, details, orderId, issue, reportNote, couponCode } = req.body as { 
       userId: string, 
       action: string, 
       serviceId: string, 
@@ -72,9 +72,10 @@ export const handleUserService: RequestHandler = async (req, res) => {
       details?: Record<string, unknown>,
       orderId?: string,
       issue?: string,
-      reportNote?: string
+      reportNote?: string,
+      couponCode?: string
     }
-    const result = await userService.handleService(userId, { action, serviceId, quantity: Number(quantity), link, note, details, orderId, issue, reportNote })
+    const result = await userService.handleService(userId, { action, serviceId, quantity: Number(quantity), link, note, details, orderId, issue, reportNote, couponCode })
     res.json(result)
   } catch (err: unknown) {
     res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
@@ -135,8 +136,10 @@ export const attendance: RequestHandler = async (req, res) => {
     const { userId } = req.body as { userId: string }
     const result = await userService.checkAttendance(userId)
     res.json(result)
+    return
   } catch (err: unknown) {
-    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ success: false, message: err instanceof Error ? err.message : String(err) })
+    return
   }
 }
 

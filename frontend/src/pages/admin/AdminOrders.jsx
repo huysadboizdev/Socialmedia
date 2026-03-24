@@ -452,6 +452,9 @@ const AdminOrders = () => {
                            key === 'password' ? 'Mật khẩu' :
                            key === 'twoFaCode' ? 'Mã 2FA' :
                            key === 'contactInfo' ? 'Liên hệ' :
+                           key === 'udid' ? 'Mã UDID' :
+                           key === 'email' ? 'Email' :
+                           key === 'locketLink' ? 'Link Locket' :
                            key}
                         </span>
                         <span className="font-bold text-slate-700 dark:text-slate-200 break-all text-sm mt-0.5">{String(value)}</span>

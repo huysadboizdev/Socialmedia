@@ -1,6 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+// Assets (Currently commented out because they are missing in the mobile/assets folder)
+// import homeIcon from '../../assets/trangchu.png';
+// import servicesIcon from '../../assets/alll_list.gif';
+// import missionsIcon from '../../assets/điemanh.gif';
+// import depositIcon from '../../assets/naptien.png';
+// import profileIcon from '../../assets/thongtin.png';
+
 export default function TabLayout() {
   return (
     <Tabs

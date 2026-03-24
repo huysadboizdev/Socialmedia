@@ -133,17 +133,30 @@ export const handleWebhook = async (req: Request, res: Response) => {
                     }
 
                     // 6. Approve & Add Balance
+                    const { getSetting } = await import('../services/settingService.js');
+                    const bonusSetting = await getSetting('depositBonus') as { percent: number, expiry: string } | null;
+                    
+                    let bonusMessage = '';
+                    let finalAmount = amount;
+                    
+                    if (bonusSetting && bonusSetting.percent > 0 && bonusSetting.expiry && new Date(bonusSetting.expiry) > new Date()) {
+                        const bonusAmount = Math.floor(amount * (bonusSetting.percent / 100));
+                        finalAmount += bonusAmount;
+                        bonusMessage = ` (Khuyến mãi ${bonusSetting.percent}%)`;
+                    }
+
+                    transaction.status = 'approved';
+                    transaction.amount = finalAmount;
+                    transaction.description = `${transaction.description}${bonusMessage}`;
+                    await transaction.save();
+
                     const user = await userModel.findById(transaction.userId);
                     if (!user) {
                         console.error(`User not found for tx ${String(transaction._id)}`);
                         continue;
                     }
 
-                    transaction.status = 'approved';
-                    transaction.amount = amount;
-                    await transaction.save();
-
-                    user.balance = (user.balance || 0) + amount;
+                    user.balance = (user.balance || 0) + finalAmount;
                     await user.save();
 
                     const { updateUserDepositStats } = await import('../services/adminService.js');

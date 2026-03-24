@@ -6,6 +6,7 @@ import { getUserInfo } from '../../service/userService';
 import { AuthContext } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import NotificationModal from '../../components/NotificationModal';
 
 // Assets
 import sotienGif from '../../assets/sotien.gif';
@@ -21,6 +22,7 @@ export default function Home() {
   const [userData, setUserData] = useState(null);
   const [currentTime, setCurrentTime] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [isNoteVisible, setIsNoteVisible] = useState(true);
   
   // Local stats state removed as we use displayUser
 
@@ -75,6 +77,10 @@ export default function Home() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
+        <NotificationModal 
+          isOpen={isNoteVisible} 
+          onClose={() => setIsNoteVisible(false)} 
+        />
         {/* Header */}
         <View style={styles.header}>
             <View>

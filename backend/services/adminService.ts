@@ -206,7 +206,7 @@ export const removeService = async (serviceId: string) => {
 /**
  * Deposit Management
  */
-export const approveUserDeposit = async (transactionId: string) => {
+export const approveUserDeposit = async (transactionId: string, bonusPercent = 0) => {
     const transaction = await transactionModel.findById(transactionId)
     if (!transaction || transaction.status !== 'pending') {
         return { success: false, message: 'Invalid transaction' }
@@ -223,10 +223,27 @@ export const approveUserDeposit = async (transactionId: string) => {
 
     if (user) {
         transaction.oldBalance = user.balance - transaction.amount
-        transaction.newBalance = user.balance
+        
+        // Handle bonus calculation
+        if (bonusPercent > 0) {
+            const bonusAmount = Math.floor(transaction.amount * (bonusPercent / 100))
+            const updatedUser = await userModel.findByIdAndUpdate(
+                transaction.userId,
+                { $inc: { balance: bonusAmount } },
+                { new: true }
+            )
+            if (updatedUser) {
+                transaction.description = `Nạp tiền vào tài khoản (Khuyến mãi ${bonusPercent}%)`
+                transaction.amount += bonusAmount
+                transaction.newBalance = updatedUser.balance
+            }
+        } else {
+            transaction.newBalance = user.balance
+            transaction.description = 'Nạp tiền vào tài khoản'
+        }
+
         transaction.type = 'deposit'
         transaction.balanceType = 'profile'
-        transaction.description = 'Nạp tiền vào tài khoản'
         await transaction.save()
 
         // Update user deposit stats
@@ -484,21 +501,27 @@ export const fetchDashboardStats = async () => {
 /**
  * Manual Balance Adjustment
  */
-export const adjustUserBalance = async (userId: string, amount: number) => {
+export const adjustUserBalance = async (userId: string, amount: number, bonusPercent = 0) => {
     const user = await userModel.findById(userId)
     if (!user) return { success: false, message: 'User not found' }
 
+    // Calculate total including bonus if it's a positive adjustment
+    const bonusAmount = (amount > 0 && bonusPercent > 0) ? Math.floor(amount * (bonusPercent / 100)) : 0;
+    const finalAmount = amount + bonusAmount;
+
     // Update user balance
-    user.balance = (user.balance || 0) + amount
+    user.balance = (user.balance || 0) + finalAmount
     await user.save()
 
     // Create a transaction record for history
     const transaction = new transactionModel({
         userId,
-        amount: amount,
+        amount: finalAmount,
         type: 'adjustment',
-        description: amount >= 0 ? 'Admin cộng tiền' : 'Admin trừ tiền',
-        oldBalance: user.balance - amount,
+        description: bonusAmount > 0 
+            ? `Admin cộng tiền (Gốc: ${amount.toLocaleString()}₫, KM: ${bonusPercent}%)` 
+            : (amount >= 0 ? 'Admin cộng tiền' : 'Admin trừ tiền'),
+        oldBalance: user.balance - finalAmount,
         newBalance: user.balance,
         balanceType: 'profile',
         status: 'approved',
@@ -506,10 +529,12 @@ export const adjustUserBalance = async (userId: string, amount: number) => {
     })
     await transaction.save()
 
+    const displayAmount = bonusAmount > 0 ? `${amount.toLocaleString()}₫ + ${bonusPercent}% KM` : `${amount.toLocaleString()}₫`;
+
 
     return { 
         success: true, 
-        message: `Successfully adjusted balance by ${amount.toLocaleString()}₫`,
+        message: `Successfully adjusted balance by ${displayAmount}`,
         newBalance: user.balance 
     }
 }

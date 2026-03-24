@@ -63,9 +63,16 @@ const AdminUsers = () => {
       return;
     }
 
+    const bonusStr = window.prompt(`Nhập % khuyến mãi cho "${username}" (Để 0 nếu không có):`, "0");
+    const bonusPercent = parseInt(bonusStr || "0") || 0;
+
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(`${API_URL}/api/admin/adjust-balance`, { userId, amount }, {
+      const res = await axios.post(`${API_URL}/api/admin/adjust-balance`, { 
+        userId, 
+        amount,
+        bonusPercent 
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

@@ -88,8 +88,8 @@ export const deleteService: RequestHandler = async (req, res) => {
 
 export const approveDeposit: RequestHandler = async (req, res) => {
     try {
-        const { transactionId } = req.body as { transactionId: string }
-        const result = await adminService.approveUserDeposit(transactionId)
+        const { transactionId, bonusPercent } = req.body as { transactionId: string, bonusPercent?: number }
+        const result = await adminService.approveUserDeposit(transactionId, bonusPercent ?? 0)
         res.json(result)
     } catch (error: unknown) {
         res.status(500).json({ success: false, message: 'Error server', error: error instanceof Error ? error.message : String(error) })
@@ -182,12 +182,12 @@ export const getDashboardStats: RequestHandler = async (_req, res) => {
 
 export const adjustBalance: RequestHandler = async (req, res) => {
     try {
-        const { userId, amount } = req.body as { userId: string, amount: string | number }
+        const { userId, amount, bonusPercent } = req.body as { userId: string, amount: string | number, bonusPercent?: string | number }
         if (!userId) {
             res.status(400).json({ success: false, message: 'User ID is required' })
             return
         }
-        const result = await adminService.adjustUserBalance(userId, Number(amount || 0))
+        const result = await adminService.adjustUserBalance(userId, Number(amount || 0), Number(bonusPercent ?? 0))
         res.json(result)
     } catch (error: unknown) {
         res.status(400).json({ success: false, message: error instanceof Error ? error.message : String(error) })

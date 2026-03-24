@@ -10,6 +10,7 @@ import transactionModel from '../models/transactionModel.js'
 import notificationModel from '../models/notificationModel.js'
 import submissionModel from '../models/submissionModel.js'
 import settingModel from '../models/settingModel.js'
+import couponModel from '../models/couponModel.js'
 
 function getISOWeek(date: Date) {
   const d = new Date(date.getTime());
@@ -80,6 +81,7 @@ interface HandleServiceParams {
   orderId?: string;
   issue?: string;
   reportNote?: string;
+  couponCode?: string;
 }
 
 interface ChangePasswordParams {
@@ -322,7 +324,8 @@ function validateEmail(email: string): boolean {
 /**
  * Handle services and orders for user
  */
-export const handleService = async (userId: string, { action, serviceId, quantity = 1, link, note, details, orderId, issue, reportNote }: HandleServiceParams) => {
+export const handleService = async (userId: string, params: HandleServiceParams) => {
+    const { action, serviceId, quantity = 1, link, note, details, orderId, issue, reportNote, couponCode } = params;
     if (action === 'getServices') {
         const [services, user, rankConfig] = await Promise.all([
             serviceModel.find().lean(),
@@ -352,20 +355,88 @@ export const handleService = async (userId: string, { action, serviceId, quantit
 
         const rankDisplay = rank.name;
 
-        if (discountPctPercent > 0) {
-             const discountedServices = services.map(s => {
-                  const safePrice = s.price || 0;
-                  return {
-                      ...s,
-                      originalPrice: safePrice,
-                      price: safePrice - Math.floor(safePrice * (discountPctPercent / 100)),
-                      name: `[Giảm ${discountPctPercent}%] ` + s.name
-                  };
-             });
-             return { success: true, services: discountedServices, discountPct: discountPctPercent, rankName: rankDisplay }
+        const processedServices = services.map(s => {
+            const safePrice = s.price || 0;
+            if (discountPctPercent > 0) {
+                return {
+                    ...s,
+                    originalPrice: safePrice,
+                    price: safePrice - Math.floor(safePrice * (discountPctPercent / 100)),
+                    name: `[Giảm ${discountPctPercent}%] ` + s.name
+                };
+            }
+            return {
+                ...s,
+                originalPrice: safePrice,
+                price: safePrice
+            };
+        });
+
+        return { success: true, services: processedServices, discountPct: discountPctPercent, rankName: rankDisplay };
+    }
+
+    if (action === 'validateCoupon') {
+        const [user, rankConfig] = await Promise.all([
+            userModel.findById(userId),
+            settingModel.findOne({ key: 'membershipConfig' })
+        ]);
+        if (!user) return { success: false, message: 'User not found' };
+
+        const rank = getUserRank(user.totalDeposit, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+        let discountPctPercent = rank.discount * 100;
+
+        try {
+            const weeklyWinner = await settingModel.findOne({ key: 'weeklyTopWinner' });
+            if (weeklyWinner?.value) {
+                const winnerVal = weeklyWinner.value as { userId: string, forWeek: string };
+                if (winnerVal.userId === userId) {
+                    const currentWeek = getISOWeek(new Date());
+                    if (winnerVal.forWeek === currentWeek) {
+                        discountPctPercent = Math.max(discountPctPercent, 20);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching weekly discount in validateCoupon", err);
         }
 
-        return { success: true, services, rankName: rankDisplay };
+        const couponInfo = {
+            rankDiscount: discountPctPercent,
+            couponDiscountPercent: 0,
+            couponDiscountAmount: 0,
+            isValid: false,
+            message: ''
+        };
+
+        if (couponCode) {
+            const coupon = await couponModel.findOne({ 
+                code: couponCode.toUpperCase(), 
+                isActive: true,
+                expiryDate: { $gt: new Date() }
+            });
+
+            if (coupon) {
+                if (coupon.usedQuantity < coupon.totalQuantity) {
+                    couponInfo.isValid = true;
+                    couponInfo.couponDiscountPercent = coupon.discountPercent;
+                    couponInfo.couponDiscountAmount = coupon.discountAmount;
+                } else {
+                    couponInfo.message = 'Mã giảm giá đã hết lượt sử dụng';
+                }
+            } else {
+                couponInfo.message = 'Mã giảm giá không hợp lệ hoặc đã hết hạn';
+            }
+        }
+
+        return { 
+            success: couponCode ? couponInfo.isValid : true, 
+            userDiscounts: {
+                rankPercent: rank.discount * 100,
+                weeklyPercent: (discountPctPercent > rank.discount * 100) ? 20 : 0
+            },
+            couponInfo: couponInfo.isValid ? couponInfo : null,
+            error: couponInfo.message
+        };
     }
 
     if (action === 'reportOrder') {
@@ -452,8 +523,9 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         const totalPrice = service.price * quantity
         let finalPrice = totalPrice;
 
-        // Apply Highest Discount (Tiered Membership vs Weekly Reward)
+        // Apply Highest Discount (Tiered Membership vs Weekly Reward vs Coupon)
         let discountPercent = 0;
+        let couponDiscountAmount = 0;
         
         // 1. Tiered Membership Discount
         const rank = getUserRank(user.totalDeposit, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
@@ -473,8 +545,37 @@ export const handleService = async (userId: string, { action, serviceId, quantit
             console.error("Error applying weekly discount in order", err);
         }
 
+        // 3. Coupon Code Discount
+        let appliedCoupon = null;
+        if (couponCode) {
+            const coupon = await couponModel.findOne({ 
+                code: couponCode.toUpperCase(), 
+                isActive: true,
+                expiryDate: { $gt: new Date() }
+            });
+
+            if (coupon) {
+                if (coupon.usedQuantity < coupon.totalQuantity) {
+                    if (coupon.discountPercent > 0) {
+                        discountPercent = Math.max(discountPercent, coupon.discountPercent / 100);
+                    } else if (coupon.discountAmount > 0) {
+                        couponDiscountAmount = coupon.discountAmount;
+                    }
+                    appliedCoupon = coupon;
+                } else {
+                    return { success: false, message: 'Mã giảm giá đã hết lượt sử dụng!' }
+                }
+            } else {
+                return { success: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn!' }
+            }
+        }
+
         if (discountPercent > 0) {
             finalPrice = totalPrice - Math.floor(totalPrice * discountPercent);
+        }
+        
+        if (couponDiscountAmount > 0) {
+            finalPrice = Math.max(0, finalPrice - couponDiscountAmount);
         }
 
         if ((user.balance || 0) < finalPrice) {
@@ -495,12 +596,18 @@ export const handleService = async (userId: string, { action, serviceId, quantit
         user.balance = (user.balance || 0) - finalPrice
         await user.save()
 
+        // Increment coupon usage
+        if (appliedCoupon) {
+            appliedCoupon.usedQuantity += 1;
+            await appliedCoupon.save();
+        }
+
         // Create transaction record for the payment
         await transactionModel.create({
             userId,
             amount: -finalPrice,
             type: 'payment',
-            description: `Thanh toán đơn hàng: ${service.name}`,
+            description: `Thanh toán đơn hàng: ${service.name}${appliedCoupon ? ` (Mã: ${appliedCoupon.code})` : ''}`,
             oldBalance: user.balance + finalPrice,
             newBalance: user.balance,
             balanceType: 'profile',
@@ -713,42 +820,43 @@ export const checkAttendance = async (userId: string) => {
 
     const now = new Date()
     
-    // Parse the date as UTC but set it to the numbers of Vietnam Time
-    const vnNowString = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
-    const vnNow = new Date(vnNowString)
-    
-    const today = new Date(vnNow.getFullYear(), vnNow.getMonth(), vnNow.getDate()).getTime()
-    
-    let lastCheckIn = 0
-    let lastCheckInMonth = -1
-    let lastCheckInYear = -1
+    // Stable helper for Vietnam Date String (YYYY-MM-DD)
+    // Using Intl.DateTimeFormat parts for maximum reliability across Node versions
+    const getVNDateParts = (d: Date) => {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).formatToParts(d);
+        const day = parts.find(p => p.type === 'day')?.value;
+        const month = parts.find(p => p.type === 'month')?.value;
+        const year = parts.find(p => p.type === 'year')?.value;
+        return { day, month, year, dateStr: `${year}-${month}-${day}` };
+    }
+
+    const vnNow = getVNDateParts(now);
     
     if (user.attendance.lastDate) {
-        const last = new Date(user.attendance.lastDate)
-        const vnLastString = last.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
-        const vnLast = new Date(vnLastString)
+        const vnLast = getVNDateParts(new Date(user.attendance.lastDate));
         
-        lastCheckIn = new Date(vnLast.getFullYear(), vnLast.getMonth(), vnLast.getDate()).getTime()
-        lastCheckInMonth = vnLast.getMonth()
-        lastCheckInYear = vnLast.getFullYear()
+        // Already checked in today?
+        if (vnLast.dateStr === vnNow.dateStr) {
+            return { success: false, message: 'Bạn đã điểm danh hôm nay rồi!' }
+        }
+
+        // Reset streak on new month
+        if (vnLast.month !== vnNow.month || vnLast.year !== vnNow.year) {
+            user.attendance.streak = 0
+        }
     }
 
-    // Check if already checked in today
-    if (lastCheckIn === today) {
-        return { success: false, message: 'Bạn đã điểm danh hôm nay rồi!' }
-    }
-
-    // Check if it's a new month to reset the streak
-    if (lastCheckIn !== 0 && (vnNow.getMonth() !== lastCheckInMonth || vnNow.getFullYear() !== lastCheckInYear)) {
+    // Cycle reset: If current streak is 7, restart at 1
+    if (user.attendance.streak >= 7) {
         user.attendance.streak = 0
     }
 
-    // Cannot check in more than 7 times a month
-    if (user.attendance.streak >= 7) {
-        return { success: false, message: 'Bạn đã điểm danh tối đa 7 lần trong tháng này. Vui lòng quay lại vào tháng sau!' }
-    }
-
-    // Increment check-in count for the month
+    // Increment
     user.attendance.streak += 1
 
     const rewards: Record<number, number | undefined> = {
