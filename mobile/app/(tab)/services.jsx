@@ -10,19 +10,32 @@ import api from '../../service/userService';
 import igGif from '../../assets/ig.gif';
 import fbGif from '../../assets/fb.gif';
 import tiktokGif from '../../assets/tiktok.gif';
-// Placeholders for others if not available as GIFs, fallback to icons or standard images if you have them.
-// User requested "put where they are in frontend". Frontend has these 3 clearly. 
-// For others (Youtube, Shopee, Telegram), I'll stick to Ionicons for now or check if I have GIFs.
-// Checking file list: fb.gif, ig.gif, tiktok.gif exist. 
+import youtubeLogo from '../../assets/Youtube_logo.png';
+import locketLogo from '../../assets/locket_gold.png';
+import spotifyLogo from '../../assets/spotify.png';
+import appleLogo from '../../assets/certification.png';
+
+// Preview Assets
+import youtube1 from '../../assets/youtube1.jpg';
+import youtube2 from '../../assets/youtube2.jpg';
+import youtube3 from '../../assets/youtube3.jpg';
+import locket1 from '../../assets/Locket1.jpg';
+import locket2 from '../../assets/Locket2.jpg';
+import spotifyPreview from '../../assets/spotify.jpg';
+import cert1 from '../../assets/chungchi1.jpg';
+import cert2 from '../../assets/chungchi2.jpg';
+import cert3 from '../../assets/chungchi3.jpg';
+import cert4 from '../../assets/chungchi4.jpg';
 
 // Platform Config
 const PLATFORMS = [
   { id: 'Instagram', name: 'Instagram', type: 'gif', source: igGif, color: '#E1306C' },
   { id: 'Facebook', name: 'Facebook', type: 'gif', source: fbGif, color: '#1877F2' },
   { id: 'TikTok', name: 'TikTok', type: 'gif', source: tiktokGif, color: '#ffffff' },
-  { id: 'Youtube', name: 'Youtube', type: 'icon', icon: 'logo-youtube', color: '#FF0000' },
-  { id: 'Shopee', name: 'Shopee', type: 'icon', icon: 'cart', color: '#EE4D2D' },
-  { id: 'Telegram', name: 'Telegram', type: 'icon', icon: 'paper-plane', color: '#0088cc' },
+  { id: 'YouTube', name: 'Youtube', type: 'gif', source: youtubeLogo, color: '#FF0000' },
+  { id: 'Locket', name: 'Locket', type: 'gif', source: locketLogo, color: '#FFB800' },
+  { id: 'Spotify', name: 'Spotify', type: 'gif', source: spotifyLogo, color: '#1DB954' },
+  { id: 'Apple', name: 'Apple', type: 'gif', source: appleLogo, color: '#A2AAAD' },
 ];
 
 export default function Services() {
@@ -112,6 +125,43 @@ export default function Services() {
 
   const displayServices = platformServices.filter(s => s.category === activeCategory);
 
+  const isPremiumPlatform = (platform) => ['YouTube', 'Spotify', 'Apple', 'Locket'].includes(platform);
+
+  const PLATFORM_NOTES = {
+    YouTube: [
+        'Cần cung cấp email chính xác để nhận lời mời Family.',
+        'Nhập thông tin liên hệ chính xác để Admin có thể hỗ trợ nâng cấp.',
+        'Thời gian xử lý từ 10-60 phút.',
+        'Bảo hành 1 đổi 1 trong thời gian sử dụng.'
+    ],
+    Spotify: [
+        'Cần nhập Email chính xác để nhận invite Family.',
+        'Nhập thông tin liên hệ chính xác để Admin có thể hỗ trợ nâng cấp.',
+        'Nếu nâng cấp chính chủ, cần thoát Family hiện tại (nếu có).',
+        'Thời gian hoàn thành từ 5-20 phút.',
+        'Bảo hành full thời gian đăng ký.'
+    ],
+    Locket: [
+        'Cần nhập đúng Link profile Locket cá nhân.',
+        'Nhập thông tin liên hệ chính xác để Admin có thể hỗ trợ nâng cấp.',
+        'Thời gian hoàn thành từ 5-30 phút tùy thời điểm.',
+        'Bảo hành trọn đời theo thời gian gói đã mua.'
+    ],
+    Apple: [
+        'Cần nhập UDID chính xác, sai UDID không được hoàn tiền.',
+        'Nhập thông tin liên hệ để Admin thông báo khi có Cert.',
+        'Thời gian cấp Cert từ 24h - 72h theo quy định Apple.',
+        'Bảo hành 1 năm cho tất cả các loại Cert.'
+    ]
+  };
+
+  const PLATFORM_PREVIEWS = {
+    YouTube: [youtube1, youtube2, youtube3],
+    Spotify: [spotifyPreview],
+    Locket: [locket1, locket2],
+    Apple: [cert1, cert2, cert3, cert4],
+  };
+
   useEffect(() => {
     if (displayServices.length > 0) {
          if (!selectedService || !displayServices.find(s => s._id === selectedService._id)) {
@@ -148,6 +198,17 @@ export default function Services() {
             username,
             password,
             twoFaCode,
+            contactInfo
+        };
+    } else if (isPremiumPlatform(activePlatform)) {
+        if (!link || !contactInfo) {
+            Alert.alert('Lỗi', 'Vui lòng nhập Email/Link và Thông tin liên hệ');
+            return;
+        }
+        qty = 1;
+        details = {
+            ...details,
+            email: link,
             contactInfo
         };
     } else {
@@ -191,7 +252,7 @@ export default function Services() {
     }
   };
 
-  const totalPrice = selectedService ? (activeCategory === 'Tích Xanh' ? 1 : (parseInt(quantity) || 0)) * selectedService.price : 0;
+  const totalPrice = selectedService ? (activeCategory === 'Tích Xanh' || isPremiumPlatform(activePlatform) ? 1 : (parseInt(quantity) || 0)) * selectedService.price : 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -365,6 +426,41 @@ export default function Services() {
                                     />
                                 </View>
                             </>
+                        ) : isPremiumPlatform(activePlatform) ? (
+                            <>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Email tài khoản {activePlatform}</Text>
+                                    <TextInput 
+                                        style={styles.input}
+                                        value={link}
+                                        onChangeText={setLink}
+                                        placeholder={`Nhập email ${activePlatform} của bạn`}
+                                        placeholderTextColor="#52525b"
+                                        autoCapitalize="none"
+                                    />
+                                </View>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Link Facebook hoặc SĐT Zalo liên hệ:</Text>
+                                    <TextInput 
+                                        style={styles.input}
+                                        value={contactInfo}
+                                        onChangeText={setContactInfo}
+                                        placeholder="Nhập link FB hoặc SĐT Zalo"
+                                        placeholderTextColor="#52525b"
+                                    />
+                                </View>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Mã giảm giá</Text>
+                                    <TextInput 
+                                        style={styles.input}
+                                        value={discount}
+                                        onChangeText={setDiscount}
+                                        placeholder="CODE"
+                                        placeholderTextColor="#52525b"
+                                        autoCapitalize="characters"
+                                    />
+                                </View>
+                            </>
                         ) : (
                             /* Standard Fields */
                             <View style={styles.rowInputs}>
@@ -424,6 +520,42 @@ export default function Services() {
                                 <Text style={styles.submitButtonText}>Thanh toán</Text>
                             )}
                         </TouchableOpacity>
+
+                        {/* Platform Notes - Web Style */}
+                        {PLATFORM_NOTES[activePlatform] && (
+                            <View style={styles.noteSection}>
+                                <View style={styles.noteHeader}>
+                                    <Ionicons name="alert-circle" size={18} color={colors.primary} />
+                                    <Text style={styles.noteTitle}>Lưu ý khi nâng cấp</Text>
+                                </View>
+                                {PLATFORM_NOTES[activePlatform].map((note, idx) => (
+                                    <View key={idx} style={styles.noteRow}>
+                                        <Text style={styles.noteBullet}>•</Text>
+                                        <Text style={styles.noteText}>{note}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+
+                        {/* Platform Previews - Web Style */}
+                        {PLATFORM_PREVIEWS[activePlatform] && (
+                            <View style={styles.previewSection}>
+                                <View style={styles.noteHeader}>
+                                    <Ionicons name="image" size={18} color={colors.primary} />
+                                    <Text style={styles.noteTitle}>Xem trước giao diện</Text>
+                                </View>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.previewScroll}>
+                                    {PLATFORM_PREVIEWS[activePlatform].map((img, idx) => (
+                                        <View key={idx} style={styles.previewCard}>
+                                            <Image source={img} style={styles.previewImage} resizeMode="cover" />
+                                            <View style={styles.previewOverlay}>
+                                                <Text style={styles.previewOverlayText}>{activePlatform}</Text>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
                     </View>
                 )}
                 </>
@@ -641,6 +773,75 @@ const getStyles = (colors) => StyleSheet.create({
   rowInputs: {
     flexDirection: 'row',
     gap: 12,
+  },
+  noteSection: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  noteTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  noteRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    paddingRight: 10,
+  },
+  noteBullet: {
+    color: colors.primary,
+    marginRight: 8,
+    fontSize: 14,
+  },
+  noteText: {
+    color: colors.subtext,
+    fontSize: 12,
+    lineHeight: 18,
+    flex: 1,
+  },
+  previewSection: {
+    marginTop: 16,
+    gap: 12,
+  },
+  previewScroll: {
+    // horizontal
+  },
+  previewCard: {
+    width: 200,
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0, // Hidden by default, but let's just make it subtle
+  },
+  previewOverlayText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   viewTabs: {
     flexDirection: 'row',

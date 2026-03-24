@@ -158,15 +158,53 @@ export default function AdminServices() {
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
             <View style={[styles.platformBadge, { 
-                backgroundColor: item.platform === 'Facebook' ? '#eff6ff' : item.platform === 'TikTok' ? '#F3F4F6' : '#fdf2f8',
-                borderColor: item.platform === 'Facebook' ? '#bfdbfe' : item.platform === 'TikTok' ? '#E5E7EB' : '#fbcfe8'
+                backgroundColor: 
+                    item.platform === 'Facebook' ? '#eff6ff' : 
+                    item.platform === 'TikTok' ? '#F3F4F6' : 
+                    item.platform === 'Instagram' ? '#fdf2f8' :
+                    item.platform === 'YouTube' ? '#fef2f2' :
+                    item.platform === 'Locket' ? '#fffbeb' :
+                    item.platform === 'Spotify' ? '#f0fdf4' :
+                    '#f8fafc',
+                borderColor: 
+                    item.platform === 'Facebook' ? '#bfdbfe' : 
+                    item.platform === 'TikTok' ? '#E5E7EB' : 
+                    item.platform === 'Instagram' ? '#fbcfe8' :
+                    item.platform === 'YouTube' ? '#fecaca' :
+                    item.platform === 'Locket' ? '#fde68a' :
+                    item.platform === 'Spotify' ? '#bbf7d0' :
+                    '#e2e8f0'
             }]}>
                 <Ionicons 
-                    name={item.platform === 'Facebook' ? "logo-facebook" : item.platform === 'TikTok' ? "logo-tiktok" : "logo-instagram"} 
+                    name={
+                        item.platform === 'Facebook' ? "logo-facebook" : 
+                        item.platform === 'TikTok' ? "logo-tiktok" : 
+                        item.platform === 'Instagram' ? "logo-instagram" :
+                        item.platform === 'YouTube' ? "logo-youtube" :
+                        item.platform === 'Apple' ? "logo-apple" :
+                        "star"
+                    } 
                     size={14} 
-                    color={item.platform === 'Facebook' ? '#2563eb' : item.platform === 'TikTok' ? '#374151' : '#db2777'} 
+                    color={
+                        item.platform === 'Facebook' ? '#2563eb' : 
+                        item.platform === 'TikTok' ? '#374151' : 
+                        item.platform === 'Instagram' ? '#db2777' :
+                        item.platform === 'YouTube' ? '#ef4444' :
+                        item.platform === 'Locket' ? '#d97706' :
+                        item.platform === 'Spotify' ? '#16a34a' :
+                        '#4b5563'
+                    } 
                 />
-                <Text style={[styles.platformText, { color: item.platform === 'Facebook' ? '#1d4ed8' : item.platform === 'TikTok' ? '#374151' : '#be185d' }]}>
+                <Text style={[styles.platformText, { 
+                    color: 
+                        item.platform === 'Facebook' ? '#1d4ed8' : 
+                        item.platform === 'TikTok' ? '#374151' : 
+                        item.platform === 'Instagram' ? '#be185d' :
+                        item.platform === 'YouTube' ? '#dc2626' :
+                        item.platform === 'Locket' ? '#b45309' :
+                        item.platform === 'Spotify' ? '#15803d' :
+                        '#374151'
+                }]}>
                     {item.platform}
                 </Text>
             </View>
@@ -248,7 +286,7 @@ export default function AdminServices() {
 
       {showFilters && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
-             {['All', 'Facebook', 'TikTok', 'Instagram'].map(platform => (
+             {['All', 'Facebook', 'TikTok', 'Instagram', 'YouTube', 'Locket', 'Spotify', 'Apple'].map(platform => (
                  <TouchableOpacity 
                     key={platform}
                     style={[styles.filterChip, filterPlatform === platform && styles.activeChip]}
@@ -298,18 +336,19 @@ export default function AdminServices() {
                     <View style={styles.row}>
                         <View style={[styles.inputGroup, { flex: 1 }]}>
                             <Text style={styles.label}>Nền tảng</Text>
-                             {/* Simple Platform Selector for Demo - Could be Modal Picker */}
-                            <View style={styles.radioGroup}>
-                                {['Facebook', 'TikTok', 'Instagram'].map(p => (
-                                    <TouchableOpacity 
-                                        key={p} 
-                                        style={[styles.radioBtn, formData.platform === p && styles.radioBtnActive]}
-                                        onPress={() => setFormData({...formData, platform: p})}
-                                    >
-                                        <Text style={[styles.radioText, formData.platform === p && { color: 'white' }]}>{p}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View style={styles.radioGroup}>
+                                    {['Facebook', 'TikTok', 'Instagram', 'YouTube', 'Locket', 'Spotify', 'Apple'].map(p => (
+                                        <TouchableOpacity 
+                                            key={p} 
+                                            style={[styles.radioBtn, formData.platform === p && styles.radioBtnActive]}
+                                            onPress={() => setFormData({...formData, platform: p})}
+                                        >
+                                            <Text style={[styles.radioText, formData.platform === p && { color: 'white' }]}>{p}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
                         </View>
                     </View>
 
@@ -324,18 +363,25 @@ export default function AdminServices() {
                         />
                     </View>
 
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Danh mục</Text>
+                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            <View style={styles.radioGroup}>
+                                {['Tăng Like', 'Tăng Theo Dõi', 'Tăng Share', 'Tích Xanh', 'Premium', 'Chứng Chỉ'].map(c => (
+                                    <TouchableOpacity 
+                                        key={c} 
+                                        style={[styles.radioBtn, formData.category === c && styles.radioBtnActive]}
+                                        onPress={() => setFormData({...formData, category: c})}
+                                    >
+                                        <Text style={[styles.radioText, formData.category === c && { color: 'white' }]}>{c}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
+
                     <View style={styles.row}>
-                        <View style={[styles.inputGroup, { flex: 1 }]}>
-                            <Text style={styles.label}>Danh mục</Text>
-                             <TextInput 
-                                style={styles.input}
-                                value={formData.category}
-                                onChangeText={t => setFormData({...formData, category: t})}
-                                placeholder="Tăng Like"
-                                placeholderTextColor={colors.subtext}
-                            />
-                        </View>
-                         <View style={[styles.inputGroup, { width: 120 }]}>
+                         <View style={[styles.inputGroup, { flex: 1 }]}>
                             <Text style={styles.label}>Giá (đ)</Text>
                              <TextInput 
                                 style={styles.input}
@@ -348,16 +394,18 @@ export default function AdminServices() {
                         </View>
                     </View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Tốc độ</Text>
-                        <TextInput 
-                            style={styles.input}
-                            value={formData.speed}
-                            onChangeText={t => setFormData({...formData, speed: t})}
-                            placeholder="VD: Nhanh, 5k/ngày"
-                            placeholderTextColor={colors.subtext}
-                        />
-                    </View>
+                    {formData.category !== 'Premium' && formData.category !== 'Chứng Chỉ' && (
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Tốc độ</Text>
+                            <TextInput 
+                                style={styles.input}
+                                value={formData.speed}
+                                onChangeText={t => setFormData({...formData, speed: t})}
+                                placeholder="VD: Nhanh, 5k/ngày"
+                                placeholderTextColor={colors.subtext}
+                            />
+                        </View>
+                    )}
                     
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Mô tả</Text>

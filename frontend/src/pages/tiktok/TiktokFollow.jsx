@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import useCoupon from '@/hooks/useCoupon';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
 import { validateLink } from '@/lib/validation';
 import OrderSuccessModal from '@/components/common/OrderSuccessModal';
@@ -37,6 +38,7 @@ const TiktokFollow = () => {
             id: s._id,
             label: s.description || s.name,
             price: s.price,
+            originalPrice: s.originalPrice,
             status: s.isMaintenance ? 'Bảo trì' : (s.isActive ? 'Hoạt động' : 'Tắt'),
             isMaintenance: s.isMaintenance === true,
             speed: s.speed
@@ -57,7 +59,12 @@ const TiktokFollow = () => {
 
   const currentServer = services.find(s => s.id === selectedServer) || services[0];
 
-  const totalPrice = (parseInt(formData.quantity) || 0) * (currentServer?.price || 0);
+  const { discountedPrice, originalPrice, hasDiscount, isCouponApplied, isValidating, error: couponError } = useCoupon(
+    formData.discount,
+    formData.quantity,
+    currentServer?.originalPrice || currentServer?.price,
+    API_URL
+  );
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -91,7 +98,8 @@ const TiktokFollow = () => {
         serviceId: selectedServer,
         quantity: parseInt(formData.quantity),
         link: formData.link,
-        note: formData.note
+        note: formData.note,
+        couponCode: formData.discount
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -259,14 +267,25 @@ const TiktokFollow = () => {
                   <label className="block text-sm font-bold text-[#2e1065] dark:text-purple-400 mb-2.5">
                     Mã giảm giá
                   </label>
-                  <input
-                    type="text"
-                    name="discount"
-                    value={formData.discount}
-                    onChange={handleInputChange}
-                    className="w-full p-4 border border-[#6f42c1] rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-4 focus:ring-purple-500/10 transition-all font-semibold"
-                    placeholder="Nhập mã giảm giá..."
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="discount"
+                      value={formData.discount}
+                      onChange={handleInputChange}
+                      className={`w-full p-4 border rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-4 focus:ring-purple-500/10 transition-all font-semibold ${
+                        couponError ? 'border-red-500' : hasDiscount ? 'border-green-500' : 'border-[#6f42c1]'
+                      }`}
+                      placeholder="Nhập mã giảm giá..."
+                    />
+                    {isValidating && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <span className="material-symbols-outlined animate-spin text-purple-600">sync</span>
+                      </div>
+                    )}
+                  </div>
+                  {couponError && <p className="text-xs text-red-500 mt-1 font-medium">{couponError}</p>}
+                  {isCouponApplied && <p className="text-xs text-green-500 mt-1 font-medium">Đã áp dụng mã giảm giá!</p>}
                 </div>
               </div>
 
@@ -288,7 +307,16 @@ const TiktokFollow = () => {
               {/* Total Footer */}
               <div className="bg-[#6610f2] text-white p-6 rounded-xl mb-6 text-center shadow-xl shadow-purple-500/20">
                 <div className="text-2xl font-bold mb-2">
-                  Tổng thanh toán: <span className="text-[#ffc107]">{totalPrice.toLocaleString('vi-VN')} VNĐ</span>
+                  Tổng thanh toán: <span className="text-[#ffc107]">
+                    {hasDiscount ? (
+                      <>
+                        <span className="line-through opacity-50 mr-2 text-lg">{originalPrice.toLocaleString('vi-VN')}</span>
+                        {discountedPrice.toLocaleString('vi-VN')}
+                      </>
+                    ) : (
+                      originalPrice.toLocaleString('vi-VN')
+                    )} VNĐ
+                  </span>
                 </div>
                 <div className="font-medium opacity-90">
                   Cho <span className="font-bold text-[#ffc107]">{formData.quantity || 0}</span> Lượt tương tác

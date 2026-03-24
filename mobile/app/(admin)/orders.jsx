@@ -4,12 +4,10 @@ import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../service/userService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
 export default function AdminOrders() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const router = useRouter();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -179,12 +177,7 @@ export default function AdminOrders() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
        <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => router.push('/(admin)/index')}>
-                <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Đơn Hàng</Text>
-        </View>
+          <Text style={styles.headerTitle}>Đơn Hàng</Text>
       </View>
 
       <View style={styles.searchContainer}>

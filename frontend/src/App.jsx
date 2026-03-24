@@ -27,6 +27,10 @@ const InstagramFollow = lazy(() => import("./pages/instagram/InstagramFollow"))
 const InstagramLike = lazy(() => import("./pages/instagram/InstagramLike"))
 const InstagramShare = lazy(() => import("./pages/instagram/InstagramShare"))
 const InstagramBlue = lazy(() => import("./pages/instagram/InstagramBlue"))
+const LocketGold = lazy(() => import("./pages/premium/LocketGold"))
+const YoutubePremium = lazy(() => import("./pages/premium/YoutubePremium"))
+const SpotifyPremium = lazy(() => import("./pages/premium/SpotifyPremium"))
+const AppleCert = lazy(() => import("./pages/premium/AppleCert"))
 const Support = lazy(() => import("./pages/Support"))
 const Terms = lazy(() => import("./pages/Terms"))
 
@@ -46,6 +50,7 @@ const AdminReports = lazy(() => import("./pages/admin/AdminReports"))
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"))
 const AdminDeposits = lazy(() => import("./pages/admin/AdminDeposits"))
 const AdminChat = lazy(() => import("./pages/admin/AdminChat"))
+const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"))
 
 function App() {
   return (
@@ -93,6 +98,10 @@ function App() {
             <Route path="/service/instagram-like" element={<InstagramLike />} />
             <Route path="/service/instagram-share" element={<InstagramShare />} />
             <Route path="/service/instagram-blue" element={<InstagramBlue />} />
+            <Route path="/service/locket-gold" element={<LocketGold />} />
+            <Route path="/service/youtube-premium" element={<YoutubePremium />} />
+            <Route path="/service/spotify-premium" element={<SpotifyPremium />} />
+            <Route path="/service/apple-cert" element={<AppleCert />} />
             <Route path="/support" element={<Support />} />
             <Route path="/terms" element={<Terms />} />
           </Route>
@@ -111,6 +120,7 @@ function App() {
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/chat" element={<AdminChat />} />
+            <Route path="/admin/coupons" element={<AdminCoupons />} />
           </Route>
         </Routes>
       </Suspense>

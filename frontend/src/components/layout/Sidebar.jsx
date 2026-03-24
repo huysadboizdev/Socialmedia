@@ -17,6 +17,11 @@ import allGif from "@/assets/alll_list.gif"
 import supportGif from "@/assets/supportusser.gif"
 import dieukhoanGif from "@/assets/dieukhoan.gif"
 import verifiedGif from "@/assets/vefied.jpg"
+import locketPng from "@/assets/locket_gold.png"
+import youtubePng from "@/assets/Youtube_logo.png"
+import spotifyPng from "@/assets/spotify.png"
+import certificationPng from "@/assets/certification.png"
+import premiumGif from "@/assets/Dịch Vụ Prenium.jpg"
 
 export default function Sidebar({ onClose }) {
   const location = useLocation();
@@ -26,6 +31,7 @@ export default function Sidebar({ onClose }) {
   const [isTiktokExpanded, setIsTiktokExpanded] = useState(false);
   const [isInstagramExpanded, setIsInstagramExpanded] = useState(false);
   const [isBlueTickExpanded, setIsBlueTickExpanded] = useState(false);
+  const [isPremiumExpanded, setIsPremiumExpanded] = useState(false);
 
   const handleItemClick = (label) => {
     setActiveItem(label);
@@ -37,8 +43,8 @@ export default function Sidebar({ onClose }) {
   return (
     <div className="h-full flex flex-col bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 overflow-hidden transition-colors duration-300">
       {/* Logo Header */}
-      <div className="px-6 py-5 flex items-center gap-3 flex-shrink-0 bg-white dark:bg-slate-900 z-10">
-        <img src="/icon2.svg" alt="" className="w-8 h-8 object-contain" onError={(e) => e.target.style.display='none'}/>
+      <div className="px-6 py-5 flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900 z-10">
+        <img src="/icon2.svg" alt="" className="w-8 h-8 shrink-0 object-contain" onError={(e) => e.target.style.display='none'}/>
         <div className="flex flex-col">
            <span className="font-bold text-lg text-slate-800 dark:text-slate-100 leading-none tracking-tight flex items-center gap-1">
              HUYTICHXANH
@@ -97,6 +103,24 @@ export default function Sidebar({ onClose }) {
            <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
              <NavItem label="Tích Xanh Facebook" to="/service/facebook-blue" icon={fbGif} active={location.pathname === "/service/facebook-blue"} onClick={() => handleItemClick("Tích Xanh Facebook")} isSubItem />
              <NavItem label="Tích Xanh Instagram" to="/service/instagram-blue" icon={igGif} active={location.pathname === "/service/instagram-blue"} onClick={() => handleItemClick("Tích Xanh Instagram")} isSubItem />
+           </div>
+        )}
+
+        <NavItem 
+          label="Dịch Vụ Premium" 
+          icon={premiumGif} 
+          active={activeItem === "Dịch Vụ Premium" || isPremiumExpanded} 
+          hasSubmenu
+          isOpen={isPremiumExpanded}
+          onClick={() => setIsPremiumExpanded(!isPremiumExpanded)} 
+        />
+
+        {isPremiumExpanded && (
+           <div className="ml-[18px] pl-3 space-y-1 border-l border-dashed border-slate-200 dark:border-slate-800 my-1">
+             <NavItem label="Locket Gold" to="/service/locket-gold" icon={locketPng} active={location.pathname === "/service/locket-gold"} onClick={() => handleItemClick("Locket Gold")} isSubItem />
+             <NavItem label="Youtube Premium" to="/service/youtube-premium" icon={youtubePng} active={location.pathname === "/service/youtube-premium"} onClick={() => handleItemClick("Youtube Premium")} isSubItem />
+             <NavItem label="Spotify Premium" to="/service/spotify-premium" icon={spotifyPng} active={location.pathname === "/service/spotify-premium"} onClick={() => handleItemClick("Spotify Premium")} isSubItem />
+             <NavItem label="Chứng Chỉ Apple" to="/service/apple-cert" icon={certificationPng} active={location.pathname === "/service/apple-cert"} onClick={() => handleItemClick("Chứng Chỉ Apple")} isSubItem />
            </div>
         )}
         

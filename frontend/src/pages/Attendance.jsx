@@ -30,58 +30,46 @@ export default function Attendance() {
         });
         
         if (res.data.success) {
-           const { attendance } = res.data.user;
-             // Calculate local state based on attendance data
-           if (attendance) {
-             let isToday = false;
-             const lastDate = attendance.lastDate ? new Date(attendance.lastDate) : null;
-             
-             // Get current time in Vietnam timezone
-             const nowStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
-             const vnNow = new Date(nowStr);
-             
-             if (lastDate) {
-               // Get lastDate in Vietnam timezone
-               const lastStr = lastDate.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
-               const vnLast = new Date(lastStr);
-               
-               if (vnLast.getDate() === vnNow.getDate() && 
-                   vnLast.getMonth() === vnNow.getMonth() && 
-                   vnLast.getFullYear() === vnNow.getFullYear()) {
-                 isToday = true;
-               }
-             }
+          const { attendance } = res.data.user;
+          // Calculate local state based on attendance data
+          if (attendance) {
+            // Stable helper for Vietnam Date parts
+            const getVNDateParts = (d) => {
+              const parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Ho_Chi_Minh',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+              }).formatToParts(d);
+              
+              const day = parts.find(p => p.type === 'day')?.value;
+              const month = parts.find(p => p.type === 'month')?.value;
+              const year = parts.find(p => p.type === 'year')?.value;
+              return { day, month, year, dateStr: `${year}-${month}-${day}` };
+            };
 
-             setClaimedToday(isToday);
-             // If claimed today, streak is current. If not, streak is pending (show next day)
-             // But if last date was > 1 day ago, streak will reset on next claim. 
-             // We can just show current streak from DB.
-             // Wait, if I missed yesterday, my DB streak is old. 
-             // Logic in backend resets streak on claim. Frontend should just show current DB streak if claimedToday, 
-             // else show streak + 1 (potential) OR just show DB streak and highlight next.
+            const now = new Date();
+            const vnNow = getVNDateParts(now);
+            let isToday = false;
+            let computedStreak = attendance.streak || 0;
 
-             // Simplification: Just show DB streak. 
-             // If claimedToday, streak is X. 
-             // If NOT claimedToday, active day is streak + 1 (unless streak broken, then 1).
-             // However, without claiming, we don't know if streak is broken yet safely without duplicating backend logic.
-             // Let's rely on stored streak. 
-             
-             // Improvement:
-             // If lastDate was yesterday, next is streak + 1.
-             // If lastDate was older, next is 1.
-             // If lastDate was today, current is streak.
-             
-             let computedStreak = attendance.streak || 0;
-             if (lastDate) { 
-                 const lastStr = lastDate.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
-                 const vnLast = new Date(lastStr);
-                 if (vnNow.getMonth() !== vnLast.getMonth() || vnNow.getFullYear() !== vnLast.getFullYear()) {
-                    computedStreak = 0; // Reset on new month
-                 }
-             }
+            if (attendance.lastDate) {
+              const lastDate = new Date(attendance.lastDate);
+              const vnLast = getVNDateParts(lastDate);
 
-             setStreak(computedStreak); 
-           }
+              if (vnLast.dateStr === vnNow.dateStr) {
+                isToday = true;
+              }
+
+              // Visual reset if month changed
+              if (vnLast.month !== vnNow.month || vnLast.year !== vnNow.year) {
+                computedStreak = 0;
+              }
+            }
+
+            setClaimedToday(isToday);
+            setStreak(computedStreak);
+          }
         }
       } catch (error) {
         console.error("Fetch user error:", error);
@@ -98,15 +86,6 @@ export default function Attendance() {
     
     try {
       const token = localStorage.getItem("token");
-      // Use user ID from token middleware, but controller expects body... wait, controller extracts from body. 
-      // Middleware usually injects into req.user or req.body?
-      // authUser middleware usually adds userId to req.body.
-      // So effectively we just need empty body or userId if client stores it.
-      // But typically authUser handles it. Let's check authUser usage.
-      // Usually passing {} is enough if authUser injects. 
-      // Checking userController: const { userId } = req.body.
-      // OK.
-      
       const res = await axios.post(`${API_URL}/api/user/attendance`, {}, {
          headers: { Authorization: `Bearer ${token}` }
       });
@@ -131,24 +110,12 @@ export default function Attendance() {
   };
 
   const getDayStatus = (day) => {
-    // If we have claimed today, the streak includes today.
-    // e.g. streak 1, claimed today -> Day 1 is claimed.
-    // e.g. streak 2, claimed today -> Day 1, 2 claimed.
-    
-    // If NOT claimed today:
-    // e.g. streak 1 (from yesterday) -> Day 1 claimed. Day 2 is "today" (pending).
-    // e.g. streak 0 (broken) -> Day 1 is "today".
-    
     if (loading) return "pending";
 
     if (claimedToday) {
        if (day <= streak) return "claimed";
        return "pending";
     } else {
-       // Not claimed yet
-       // If streak is 0 (broken/new), Day 1 is today.
-       // If streak is 1 (yesterday), Day 1 claimed, Day 2 today.
-       
        if (day <= streak) return "claimed";
        if (day === streak + 1) return "today";
        if (streak === 0 && day === 1) return "today"; // New/Reset
@@ -237,17 +204,17 @@ export default function Attendance() {
           {/* Action Button */}
           <button 
             onClick={handleClaim}
-            disabled={claimedToday || streak >= 7 || loading}
+            disabled={claimedToday || loading}
             className={`
               w-full md:w-auto px-24 py-6 rounded-[35px] font-bold text-xl tracking-tight
               transition-all duration-500 active:scale-[0.98]
-              ${(claimedToday || streak >= 7)
+              ${claimedToday
                 ? "bg-[#edf2f7] dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed" 
                 : "bg-gradient-to-r from-[#FFB6C1] to-[#FF69B4] text-white shadow-xl shadow-pink-200 dark:shadow-none hover:shadow-2xl hover:-translate-y-1"
               }
             `}
           >
-            {loading ? "Đang tải..." : streak >= 7 ? "Hẹn tháng sau nhé!" : claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh ngay"}
+            {loading ? "Đang tải..." : (streak >= 7 && !claimedToday) ? "Điểm danh ngay" : claimedToday ? "Ngày mai hãy quay lại nhé" : "Điểm danh ngay"}
           </button>
 
         </div>

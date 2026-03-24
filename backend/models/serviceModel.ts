@@ -10,7 +10,7 @@ const serviceSchema = new Schema({
     platform: {
       type: String,
       required: true,
-      enum: ["Facebook", "Instagram", "TikTok"]
+      enum: ["Facebook", "Instagram", "TikTok", "YouTube", "Locket", "Spotify", "Apple"]
     },
     category: {
       type: String,

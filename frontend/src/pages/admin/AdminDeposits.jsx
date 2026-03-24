@@ -48,6 +48,12 @@ const AdminDeposits = () => {
         confirmLoading: false
   });
 
+  // Automated Bonus State
+  const [autoBonusPercent, setAutoBonusPercent] = useState('0');
+  const [autoBonusDays, setAutoBonusDays] = useState('0');
+  const [currentBonus, setCurrentBonus] = useState(null);
+  const [bonusUpdating, setBonusUpdating] = useState(false);
+
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
   const fetchDeposits = React.useCallback(async () => {
@@ -68,28 +74,76 @@ const AdminDeposits = () => {
     }
   }, [API_URL]);
 
+  const fetchBonusSetting = React.useCallback(async () => {
+    try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API_URL}/api/admin/deposit-bonus`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+            setCurrentBonus(res.data.bonus);
+            setAutoBonusPercent(String(res.data.bonus.percent || 0));
+        }
+    } catch (error) {
+        console.error("Error fetching bonus setting:", error);
+    }
+  }, [API_URL]);
+
   useEffect(() => {
     fetchDeposits();
-  }, [fetchDeposits]);
+    fetchBonusSetting();
+  }, [fetchDeposits, fetchBonusSetting]);
+
+  const handleUpdateBonus = async () => {
+      try {
+          setBonusUpdating(true);
+          const token = localStorage.getItem("token");
+          
+          // Calculate expiry date
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + parseInt(autoBonusDays));
+          
+          const res = await axios.post(`${API_URL}/api/admin/deposit-bonus`, {
+              percent: parseInt(autoBonusPercent),
+              expiry: expiryDate.toISOString()
+          }, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (res.data.success) {
+              toast.success("Cập nhật khuyến mãi thành công");
+              fetchBonusSetting();
+          }
+      } catch (error) {
+          toast.error("Lỗi khi cập nhật khuyến mãi");
+      } finally {
+          setBonusUpdating(false);
+      }
+  }
 
   // Handler for opening approve dialog
   const handleApproveClick = (deposit) => {
     setDialogConfig({
         isOpen: true,
         title: 'Duyệt Nạp Tiền',
-        message: `Xác nhận duyệt nạp ${deposit.amount.toLocaleString()}đ cho ${deposit.userId?.username}?`,
+        message: `Xác nhận duyệt nạp ${deposit.amount.toLocaleString()}đ cho ${deposit.userId?.username}? Bạn có muốn cộng thêm % khuyến mãi không?`,
         type: 'success',
-        confirmText: 'Duyệt Ngay',
-        showInput: false,
-        onConfirm: () => processApprove(deposit._id)
+        confirmText: 'Duyệt & Cộng KM',
+        showInput: true,
+        inputType: 'number',
+        inputPlaceholder: '% Khuyến mãi (để 0 nếu không có)',
+        onConfirm: (bonus) => processApprove(deposit._id, bonus)
     });
   };
 
-  const processApprove = async (transactionId) => {
+  const processApprove = async (transactionId, bonusPercent = 0) => {
     try {
       setDialogConfig(prev => ({ ...prev, confirmLoading: true }));
       const token = localStorage.getItem("token");
-      const res = await axios.post(`${API_URL}/api/admin/approve`, { transactionId }, {
+      const res = await axios.post(`${API_URL}/api/admin/approve`, { 
+        transactionId, 
+        bonusPercent: parseInt(bonusPercent) || 0 
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -183,6 +237,93 @@ const AdminDeposits = () => {
             >
                 Lịch sử ({deposits.filter(d => d.status !== 'pending').length})
             </button>
+        </div>
+      </div>
+
+      {/* Automated Bonus Configuration */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                    <span className="material-symbols-outlined">campaign</span>
+                </div>
+                <div>
+                    <h2 className="font-bold text-slate-800 dark:text-white">Cấu hình khuyến mãi tự động</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Áp dụng cho tất cả nạp tiền QR</p>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider ml-1">Phần trăm khuyến mãi (%)</label>
+                    <Input 
+                        type="number" 
+                        value={autoBonusPercent} 
+                        onChange={(e) => setAutoBonusPercent(e.target.value)}
+                        placeholder="Ví dụ: 10"
+                        className="bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 h-10 focus-visible:ring-purple-500/20"
+                    />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider ml-1">Số ngày áp dụng</label>
+                    <Input 
+                        type="number" 
+                        value={autoBonusDays} 
+                        onChange={(e) => setAutoBonusDays(e.target.value)}
+                        placeholder="Ví dụ: 2"
+                        className="bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 h-10 focus-visible:ring-purple-500/20"
+                    />
+                </div>
+            </div>
+            
+            <Button 
+                onClick={handleUpdateBonus} 
+                className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold h-10 shadow-lg shadow-purple-500/20 transition-all active:scale-95"
+                disabled={bonusUpdating}
+            >
+                {bonusUpdating ? (
+                    <span className="material-symbols-outlined animate-spin mr-2">sync</span>
+                ) : (
+                    <span className="material-symbols-outlined mr-2">check_circle</span>
+                )}
+                Kích hoạt khuyến mãi
+            </Button>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm flex flex-col justify-center relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] dark:opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
+                <span className="material-symbols-outlined text-9xl">percent</span>
+            </div>
+            
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Trạng thái hiện tại</p>
+            {currentBonus && currentBonus.percent > 0 && new Date(currentBonus.expiry) > new Date() ? (
+                <div className="space-y-3">
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-purple-600 dark:text-purple-400">+{currentBonus.percent}%</span>
+                        <span className="text-sm font-bold text-slate-400 dark:text-slate-500 lowercase">Khuyến mãi</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-lg w-fit">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <span className="text-[11px] font-bold text-green-700 dark:text-green-400 uppercase tracking-tighter">Đang hoạt động</span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Hết hạn vào:</p>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{new Date(currentBonus.expiry).toLocaleString('vi-VN')}</p>
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-slate-300 dark:text-slate-700">None</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg w-fit text-slate-400">
+                        <span className="text-[11px] font-bold uppercase tracking-tighter text-slate-500 dark:text-slate-500">Chưa kích hoạt</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
+                        Thiết lập % khuyến mãi để khuyến khích người dùng nạp tiền.
+                    </p>
+                </div>
+            )}
         </div>
       </div>
 

@@ -104,15 +104,20 @@ const AdminServices = () => {
     try {
       const token = localStorage.getItem("token");
       let res;
+      let submissionData = { ...formData };
+      if ((formData.category === 'Premium' || formData.category === 'Chứng Chỉ') && !formData.speed) {
+        submissionData.speed = 'Dịch vụ Premium';
+      }
+
       if (editingService) {
         res = await axios.post(`${API_URL}/api/admin/edit-service`, {
-          ...formData,
+          ...submissionData,
           serviceId: editingService._id
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        res = await axios.post(`${API_URL}/api/admin/add-service`, formData, {
+        res = await axios.post(`${API_URL}/api/admin/add-service`, submissionData, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -172,8 +177,8 @@ const AdminServices = () => {
     }
   };
 
-  const platforms = [...new Set(services.map(s => s.platform))];
-  const categories = [...new Set(services.map(s => s.category))];
+  const platforms = [...new Set(['Facebook', 'TikTok', 'Instagram', 'YouTube', 'Locket', 'Spotify', 'Apple', ...services.map(s => s.platform)])];
+  const categories = [...new Set(['Tăng Like', 'Tăng Theo Dõi', 'Tăng Share', 'Tích Xanh', 'Premium', 'Chứng Chỉ', ...services.map(s => s.category)])];
 
   return (
     <div className="p-4 md:p-6 space-y-6 bg-[#f8f9fa] dark:bg-slate-950 min-h-full transition-colors duration-300">
@@ -281,13 +286,17 @@ const AdminServices = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                         service.platform === 'Facebook' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                         service.platform === 'TikTok' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
-                         'bg-pink-50 text-pink-600 border border-pink-100'
-                       }`}>
-                         {service.platform}
-                       </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          service.platform === 'Facebook' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                          service.platform === 'TikTok' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
+                          service.platform === 'YouTube' ? 'bg-red-50 text-red-600 border border-red-100' :
+                          service.platform === 'Locket' ? 'bg-yellow-50 text-yellow-600 border border-yellow-200' :
+                          service.platform === 'Spotify' ? 'bg-green-50 text-green-600 border border-green-100' :
+                          service.platform === 'Apple' ? 'bg-slate-900 text-white border border-slate-800' :
+                          'bg-pink-50 text-pink-600 border border-pink-100'
+                        }`}>
+                          {service.platform}
+                        </span>
                     </TableCell>
                     <TableCell className="text-center">
                       <span className="text-sm font-bold text-purple-600">{service.price.toLocaleString()}</span>
@@ -434,6 +443,10 @@ const AdminServices = () => {
                       <SelectItem value="Facebook">Facebook</SelectItem>
                       <SelectItem value="TikTok">TikTok</SelectItem>
                       <SelectItem value="Instagram">Instagram</SelectItem>
+                      <SelectItem value="YouTube">YouTube</SelectItem>
+                      <SelectItem value="Locket">Locket</SelectItem>
+                      <SelectItem value="Spotify">Spotify</SelectItem>
+                      <SelectItem value="Apple">Apple</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -451,6 +464,8 @@ const AdminServices = () => {
                       <SelectItem value="Tăng Theo Dõi">Tăng Theo Dõi</SelectItem>
                       <SelectItem value="Tăng Share">Tăng Share</SelectItem>
                       <SelectItem value="Tích Xanh">Tích Xanh</SelectItem>
+                      <SelectItem value="Premium">Premium</SelectItem>
+                      <SelectItem value="Chứng Chỉ">Chứng Chỉ</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -479,23 +494,27 @@ const AdminServices = () => {
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Tốc độ chạy</label>
-                  <Input 
-                    required
-                    placeholder="VD: Siêu nhanh, 24h..."
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
-                    value={formData.speed}
-                    onChange={(e) => setFormData({...formData, speed: e.target.value})}
-                  />
-                </div>
+                {formData.category !== 'Premium' && formData.category !== 'Chứng Chỉ' && (
+                  <div className="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Tốc độ chạy</label>
+                    <input 
+                      required
+                      placeholder="VD: Siêu nhanh, 24h..."
+                      className="w-full p-3 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white text-sm outline-none focus:ring-2 focus:ring-purple-500/20"
+                      value={formData.speed}
+                      onChange={(e) => setFormData({...formData, speed: e.target.value})}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Mô tả chi tiết</label>
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">
+                  {formData.category === 'Premium' || formData.category === 'Chứng Chỉ' ? 'Thông tin gói / Quyền lợi' : 'Mô tả chi tiết'}
+                </label>
                 <textarea 
                   rows="3"
-                  placeholder="Nhập mô tả về dịch vụ..."
+                  placeholder={formData.category === 'Premium' || formData.category === 'Chứng Chỉ' ? "VD: Xem phim 4K, Nghe nhạc offline..." : "Nhập mô tả về dịch vụ..."}
                   className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none transition-all"
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}

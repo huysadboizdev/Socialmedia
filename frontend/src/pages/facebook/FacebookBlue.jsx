@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { validateLink, validateGmail } from '@/lib/validation';
+import useCoupon from '@/hooks/useCoupon';
 import OrderSuccessModal from '@/components/common/OrderSuccessModal';
 
 const FacebookBlue = () => {
@@ -15,10 +16,18 @@ const FacebookBlue = () => {
     password: '',
     twoFaCode: '',
     contactInfo: '',
-    note: ''
+    note: '',
+    discount: ''
   });
 
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+
+  const { discountedPrice, originalPrice, hasDiscount, isCouponApplied, isValidating, error: couponError } = useCoupon(
+    formData.discount,
+    1, // Fixed quantity for Blue services
+    selectedService?.originalPrice || selectedService?.price,
+    API_URL
+  );
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -80,6 +89,7 @@ const FacebookBlue = () => {
         quantity: 1,
         link: formData.targetUrl,
         note: formData.note,
+        couponCode: formData.discount,
         details: {
           username: formData.username,
           password: formData.password,
@@ -104,7 +114,8 @@ const FacebookBlue = () => {
           password: '',
           twoFaCode: '',
           contactInfo: '',
-          note: ''
+          note: '',
+          discount: ''
         });
       } else {
         toast.error(res.data.message || 'Lỗi khi đặt dịch vụ', { id: 'order-toast' });
@@ -275,6 +286,49 @@ const FacebookBlue = () => {
                 placeholder="Nhập link Facebook hoặc SĐT Zalo của bạn..."
                 disabled={selectedService?.isMaintenance}
               />
+            </div>
+
+            {/* Coupon and Price Preview */}
+            <div className="mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  Mã giảm giá (nếu có):
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="discount"
+                    value={formData.discount}
+                    onChange={handleInputChange}
+                    className={`w-full p-3 border rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                      couponError ? 'border-red-500' : hasDiscount ? 'border-green-500' : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                    placeholder="Nhập mã giảm giá..."
+                  />
+                  {isValidating && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <span className="material-symbols-outlined animate-spin text-blue-500 text-sm">sync</span>
+                    </div>
+                  )}
+                </div>
+                {couponError && <p className="text-[10px] text-red-500 mt-1 font-medium">{couponError}</p>}
+                {isCouponApplied && <p className="text-[10px] text-green-500 mt-1 font-medium">Đã áp dụng mã giảm giá!</p>}
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700 text-center">
+                <div className="text-xl font-bold mb-1 text-slate-800 dark:text-slate-100">
+                  Tổng thanh toán: <span className="text-blue-600 dark:text-blue-400">
+                    {hasDiscount ? (
+                      <>
+                        <span className="line-through opacity-50 mr-2 text-sm text-slate-400 font-normal">{originalPrice.toLocaleString('vi-VN')}</span>
+                        {discountedPrice.toLocaleString('vi-VN')}
+                      </>
+                    ) : (
+                      originalPrice.toLocaleString('vi-VN')
+                    )} VNĐ
+                  </span>
+                </div>
+              </div>
             </div>
 
             <button 

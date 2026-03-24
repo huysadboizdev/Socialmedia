@@ -81,6 +81,7 @@ export default function AdminLayout() {
       />
       
       {/* Hidden Tabs (accessible via navigation but not on bar) */}
+      <Tabs.Screen name="coupons" options={{ href: null }} />
       <Tabs.Screen name="services" options={{ href: null }} />
       <Tabs.Screen name="deposits" options={{ href: null }} />
       <Tabs.Screen name="missions" options={{ href: null }} />

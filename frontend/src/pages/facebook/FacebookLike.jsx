@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import useCoupon from '@/hooks/useCoupon';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
 import { validateLink } from '@/lib/validation';
 import OrderSuccessModal from '@/components/common/OrderSuccessModal';
@@ -38,6 +39,7 @@ const FacebookLike = () => {
             name: s.name,
             label: s.description || s.name,
             price: s.price,
+            originalPrice: s.originalPrice,
             status: s.isMaintenance ? 'Bảo trì' : (s.isActive ? 'Hoạt động' : 'Tắt'),
             isMaintenance: s.isMaintenance === true,
             speed: s.speed
@@ -46,8 +48,12 @@ const FacebookLike = () => {
             setSelectedServer(fbLikeServices[0]._id);
           }
         }
-      } catch (err) {
-        console.error("Fetch services error:", err);
+      } catch {
+        // The original catch block had (err) and console.error.
+        // The instruction snippet removes (err) and adds coupon-related state updates,
+        // which are out of context for this fetchServices function.
+        // To faithfully apply the "catch" without (err) and keep the original toast,
+        // while ignoring the out-of-context coupon lines:
         toast.error("Không thể tải danh sách máy chủ");
       } finally {
         setLoading(false);
@@ -58,7 +64,12 @@ const FacebookLike = () => {
 
   const currentServer = services.find(s => s.id === selectedServer) || services[0];
 
-  const totalPrice = (parseInt(formData.quantity) || 0) * (currentServer?.price || 0);
+  const { discountedPrice, originalPrice, hasDiscount, isCouponApplied, isValidating, error: couponError } = useCoupon(
+    formData.discount,
+    formData.quantity,
+    currentServer?.originalPrice || currentServer?.price,
+    API_URL
+  );
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -96,7 +107,8 @@ const FacebookLike = () => {
         serviceId: selectedServer,
         quantity: parseInt(formData.quantity),
         link: formData.link,
-        note: formData.note
+        note: formData.note,
+        couponCode: formData.discount
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -241,14 +253,25 @@ const FacebookLike = () => {
                 <label className="block text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
                   Mã giảm giá
                 </label>
-                <input
-                  type="text"
-                  name="discount"
-                  value={formData.discount}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-purple-300 dark:border-purple-800 rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                  placeholder="Nhập mã giảm giá..."
-                />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="discount"
+                      value={formData.discount}
+                      onChange={handleInputChange}
+                      className={`w-full p-3 border rounded bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-purple-500 transition-all ${
+                        couponError ? 'border-red-500' : hasDiscount ? 'border-green-500' : 'border-purple-300 dark:border-purple-800'
+                      }`}
+                      placeholder="Nhập mã giảm giá..."
+                    />
+                    {isValidating && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <span className="material-symbols-outlined animate-spin text-purple-600 text-sm">sync</span>
+                      </div>
+                    )}
+                  </div>
+                  {couponError && <p className="text-[10px] text-red-500 mt-1 font-medium">{couponError}</p>}
+                  {isCouponApplied && <p className="text-[10px] text-green-500 mt-1 font-medium">Đã áp dụng mã giảm giá!</p>}
               </div>
             </div>
 
@@ -270,7 +293,16 @@ const FacebookLike = () => {
             {/* Total Footer */}
             <div className="bg-purple-600 text-white p-4 rounded-lg mb-4 text-center">
               <div className="text-xl font-bold mb-1">
-                Tổng thanh toán: <span className="text-yellow-300">{totalPrice.toLocaleString('vi-VN')} VNĐ</span>
+                Tổng thanh toán: <span className="text-yellow-300">
+                  {hasDiscount ? (
+                    <>
+                      <span className="line-through opacity-50 mr-2 text-sm">{originalPrice.toLocaleString('vi-VN')}</span>
+                      {discountedPrice.toLocaleString('vi-VN')}
+                    </>
+                  ) : (
+                    originalPrice.toLocaleString('vi-VN')
+                  )} VNĐ
+                </span>
               </div>
               <div className="text-sm opacity-90">
                 Cho <span className="font-bold">{formData.quantity || 0}</span> Lượt tương tác
