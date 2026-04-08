@@ -43,7 +43,7 @@ function maskAmount(amount: number): string {
 /**
  * Get user membership rank and discount based on dynamic config
  */
-export function getUserRank(totalDeposit: number, config?: { tiers: { name: string, threshold: number, discount: number }[] }) {
+export function getUserRank(user: { totalDeposit: number, role?: string } | null, config?: { tiers: { name: string, threshold: number, discount: number }[] }) {
   const defaultTiers = [
     { name: 'Nhà phân phối', threshold: 20000000, discount: 0.3 },
     { name: 'Cộng tác viên', threshold: 5000000, discount: 0.1 },
@@ -55,8 +55,14 @@ export function getUserRank(totalDeposit: number, config?: { tiers: { name: stri
   // Sort tiers by threshold descending to find the highest match
   const sortedTiers = [...tiers].sort((a, b) => b.threshold - a.threshold);
   
+  if (user?.role === 'admin') {
+    return { name: 'Quản trị viên', discount: sortedTiers[0]?.discount ?? 0.3 };
+  }
+
+  const deposit = user?.totalDeposit ?? 0;
+
   for (const tier of sortedTiers) {
-    if (totalDeposit >= tier.threshold) {
+    if (deposit >= tier.threshold) {
       return { name: tier.name, discount: tier.discount };
     }
   }
@@ -145,7 +151,7 @@ export const getInfo = async (userId: string) => {
         settingModel.findOne({ key: 'membershipConfig' }),
         checkAttendance(userId)
     ]);
-    const rank = getUserRank(user.totalDeposit, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+    const rank = getUserRank(user, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
     
     return { 
         success: true, 
@@ -334,7 +340,7 @@ export const handleService = async (userId: string, params: HandleServiceParams)
         ]);
         
         let discountPctPercent = 0;
-        const rank = getUserRank(user?.totalDeposit ?? 0, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+        const rank = getUserRank(user ?? null, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
         discountPctPercent = rank.discount * 100;
 
         try {
@@ -345,12 +351,16 @@ export const handleService = async (userId: string, params: HandleServiceParams)
                  if (winnerVal.userId === userId) {
                      const currentWeek = getISOWeek(new Date());
                      if (winnerVal.forWeek === currentWeek) {
-                         discountPctPercent = Math.max(discountPctPercent, 20);
+                         discountPctPercent += 20;
                      }
                  }
              }
         } catch (err) {
              console.error("Error fetching weekly discount", err);
+        }
+
+        if (discountPctPercent > 90) {
+            discountPctPercent = 90;
         }
 
         const rankDisplay = rank.name;
@@ -382,8 +392,9 @@ export const handleService = async (userId: string, params: HandleServiceParams)
         ]);
         if (!user) return { success: false, message: 'User not found' };
 
-        const rank = getUserRank(user.totalDeposit, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+        const rank = getUserRank(user, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
         let discountPctPercent = rank.discount * 100;
+        let weeklyDiscountPercent = 0;
 
         try {
             const weeklyWinner = await settingModel.findOne({ key: 'weeklyTopWinner' });
@@ -392,7 +403,8 @@ export const handleService = async (userId: string, params: HandleServiceParams)
                 if (winnerVal.userId === userId) {
                     const currentWeek = getISOWeek(new Date());
                     if (winnerVal.forWeek === currentWeek) {
-                        discountPctPercent = Math.max(discountPctPercent, 20);
+                        weeklyDiscountPercent = 20;
+                        discountPctPercent += 20;
                     }
                 }
             }
@@ -432,7 +444,7 @@ export const handleService = async (userId: string, params: HandleServiceParams)
             success: couponCode ? couponInfo.isValid : true, 
             userDiscounts: {
                 rankPercent: rank.discount * 100,
-                weeklyPercent: (discountPctPercent > rank.discount * 100) ? 20 : 0
+                weeklyPercent: weeklyDiscountPercent
             },
             couponInfo: couponInfo.isValid ? couponInfo : null,
             error: couponInfo.message
@@ -528,8 +540,8 @@ export const handleService = async (userId: string, params: HandleServiceParams)
         let couponDiscountAmount = 0;
         
         // 1. Tiered Membership Discount
-        const rank = getUserRank(user.totalDeposit, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
-        discountPercent = Math.max(discountPercent, rank.discount);
+        const rank = getUserRank(user, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
+        discountPercent += rank.discount;
 
         // 2. Weekly Top Reward (20%)
         try {
@@ -538,7 +550,7 @@ export const handleService = async (userId: string, params: HandleServiceParams)
             if (winnerVal?.userId === userId) {
                 const currentWeek = getISOWeek(new Date());
                 if (winnerVal.forWeek === currentWeek) {
-                    discountPercent = Math.max(discountPercent, 0.2);
+                    discountPercent += 0.2;
                 }
             }
         } catch (err) {
@@ -557,7 +569,7 @@ export const handleService = async (userId: string, params: HandleServiceParams)
             if (coupon) {
                 if (coupon.usedQuantity < coupon.totalQuantity) {
                     if (coupon.discountPercent > 0) {
-                        discountPercent = Math.max(discountPercent, coupon.discountPercent / 100);
+                        discountPercent += (coupon.discountPercent / 100);
                     } else if (coupon.discountAmount > 0) {
                         couponDiscountAmount = coupon.discountAmount;
                     }
@@ -568,6 +580,10 @@ export const handleService = async (userId: string, params: HandleServiceParams)
             } else {
                 return { success: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn!' }
             }
+        }
+
+        if (discountPercent > 0.9) {
+            discountPercent = 0.9;
         }
 
         if (discountPercent > 0) {
@@ -1390,4 +1406,4 @@ export const getLeaderboardStats = async () => {
     currentQuarter: quarterMonth + 1
   };
 };
-
+

@@ -71,6 +71,43 @@ export default function Services() {
   const [orders, setOrders] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // --- Coupon Logic ---
+  const [couponData, setCouponData] = useState(null);
+  const [couponError, setCouponError] = useState(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
+  useEffect(() => {
+    const validateCoupon = async (code) => {
+      setIsValidatingCoupon(true);
+      try {
+        const res = await api.post('/user/service', { action: 'validateCoupon', couponCode: code.toUpperCase() });
+        if (res.data.success) {
+          setCouponData(res.data);
+          setCouponError(null);
+        } else {
+          if (res.data.userDiscounts) setCouponData(res.data);
+          else setCouponData(null);
+          setCouponError(res.data.message || res.data.error || "Mã không hợp lệ");
+        }
+      } catch {
+        setCouponData(null);
+        setCouponError("Lỗi kết nối");
+      } finally {
+        setIsValidatingCoupon(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (discount && discount.length > 0) {
+        validateCoupon(discount);
+      } else {
+        setCouponData(null);
+        setCouponError(null);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [discount]);
+
   useEffect(() => {
     fetchServices();
   }, []);
@@ -252,7 +289,31 @@ export default function Services() {
     }
   };
 
-  const totalPrice = selectedService ? (activeCategory === 'Tích Xanh' || isPremiumPlatform(activePlatform) ? 1 : (parseInt(quantity) || 0)) * selectedService.price : 0;
+  const getCalculatedPrice = () => {
+    if (!selectedService) return 0;
+    const baseQty = (activeCategory === 'Tích Xanh' || isPremiumPlatform(activePlatform)) ? 1 : (parseInt(quantity) || 0);
+
+    if (!discount || !couponData || !couponData.couponInfo || !couponData.couponInfo.isValid) {
+      return baseQty * selectedService.price;
+    }
+
+    const baseTotal = baseQty * (selectedService.originalPrice || selectedService.price);
+    const userRankPercent = (couponData.userDiscounts?.rankPercent || 0) / 100;
+    const weeklyPercent = (couponData.userDiscounts?.weeklyPercent || 0) / 100;
+    const couponPercent = (couponData.couponInfo?.couponDiscountPercent || 0) / 100;
+
+    let totalDiscountPercent = userRankPercent + weeklyPercent + couponPercent;
+    if (totalDiscountPercent > 0.9) totalDiscountPercent = 0.9;
+
+    let final = baseTotal - Math.floor(baseTotal * totalDiscountPercent);
+    const couponAmount = couponData.couponInfo?.couponDiscountAmount || 0;
+    if (couponAmount > 0) {
+      final = Math.max(0, final - couponAmount);
+    }
+    return final;
+  };
+
+  const totalPrice = getCalculatedPrice();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -501,9 +562,23 @@ export default function Services() {
                             />
                         </View>
 
+                        {couponError && discount.length > 0 && (
+                            <Text style={{ color: colors.danger, fontSize: 12, marginTop: -8, paddingHorizontal: 4 }}>
+                                {couponError}
+                            </Text>
+                        )}
+                        {couponData?.couponInfo?.isValid && (
+                            <Text style={{ color: colors.success, fontSize: 12, marginTop: -8, paddingHorizontal: 4 }}>
+                                Đã áp dụng mã giảm giá thành công!
+                            </Text>
+                        )}
                         <View style={styles.totalContainer}>
                              <Text style={styles.totalLabel}>Tổng cộng:</Text>
-                             <Text style={styles.totalValue}>{totalPrice.toLocaleString('vi-VN')} VND</Text>
+                             {isValidatingCoupon ? (
+                                <ActivityIndicator size="small" color={colors.primary} />
+                             ) : (
+                                <Text style={styles.totalValue}>{totalPrice.toLocaleString('vi-VN')} VND</Text>
+                             )}
                         </View>
 
                         <TouchableOpacity 
