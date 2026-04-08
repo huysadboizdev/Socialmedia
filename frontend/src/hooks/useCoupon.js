@@ -54,9 +54,13 @@ const useCoupon = (couponCode, quantity, baseUnitPrice, API_URL) => {
     const weeklyPercent = (couponData.userDiscounts?.weeklyPercent || 0) / 100;
     const couponPercent = (couponData.couponInfo?.couponDiscountPercent || 0) / 100;
     
-    const maxPercent = Math.max(userRankPercent, weeklyPercent, couponPercent);
+    let totalDiscountPercent = userRankPercent + weeklyPercent + couponPercent;
     
-    let final = baseTotal - Math.floor(baseTotal * maxPercent);
+    if (totalDiscountPercent > 0.9) {
+      totalDiscountPercent = 0.9;
+    }
+    
+    let final = baseTotal - Math.floor(baseTotal * totalDiscountPercent);
     
     const couponAmount = couponData.couponInfo?.couponDiscountAmount || 0;
     if (couponAmount > 0) {
