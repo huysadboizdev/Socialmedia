@@ -8,6 +8,7 @@ import passport from 'passport'
 import connectDB from './config/mongodb.js'
 import connectCloudinary from './config/cloudinary.js'
 import fs from 'fs'
+import { initCronJobs } from './services/cronService.js'
 
 if (!fs.existsSync('./uploads')) {
   fs.mkdirSync('./uploads')
@@ -64,5 +65,6 @@ await connectCloudinary()
 
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+  initCronJobs();
 })
 server.setTimeout(300000);

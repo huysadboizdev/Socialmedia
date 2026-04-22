@@ -11,6 +11,7 @@ import notificationModel from '../models/notificationModel.js'
 import submissionModel from '../models/submissionModel.js'
 import settingModel from '../models/settingModel.js'
 import couponModel from '../models/couponModel.js'
+import { addSmmOrder } from './smmApiService.js'
 
 function getISOWeek(date: Date) {
   const d = new Date(date.getTime());
@@ -598,6 +599,17 @@ export const handleService = async (userId: string, params: HandleServiceParams)
             return { success: false, message: 'Số dư tài khoản không đủ. Vui lòng nạp thêm!' }
         }
 
+        let externalOrderId = "";
+        const apiProviderId = service.get('apiProviderId') as string | undefined;
+        if (apiProviderId) {
+            const apiRes = await addSmmOrder(apiProviderId, link ?? "", quantity);
+            if (apiRes.order) {
+                externalOrderId = String(apiRes.order);
+            } else {
+                return { success: false, message: `Lỗi kết nối nhà cung cấp: ${apiRes.error ?? 'Kiểm tra lại link hoặc số lượng.'}` };
+            }
+        }
+
         const order = await orderModel.create({
             userId,
             service: serviceId,
@@ -606,7 +618,8 @@ export const handleService = async (userId: string, params: HandleServiceParams)
             link: link ?? "",
             note: note ?? "",
             details: details ?? {},
-            status: 'Pending'
+            status: 'Pending',
+            externalOrderId: externalOrderId
         })
 
         user.balance = (user.balance || 0) - finalPrice
@@ -1375,7 +1388,7 @@ export const getLeaderboardStats = async () => {
   const startOfQuarter = new Date(now.getFullYear(), quarterMonth * 3, 1);
 
   const [monthlyLeaders, quarterlyLeaders] = await Promise.all([
-    transactionModel.aggregate([
+    transactionModel.aggregate<{ total: number, user: { fullName?: string, username: string } }>([
       { $match: { type: 'deposit', status: 'approved', createdAt: { $gte: startOfMonth } } },
       { $group: { _id: '$userId', total: { $sum: '$amount' } } },
       { $sort: { total: -1 } },
@@ -1383,7 +1396,7 @@ export const getLeaderboardStats = async () => {
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
       { $unwind: '$user' }
     ]),
-    transactionModel.aggregate([
+    transactionModel.aggregate<{ total: number, user: { fullName?: string, username: string } }>([
       { $match: { type: 'deposit', status: 'approved', createdAt: { $gte: startOfQuarter } } },
       { $group: { _id: '$userId', total: { $sum: '$amount' } } },
       { $sort: { total: -1 } },
@@ -1393,15 +1406,15 @@ export const getLeaderboardStats = async () => {
     ])
   ]);
 
-  const formatRow = (row: { total: number, user: { fullName?: string, username: string } }) => ({
-    name: maskName(row.user.fullName ?? row.user.username),
-    amount: maskAmount(row.total),
+  const formatRow = (row: { total: number, user: { fullName?: string, username: string } }, index: number) => ({
+    name: index === 0 ? (row.user.fullName ?? row.user.username) : maskName(row.user.fullName ?? row.user.username),
+    amount: index === 0 ? row.total.toLocaleString('vi-VN') : maskAmount(row.total),
     rawAmount: row.total
   });
   return {
     success: true,
-    monthly: monthlyLeaders.map(formatRow),
-    quarterly: quarterlyLeaders.map(formatRow),
+    monthly: monthlyLeaders.map((row, i) => formatRow(row, i)),
+    quarterly: quarterlyLeaders.map((row, i) => formatRow(row, i)),
     currentMonth: now.getMonth() + 1,
     currentQuarter: quarterMonth + 1
   };

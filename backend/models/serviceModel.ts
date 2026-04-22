@@ -36,6 +36,14 @@ const serviceSchema = new Schema({
     isMaintenance: {
       type: Boolean,
       default: false
+    },
+    apiProviderId: {
+      type: String,
+      default: ""
+    },
+    apiProvider: {
+      type: String,
+      default: "smm79"
     }
   },
   {
