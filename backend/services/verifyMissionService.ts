@@ -16,7 +16,13 @@ interface ValidationResult {
  * Check for significant blue color (Facebook Active Like)
  * Heuristic: Active buttons are typically bright blue (#0866FF, #0084FF)
  */
-async function hasBlueLikeText(buffer: Buffer, worker: Tesseract.Worker): Promise<boolean> {
+export interface BlueCheckResult {
+    hasKeyword: boolean;
+    hasBlueIcon: boolean;
+    bluePixelCount: number;
+}
+
+async function hasBlueLikeText(buffer: Buffer, worker: Tesseract.Worker): Promise<BlueCheckResult> {
     try {
         const metadata = await sharp(buffer).metadata();
         const height = metadata.height || 100;
@@ -42,6 +48,7 @@ async function hasBlueLikeText(buffer: Buffer, worker: Tesseract.Worker): Promis
 
         // 2. Filter: Keep ONLY standard Blue pixels. Make them BLACK. Make others WHITE.
         // This isolates the Blue "Thích"/"Like" text or Blue "Like" icon.
+        let bluePixelCount = 0;
         for (let i = 0; i < data.length; i += 3) {
             const r = data[i];
             const g = data[i+1];
@@ -55,6 +62,7 @@ async function hasBlueLikeText(buffer: Buffer, worker: Tesseract.Worker): Promis
             // b > 110 (was 130)
             // difference > 15 (was 30)
             if (bVal > 110 && bVal > rVal + 15 && bVal > gVal + 15) {
+                 bluePixelCount++;
                  // Keep Blue (Black for OCR)
                  outputData[i] = 0;
                  outputData[i+1] = 0;
@@ -76,15 +84,18 @@ async function hasBlueLikeText(buffer: Buffer, worker: Tesseract.Worker): Promis
         const cleanText = text.toLowerCase();
         
         console.log(`[BLUE-OCR] Extracted Text from Blue Layer: "${cleanText.replace(/\s+/g, ' ').trim().substring(0, 50)}..."`);
+        console.log(`[BLUE-OCR] Blue Pixel Count: ${bluePixelCount}`);
 
         const keywords = ['thích', 'like', 'liked'];
         const hasKeyword = keywords.some(k => cleanText.includes(k));
 
-        return hasKeyword;
+        const hasBlueIcon = bluePixelCount > 1500 && bluePixelCount < 50000;
+
+        return { hasKeyword, hasBlueIcon, bluePixelCount };
 
     } catch (e) {
         console.error("[BLUE-OCR] Check Error:", e);
-        return false;
+        return { hasKeyword: false, hasBlueIcon: false, bluePixelCount: 0 };
     }
 }
 
@@ -330,7 +341,8 @@ export const verifyMissionProof = async (
             // A. Check for Blue Text (Blue Mask OCR) - Gate 1
             // This verifies that "Thích"/"Like" is actually colored BLUE.
             // Using the worker from the main scope
-            const hasBlueText = await hasBlueLikeText(fileBuffer, worker);
+            const blueCheck = await hasBlueLikeText(fileBuffer, worker);
+            const hasBlueText = blueCheck.hasKeyword;
             
             // B. Check for Strong Keywords (Standard OCR)
             // Added "bạn," (comma is important) to catch "Bạn, [Name]..." status line which confirms user like.
@@ -362,6 +374,10 @@ export const verifyMissionProof = async (
                 textLower.includes('liked') 
             );
 
+            // D. Is it a Facebook post? (Fallback to avoid false blue positives on random images)
+            const fbKeywords = ['bình luận', 'comment', 'chia sẻ', 'share', 'most relevant', 'phù hợp nhất', 'tất cả bình luận'];
+            const isFbPost = fbKeywords.some(k => textLower.includes(k));
+
             if (hasBlueText) {
                  isValidContent = true;
                  console.log("[VERIFY] Blue Like Text Detected (Mask OCR). Approved.");
@@ -371,8 +387,11 @@ export const verifyMissionProof = async (
             } else if (hasCompoundKeyword) {
                  isValidContent = true;
                  console.log("[VERIFY] Compound Context detected (Bạn/Ban + ...). Approved.");
+            } else if (blueCheck.hasBlueIcon && isFbPost) {
+                 isValidContent = true;
+                 console.log(`[VERIFY] Blue Like Icon Detected (Pixels: ${blueCheck.bluePixelCount}) in FB Post. Approved.`);
             } else {
-                 rejectReason = 'Nút Like chưa chuyển sang màu xanh (Chưa active) HOẶC không có chữ "Đã thích".';
+                 rejectReason = 'Nút Like chưa chuyển sang màu xanh (Chưa hiển thị active) HOẶC không tìm thấy nút Like.';
             }
 
         } else if (missionType === 'follow') {

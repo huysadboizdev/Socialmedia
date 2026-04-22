@@ -40,6 +40,18 @@ const orderSchema = new Schema({
     enum: ["Pending", "In Progress", "Completed", "Cancelled"],
     default: "Pending"
   },
+  externalOrderId: {
+    type: String,
+    default: ""
+  },
+  apiCharge: {
+    type: Number,
+    default: 0
+  },
+  remains: {
+    type: Number,
+    default: 0
+  },
   orderDate: {
     type: Date,
     default: Date.now

@@ -19,6 +19,8 @@ export interface ServiceParams {
   price: number;
   speed: string;
   isMaintenance?: boolean;
+  apiProviderId?: string;
+  apiProvider?: string;
 }
 
 export interface UpdateServiceParams extends ServiceParams {
@@ -169,22 +171,22 @@ export const adminAuthUser = async ({ email }: { email?: string }) => {
 /**
  * Service Management
  */
-export const createService = async ({ platform, category, name, price, speed, isMaintenance }: ServiceParams) => {
+export const createService = async ({ platform, category, name, price, speed, isMaintenance, apiProviderId, apiProvider }: ServiceParams) => {
     if (!platform || !category || !name || !price || !speed) {
         return { success: false, message: 'Please Fill In All Information' }
     }
-    const newService = new Service({ platform, category, name, price, speed, isMaintenance })
+    const newService = new Service({ platform, category, name, price, speed, isMaintenance, apiProviderId, apiProvider })
     await newService.save()
     return { success: true, service: newService }
 }
 
-export const updateService = async ({ serviceId, platform, category, name, price, speed, isMaintenance }: UpdateServiceParams) => {
+export const updateService = async ({ serviceId, platform, category, name, price, speed, isMaintenance, apiProviderId, apiProvider }: UpdateServiceParams) => {
     if (!serviceId || !platform || !category || !name || !price || !speed) {
         return { success: false, message: 'Please fill in the information completely' }
     }
     const updatedService = await Service.findByIdAndUpdate(
         serviceId,
-        { platform, category, name, price, speed, isMaintenance },
+        { platform, category, name, price, speed, isMaintenance, apiProviderId, apiProvider },
         { new: true }
     )
     if (!updatedService) {

@@ -40,7 +40,8 @@ const AdminServices = () => {
     speed: '',
     description: '',
     isActive: true,
-    isMaintenance: false
+    isMaintenance: false,
+    apiProviderId: ''
   });
 
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
@@ -76,7 +77,8 @@ const AdminServices = () => {
         speed: service.speed,
         description: service.description || '',
         isActive: service.isActive !== false,
-        isMaintenance: service.isMaintenance === true
+        isMaintenance: service.isMaintenance === true,
+        apiProviderId: service.apiProviderId || ''
       });
     } else {
       setEditingService(null);
@@ -88,7 +90,8 @@ const AdminServices = () => {
         speed: '',
         description: '',
         isActive: true,
-        isMaintenance: false
+        isMaintenance: false,
+        apiProviderId: ''
       });
     }
     setIsModalOpen(true);
@@ -519,6 +522,17 @@ const AdminServices = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                 ></textarea>
+              </div>
+
+              <div className="space-y-1.5 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">API Provider ID (Tuỳ chọn)</label>
+                <Input 
+                  placeholder="VD: 15 (Mã ID bên SMM79)"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-10 rounded-xl dark:text-white"
+                  value={formData.apiProviderId}
+                  onChange={(e) => setFormData({...formData, apiProviderId: e.target.value})}
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Để trống nếu là dịch vụ chạy bằng tay</p>
               </div>
 
               <div className="flex items-center gap-8 pt-1">

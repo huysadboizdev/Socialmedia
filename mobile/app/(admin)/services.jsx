@@ -32,7 +32,8 @@ export default function AdminServices() {
     speed: '',
     description: '',
     isActive: true,
-    isMaintenance: false
+    isMaintenance: false,
+    apiProviderId: ''
   });
 
   const fetchServices = async () => {
@@ -104,7 +105,8 @@ export default function AdminServices() {
         speed: service.speed,
         description: service.description || '',
         isActive: service.isActive !== false,
-        isMaintenance: service.isMaintenance === true
+        isMaintenance: service.isMaintenance === true,
+        apiProviderId: service.apiProviderId || ''
       });
     } else {
       setEditingService(null);
@@ -116,7 +118,8 @@ export default function AdminServices() {
         speed: '',
         description: '',
         isActive: true,
-        isMaintenance: false
+        isMaintenance: false,
+        apiProviderId: ''
       });
     }
     setModalVisible(true);
@@ -417,6 +420,18 @@ export default function AdminServices() {
                             placeholderTextColor={colors.subtext}
                             multiline
                         />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>API Provider ID (Tuỳ chọn)</Text>
+                        <TextInput 
+                            style={styles.input}
+                            value={formData.apiProviderId}
+                            onChangeText={t => setFormData({...formData, apiProviderId: t})}
+                            placeholder="VD: 15 (Mã ID bên SMM79)"
+                            placeholderTextColor={colors.subtext}
+                        />
+                        <Text style={{fontSize: 10, color: colors.subtext, marginTop: 4}}>Để trống nếu là dịch vụ chạy bằng tay</Text>
                     </View>
 
                     <View style={styles.switchRow}>
