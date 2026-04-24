@@ -227,9 +227,10 @@ export const getTransactionHistory: RequestHandler = async (req, res) => {
 }
 
 // get leaderboard
-export const getLeaderboard: RequestHandler = async (_req, res) => {
+export const getLeaderboard: RequestHandler = async (req, res) => {
     try {
-        const result = await userService.getLeaderboardStats()
+        const { userId } = req.query as { userId?: string }
+        const result = await userService.getLeaderboardStats(userId)
         res.json(result)
     } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : String(err)

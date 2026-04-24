@@ -159,9 +159,10 @@ export const markNotificationRead = async (userId, notificationId) => {
     }
 };
 
-export const getLeaderboard = async () => {
+export const getLeaderboard = async (userId = '') => {
     try {
-        const response = await api.get('/user/leaderboard');
+        const url = userId ? `/user/leaderboard?userId=${userId}` : '/user/leaderboard';
+        const response = await api.get(url);
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;

@@ -1323,7 +1323,7 @@ export const getTransactions = async (userId: string, type?: string) => {
 /**
  * Leaderboard & Weekly Reward Logic
  */
-export const getLeaderboardStats = async () => {
+export const getLeaderboardStats = async (requestingUserId?: string) => {
   const now = new Date();
   const currentWeekId = getISOWeek(now);
 
@@ -1388,7 +1388,7 @@ export const getLeaderboardStats = async () => {
   const startOfQuarter = new Date(now.getFullYear(), quarterMonth * 3, 1);
 
   const [monthlyLeaders, quarterlyLeaders] = await Promise.all([
-    transactionModel.aggregate<{ total: number, user: { fullName?: string, username: string } }>([
+    transactionModel.aggregate<{ _id: Types.ObjectId, total: number, user: { fullName?: string, username: string } }>([
       { $match: { type: 'deposit', status: 'approved', createdAt: { $gte: startOfMonth } } },
       { $group: { _id: '$userId', total: { $sum: '$amount' } } },
       { $sort: { total: -1 } },
@@ -1396,7 +1396,7 @@ export const getLeaderboardStats = async () => {
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
       { $unwind: '$user' }
     ]),
-    transactionModel.aggregate<{ total: number, user: { fullName?: string, username: string } }>([
+    transactionModel.aggregate<{ _id: Types.ObjectId, total: number, user: { fullName?: string, username: string } }>([
       { $match: { type: 'deposit', status: 'approved', createdAt: { $gte: startOfQuarter } } },
       { $group: { _id: '$userId', total: { $sum: '$amount' } } },
       { $sort: { total: -1 } },
@@ -1406,15 +1406,18 @@ export const getLeaderboardStats = async () => {
     ])
   ]);
 
-  const formatRow = (row: { total: number, user: { fullName?: string, username: string } }, index: number) => ({
-    name: index === 0 ? (row.user.fullName ?? row.user.username) : maskName(row.user.fullName ?? row.user.username),
-    amount: index === 0 ? row.total.toLocaleString('vi-VN') : maskAmount(row.total),
-    rawAmount: row.total
-  });
+  const formatRow = (row: { _id: Types.ObjectId, total: number, user: { fullName?: string, username: string } }) => {
+    const isMe = requestingUserId && row._id.toString() === requestingUserId;
+    return {
+      name: isMe ? (row.user.fullName ?? row.user.username) : maskName(row.user.fullName ?? row.user.username),
+      amount: isMe ? row.total.toLocaleString('vi-VN') : maskAmount(row.total),
+      rawAmount: row.total
+    };
+  };
   return {
     success: true,
-    monthly: monthlyLeaders.map((row, i) => formatRow(row, i)),
-    quarterly: quarterlyLeaders.map((row, i) => formatRow(row, i)),
+    monthly: monthlyLeaders.map((row) => formatRow(row)),
+    quarterly: quarterlyLeaders.map((row) => formatRow(row)),
     currentMonth: now.getMonth() + 1,
     currentQuarter: quarterMonth + 1
   };
