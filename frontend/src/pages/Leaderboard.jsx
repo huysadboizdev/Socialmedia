@@ -12,7 +12,16 @@ const Leaderboard = () => {
     useEffect(() => {
         const fetchLeaderboard = async () => {
             try {
-                const res = await axios.get(`${API_URL}/api/user/leaderboard`);
+                let userId = '';
+                try {
+                    const userStr = localStorage.getItem('user');
+                    if (userStr) {
+                        const user = JSON.parse(userStr);
+                        if (user && user._id) userId = user._id;
+                    }
+                } catch (e) {}
+                
+                const res = await axios.get(`${API_URL}/api/user/leaderboard${userId ? `?userId=${userId}` : ''}`);
                 if (res.data.success) {
                     setData(res.data);
                 }

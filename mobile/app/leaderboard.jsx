@@ -1,17 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getLeaderboard } from '../service/userService';
+import { AuthContext } from '../context/AuthContext';
 
-// Helper to mask name
-const maskName = (name) => {
-    if (!name) return '***';
-    if (name.length <= 3) return name[0] + '**';
-    return name.substring(0, 3) + '***';
-};
+// Helper removed: backend masks the data directly
 
 export default function Leaderboard() {
     const router = useRouter();
@@ -19,6 +15,7 @@ export default function Leaderboard() {
     const [activeTab, setActiveTab] = useState('monthly');
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState({ monthly: [], quarterly: [] });
+    const { user } = useContext(AuthContext);
 
     const localStyles = getStyles(colors);
 
@@ -29,11 +26,12 @@ export default function Leaderboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await getLeaderboard();
+            const userId = user?._id || user?.id || '';
+            const res = await getLeaderboard(userId);
             if (res.success) {
                 setData({
-                    monthly: res.monthlyBoard || [],
-                    quarterly: res.quarterlyBoard || []
+                    monthly: res.monthly || [],
+                    quarterly: res.quarterly || []
                 });
             }
         } catch (error) {
@@ -99,8 +97,8 @@ export default function Leaderboard() {
                                 </View>
                                 
                                 <View style={localStyles.userInfo}>
-                                    <Text style={localStyles.username}>{maskName(item.username)}</Text>
-                                    <Text style={localStyles.amount}>{(item.maskedAmount || 0).toLocaleString('vi-VN')} đ</Text>
+                                    <Text style={localStyles.username}>{item.name}</Text>
+                                    <Text style={localStyles.amount}>{item.amount} đ</Text>
                                 </View>
 
                                 {index === 0 && (
