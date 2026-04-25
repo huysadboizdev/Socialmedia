@@ -255,3 +255,13 @@ export const clickMission: RequestHandler = async (req, res) => {
         res.status(500).json({ success: false, message: error instanceof Error ? error.message : 'Internal Server Error' });
     }
 }
+
+// get active coupons for users
+export const getActiveCoupons: RequestHandler = async (req, res) => {
+    try {
+        const result = await userService.fetchActiveCoupons();
+        res.json(result);
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, message: error instanceof Error ? error.message : 'Internal Server Error' });
+    }
+}

@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import useCoupon from '@/hooks/useCoupon';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
+import ActiveCouponsList from '@/components/common/ActiveCouponsList';
 import { validateLink } from '@/lib/validation';
 import OrderSuccessModal from '@/components/common/OrderSuccessModal';
 
@@ -272,6 +273,7 @@ const FacebookLike = () => {
                   </div>
                   {couponError && <p className="text-[10px] text-red-500 mt-1 font-medium">{couponError}</p>}
                   {isCouponApplied && <p className="text-[10px] text-green-500 mt-1 font-medium">Đã áp dụng mã giảm giá!</p>}
+                  <ActiveCouponsList onApply={(code) => setFormData(prev => ({...prev, discount: code}))} appliedCouponCode={formData.discount} />
               </div>
             </div>
 

@@ -19,7 +19,9 @@ const Leaderboard = () => {
                         const user = JSON.parse(userStr);
                         if (user && user._id) userId = user._id;
                     }
-                } catch (e) {}
+                } catch {
+                    // Ignore parsing error
+                }
                 
                 const res = await axios.get(`${API_URL}/api/user/leaderboard${userId ? `?userId=${userId}` : ''}`);
                 if (res.data.success) {

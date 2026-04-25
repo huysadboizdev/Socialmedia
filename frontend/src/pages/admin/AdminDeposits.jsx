@@ -114,7 +114,7 @@ const AdminDeposits = () => {
               toast.success("Cập nhật khuyến mãi thành công");
               fetchBonusSetting();
           }
-      } catch (error) {
+      } catch {
           toast.error("Lỗi khi cập nhật khuyến mãi");
       } finally {
           setBonusUpdating(false);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import ConfirmModal from '@/components/common/ConfirmModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -27,6 +28,7 @@ const AdminMissions = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMission, setEditingMission] = useState(null);
+    const [deleteData, setDeleteData] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('All');
     const [selectedMissions, setSelectedMissions] = useState([]);
@@ -124,8 +126,14 @@ const AdminMissions = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Bạn có chắc muốn xóa nhiệm vụ này?')) return;
+    const confirmDelete = (id) => {
+        setDeleteData({ id });
+    };
+
+    const executeDelete = async () => {
+        if (!deleteData) return;
+        const { id } = deleteData;
+        setDeleteData(null);
         try {
             const token = localStorage.getItem('token');
             const res = await axios.post(`${API_URL}/api/admin/mission/delete`, { missionId: id }, {
@@ -287,7 +295,7 @@ const AdminMissions = () => {
                                                     variant="ghost" 
                                                     size="icon"
                                                     className="size-8 text-slate-400 hover:text-red-500"
-                                                    onClick={() => handleDelete(mission._id)}
+                                                    onClick={() => confirmDelete(mission._id)}
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">delete</span>
                                                 </Button>
@@ -469,6 +477,14 @@ const AdminMissions = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!deleteData}
+                title="Xác nhận xóa nhiệm vụ"
+                message="Bạn có chắc chắn muốn xóa nhiệm vụ này? Thao tác này không thể hoàn tác."
+                onConfirm={executeDelete}
+                onCancel={() => setDeleteData(null)}
+            />
         </div>
     );
 };

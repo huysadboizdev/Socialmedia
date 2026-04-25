@@ -15,7 +15,8 @@ import {
   withdrawMissionBalance,
   getTransactionHistory,
   clickMission,
-  getLeaderboard
+  getLeaderboard,
+  getActiveCoupons
 } from '../controller/userController.js'
 import { getAnnouncement as fetchAnnouncement } from '../controller/settingController.js'
 import upload from '../middlewares/multer.js'
@@ -52,5 +53,6 @@ userRouter.get('/leaderboard', getLeaderboard)
 
 // public
 userRouter.get('/announcement', fetchAnnouncement)
+userRouter.get('/coupons/active', authUser, getActiveCoupons)
 
 export default userRouter
