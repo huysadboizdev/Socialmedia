@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import ConfirmModal from '@/components/common/ConfirmModal';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteData, setDeleteData] = useState(null);
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
   const fetchUsers = async () => {
@@ -31,10 +33,14 @@ const AdminUsers = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API_URL]);
 
-  const handleDeleteUser = async (userId, username) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${username}" không? Thao tác này không thể hoàn tác.`)) {
-      return;
-    }
+  const confirmDeleteUser = (userId, username) => {
+    setDeleteData({ userId, username });
+  };
+
+  const executeDeleteUser = async () => {
+    if (!deleteData) return;
+    const { userId, username } = deleteData;
+    setDeleteData(null);
 
     try {
       const token = localStorage.getItem("token");
@@ -257,7 +263,7 @@ const AdminUsers = () => {
                           </button>
                           <button 
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-500 transition-all title='Xóa người dùng'"
-                            onClick={() => handleDeleteUser(user._id, user.username)}
+                            onClick={() => confirmDeleteUser(user._id, user.username)}
                           >
                             <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>
@@ -377,6 +383,14 @@ const AdminUsers = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={!!deleteData}
+        title="Xác nhận xóa người dùng"
+        message={`Bạn có chắc chắn muốn xóa người dùng "${deleteData?.username}" không? Thao tác này không thể hoàn tác.`}
+        onConfirm={executeDeleteUser}
+        onCancel={() => setDeleteData(null)}
+      />
     </div>
   );
 };

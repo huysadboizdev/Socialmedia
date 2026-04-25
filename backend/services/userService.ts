@@ -148,18 +148,31 @@ export const getInfo = async (userId: string) => {
         }
     }
 
-    const [rankConfig] = await Promise.all([
+    const [rankConfig, weeklyWinner] = await Promise.all([
         settingModel.findOne({ key: 'membershipConfig' }),
+        settingModel.findOne({ key: 'weeklyTopWinner' }),
         checkAttendance(userId)
     ]);
     const rank = getUserRank(user, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
     
+    let isWeeklyTop = false;
+    if (weeklyWinner?.value) {
+        const winnerVal = weeklyWinner.value as { userId: string, forWeek: string };
+        if (winnerVal.userId === userId) {
+            const currentWeek = getISOWeek(new Date());
+            if (winnerVal.forWeek === currentWeek) {
+                isWeeklyTop = true;
+            }
+        }
+    }
+
     return { 
         success: true, 
         user: { 
             ...user.toObject(), 
             rankName: rank.name,
-            rankDiscount: rank.discount
+            rankDiscount: rank.discount,
+            isWeeklyTop
         } 
     }
 }
@@ -1423,3 +1436,11 @@ export const getLeaderboardStats = async (requestingUserId?: string) => {
   };
 };
 
+export const fetchActiveCoupons = async () => {
+    const coupons = await couponModel.find({
+        isActive: true,
+        expiryDate: { $gt: new Date() },
+        $expr: { $lt: ["$usedQuantity", "$totalQuantity"] }
+    }).select('-createdAt -updatedAt -__v').sort({ discountPercent: -1, discountAmount: -1 });
+    return { success: true, coupons };
+};

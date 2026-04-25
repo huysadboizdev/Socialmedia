@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import ConfirmModal from '@/components/common/ConfirmModal';
 
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showFixConfirm, setShowFixConfirm] = useState(false);
   const [announcement, setAnnouncement] = useState({
     title: 'THÔNG BÁO',
     items: [
@@ -132,8 +134,8 @@ const AdminSettings = () => {
     }
   };
 
-  const handleFixBalances = async () => {
-    if (!window.confirm("CẢNH BÁO: Thao tác này sẽ quét toàn bộ thành viên và sửa các số dư bị lỗi 'khổng lồ' (hàng nghìn tỷ). Bạn có chắc chắn muốn thực hiện?")) return;
+  const executeFixBalances = async () => {
+    setShowFixConfirm(false);
     
     try {
       const token = localStorage.getItem("token");
@@ -327,13 +329,21 @@ const AdminSettings = () => {
             Sử dụng công cụ này để sửa các số dư bị lỗi hiển thị con số quá lớn (hàng nghìn tỷ) do lỗi ghép chuỗi dữ liệu cũ.
           </p>
           <button 
-            onClick={handleFixBalances}
+            onClick={() => setShowFixConfirm(true)}
             className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-red-500/20 flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-sm">build</span>
             Sửa Lỗi Số Dư Khổng Lồ
           </button>
       </div>
+
+      <ConfirmModal 
+        isOpen={showFixConfirm}
+        title="Xác nhận sửa lỗi số dư"
+        message="CẢNH BÁO: Thao tác này sẽ quét toàn bộ thành viên và sửa các số dư bị lỗi 'khổng lồ' (hàng nghìn tỷ). Bạn có chắc chắn muốn thực hiện?"
+        onConfirm={executeFixBalances}
+        onCancel={() => setShowFixConfirm(false)}
+      />
     </div>
   );
 };

@@ -75,6 +75,7 @@ export default function Services() {
   const [couponData, setCouponData] = useState(null);
   const [couponError, setCouponError] = useState(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [activeCoupons, setActiveCoupons] = useState([]);
 
   useEffect(() => {
     const validateCoupon = async (code) => {
@@ -110,6 +111,7 @@ export default function Services() {
 
   useEffect(() => {
     fetchServices();
+    fetchActiveCoupons();
   }, []);
 
   useEffect(() => {
@@ -129,6 +131,17 @@ export default function Services() {
         Alert.alert('Error', 'Failed to load services');
     } finally {
         setLoading(false);
+    }
+  };
+
+  const fetchActiveCoupons = async () => {
+    try {
+        const res = await api.get('/user/coupons/active');
+        if (res.data.success) {
+            setActiveCoupons(res.data.coupons);
+        }
+    } catch (e) {
+        console.error("Fetch active coupons error", e);
     }
   };
 
@@ -571,6 +584,44 @@ export default function Services() {
                             <Text style={{ color: colors.success, fontSize: 12, marginTop: -8, paddingHorizontal: 4 }}>
                                 Đã áp dụng mã giảm giá thành công!
                             </Text>
+                        )}
+
+                        {/* Active Coupons List */}
+                        {activeCoupons.length > 0 && (
+                            <View style={{ marginTop: 4 }}>
+                                <Text style={{ fontSize: 12, fontWeight: 'bold', color: colors.subtext, marginBottom: 8 }}>Mã giảm giá khả dụng:</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    {activeCoupons.map((c) => {
+                                        const isApplied = discount.toUpperCase() === c.code.toUpperCase();
+                                        return (
+                                            <TouchableOpacity 
+                                                key={c._id}
+                                                onPress={() => setDiscount(c.code)}
+                                                style={{
+                                                    marginRight: 10,
+                                                    padding: 10,
+                                                    borderRadius: 8,
+                                                    borderWidth: 1,
+                                                    borderColor: isApplied ? colors.primary : colors.border,
+                                                    backgroundColor: isApplied ? colors.primary + '20' : colors.card,
+                                                    minWidth: 140
+                                                }}
+                                            >
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                                    <Text style={{ fontWeight: 'bold', color: isApplied ? colors.primary : colors.text }}>{c.code}</Text>
+                                                    <View style={{ backgroundColor: '#fecaca', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}>
+                                                        <Text style={{ color: '#dc2626', fontSize: 10, fontWeight: 'bold' }}>
+                                                            -{c.discountPercent > 0 ? `${c.discountPercent}%` : `${c.discountAmount / 1000}k`}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                                <Text style={{ fontSize: 10, color: colors.subtext }}>HSD: {new Date(c.expiryDate).toLocaleDateString('vi-VN')}</Text>
+                                                <Text style={{ fontSize: 10, color: colors.subtext }}>Đã dùng: {c.usedQuantity}/{c.totalQuantity}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </ScrollView>
+                            </View>
                         )}
                         <View style={styles.totalContainer}>
                              <Text style={styles.totalLabel}>Tổng cộng:</Text>

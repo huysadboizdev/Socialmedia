@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import ConfirmModal from '@/components/common/ConfirmModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -42,6 +43,7 @@ const AdminCoupons = () => {
     expiryDate: ''
   });
   const [editingCoupon, setEditingCoupon] = useState(null);
+  const [deleteData, setDeleteData] = useState(null);
 
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
@@ -97,8 +99,14 @@ const AdminCoupons = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa mã này?")) return;
+  const confirmDelete = (id) => {
+    setDeleteData({ id });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteData) return;
+    const { id } = deleteData;
+    setDeleteData(null);
 
     try {
       const token = localStorage.getItem("token");
@@ -246,7 +254,7 @@ const AdminCoupons = () => {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(coupon)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50">
                           <Edit size={18} />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(coupon._id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                        <Button variant="ghost" size="icon" onClick={() => confirmDelete(coupon._id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
                           <Trash2 size={18} />
                         </Button>
                       </div>
@@ -389,6 +397,14 @@ const AdminCoupons = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmModal 
+        isOpen={!!deleteData}
+        title="Xác nhận xóa mã giảm giá"
+        message="Bạn có chắc chắn muốn xóa mã này không? Thao tác này không thể hoàn tác."
+        onConfirm={executeDelete}
+        onCancel={() => setDeleteData(null)}
+      />
     </div>
   );
 };

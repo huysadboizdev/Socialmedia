@@ -104,6 +104,32 @@ export default function Home() {
             </View>
         </View>
 
+        {displayUser?.isWeeklyTop && (
+            <View style={{
+                backgroundColor: '#f59e0b', // amber-500 equivalent
+                borderRadius: 16,
+                padding: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                shadowColor: '#f59e0b',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 5,
+            }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Ionicons name="trophy" size={32} color="#fff" />
+                    <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>Chúc mừng bạn!</Text>
+                        <Text style={{ color: '#fff', fontSize: 13, lineHeight: 18 }}>
+                            Bạn đang là <Text style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}>Người đứng nhất tuần</Text> nạp tiền. Bạn được giảm thêm <Text style={{ fontWeight: 'bold', color: '#fef08a', fontSize: 16 }}>20%</Text>!
+                        </Text>
+                    </View>
+                </View>
+            </View>
+        )}
+
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
             {/* Balance */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import ConfirmModal from '@/components/common/ConfirmModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,6 +26,7 @@ const AdminServices = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
+  const [deleteData, setDeleteData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPlatform, setFilterPlatform] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
@@ -138,8 +140,14 @@ const AdminServices = () => {
     }
   };
 
-  const handleDelete = async (serviceId, name) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa dịch vụ "${name}"?`)) return;
+  const confirmDelete = (serviceId, name) => {
+    setDeleteData({ serviceId, name });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteData) return;
+    const { serviceId } = deleteData;
+    setDeleteData(null);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(`${API_URL}/api/admin/delete-service`, { serviceId }, {
@@ -335,7 +343,7 @@ const AdminServices = () => {
                           variant="ghost" 
                           size="icon"
                           className="size-8 text-slate-400 hover:text-red-500"
-                          onClick={() => handleDelete(service._id, service.name)}
+                          onClick={() => confirmDelete(service._id, service.name)}
                         >
                           <span className="material-symbols-outlined text-[18px]">delete</span>
                         </Button>
@@ -577,6 +585,14 @@ const AdminServices = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={!!deleteData}
+        title="Xác nhận xóa dịch vụ"
+        message={`Bạn có chắc chắn muốn xóa dịch vụ "${deleteData?.name}"? Thao tác này không thể hoàn tác.`}
+        onConfirm={executeDelete}
+        onCancel={() => setDeleteData(null)}
+      />
     </div>
   );
 };

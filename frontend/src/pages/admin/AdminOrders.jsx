@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import ConfirmModal from '@/components/common/ConfirmModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,6 +36,7 @@ const AdminOrders = () => {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [deleteData, setDeleteData] = useState(null);
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -89,8 +91,14 @@ const AdminOrders = () => {
     }
   };
 
-  const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa đơn hàng này?")) return;
+  const confirmDeleteOrder = (orderId) => {
+    setDeleteData({ orderId });
+  };
+
+  const executeDeleteOrder = async () => {
+    if (!deleteData) return;
+    const { orderId } = deleteData;
+    setDeleteData(null);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(`${API_URL}/api/admin/manage-order`, { 
@@ -285,7 +293,7 @@ const AdminOrders = () => {
                           variant="ghost" 
                           size="icon"
                           className="size-8 text-slate-400 hover:text-red-500"
-                          onClick={() => handleDeleteOrder(order._id)}
+                          onClick={() => confirmDeleteOrder(order._id)}
                         >
                           <span className="material-symbols-outlined text-[18px]">delete</span>
                         </Button>
@@ -467,6 +475,14 @@ const AdminOrders = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmModal 
+        isOpen={!!deleteData}
+        title="Xác nhận xóa đơn hàng"
+        message="Bạn có chắc chắn muốn xóa đơn hàng này? Thao tác này không thể hoàn tác."
+        onConfirm={executeDeleteOrder}
+        onCancel={() => setDeleteData(null)}
+      />
     </div>
   );
 };

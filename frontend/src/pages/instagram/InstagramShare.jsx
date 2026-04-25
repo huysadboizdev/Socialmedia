@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import useCoupon from '@/hooks/useCoupon';
+import ActiveCouponsList from '@/components/common/ActiveCouponsList';
 import ServiceOrderList from '@/components/common/ServiceOrderList';
 import { validateLink } from '@/lib/validation';
 import OrderSuccessModal from '@/components/common/OrderSuccessModal';
@@ -287,6 +288,7 @@ const InstagramShare = () => {
                   </div>
                   {couponError && <p className="text-xs text-red-500 mt-1 font-medium">{couponError}</p>}
                   {isCouponApplied && <p className="text-xs text-green-500 mt-1 font-medium">Đã áp dụng mã giảm giá!</p>}
+                  <ActiveCouponsList onApply={(code) => setFormData(prev => ({...prev, discount: code}))} appliedCouponCode={formData.discount} />
                 </div>
               </div>
 

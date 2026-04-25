@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import useCoupon from '@/hooks/useCoupon';
+import ActiveCouponsList from '@/components/common/ActiveCouponsList';
 import OrderSuccessModal from '@/components/common/OrderSuccessModal';
 import spotifyIcon from '@/assets/spotify.png';
 import spotifyPreview from '@/assets/spotify.jpg';
@@ -250,6 +251,7 @@ const SpotifyPremium = () => {
                 </div>
                 {couponError && <p className="text-[10px] text-red-500 mt-1">{couponError}</p>}
                 {isCouponApplied && <p className="text-[10px] text-green-500 mt-1">Đã áp dụng mã giảm giá!</p>}
+                  <ActiveCouponsList onApply={(code) => setFormData(prev => ({...prev, discount: code}))} appliedCouponCode={formData.discount} />
               </div>
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-700 text-center">

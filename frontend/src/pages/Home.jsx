@@ -57,7 +57,18 @@ export default function Home() {
       <div className="w-full p-4 md:p-6 space-y-6">
         <NotificationModal />
         
-
+        {userData?.isWeeklyTop && (
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl p-4 text-white shadow-lg flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-3xl">emoji_events</span>
+              <div>
+                <h3 className="font-bold text-lg">Chúc mừng bạn!</h3>
+                <p className="text-sm font-medium">Bạn đang là <span className="font-bold underline">Người đứng nhất tuần</span> nạp tiền. Bạn sẽ được giảm thêm <span className="font-bold text-yellow-100 text-lg">20%</span> cho mọi dịch vụ!</p>
+              </div>
+            </div>
+            <img src={sotienGif} alt="reward" className="w-12 h-12 hidden md:block opacity-80" />
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-5 transition-colors">
             <div className="size-20 min-w-20 rounded-full bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center">
