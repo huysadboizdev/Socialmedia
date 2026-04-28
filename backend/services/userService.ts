@@ -1220,10 +1220,10 @@ export const withdrawMissionBalance = async (
         // Create an approved transaction record
         await transactionModel.create({
             userId,
-            amount,
+            amount: -amount,
             type: 'transfer',
             description: 'Đổi tiền từ ví nhiệm vụ sang ví chính (Web Account)',
-            oldBalance: user.missionBalance,
+            oldBalance: user.missionBalance + amount,
             newBalance: user.missionBalance, // This is for mission balance type
             balanceType: 'mission',
             status: 'approved',
