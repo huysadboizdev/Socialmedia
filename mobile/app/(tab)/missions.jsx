@@ -325,6 +325,30 @@ export default function Missions() {
 
       <ScrollView contentContainerStyle={styles.list}>
         
+        {/* Stats Row */}
+        {!focusedMissionId && (
+            <View style={{flexDirection: 'row', gap: 12}}>
+                 <View style={{flex: 1, backgroundColor: colors.card, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                     <View style={{width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(234, 88, 12, 0.1)', justifyContent: 'center', alignItems: 'center'}}>
+                         <Ionicons name="wallet" size={18} color="#ea580c" />
+                     </View>
+                     <View style={{flex: 1}}>
+                         <Text style={{color: colors.subtext, fontSize: 11, fontWeight: 'bold'}}>Số dư</Text>
+                         <Text style={{color: colors.text, fontSize: 14, fontWeight: 'bold'}} adjustsFontSizeToFit numberOfLines={1}>{(user?.missionBalance || 0).toLocaleString()} đ</Text>
+                     </View>
+                 </View>
+                 <View style={{flex: 1, backgroundColor: colors.card, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                     <View style={{width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(168, 85, 247, 0.1)', justifyContent: 'center', alignItems: 'center'}}>
+                         <Ionicons name="cash" size={18} color="#a855f7" />
+                     </View>
+                     <View style={{flex: 1}}>
+                         <Text style={{color: colors.subtext, fontSize: 11, fontWeight: 'bold'}}>Đã rút</Text>
+                         <Text style={{color: colors.text, fontSize: 14, fontWeight: 'bold'}} adjustsFontSizeToFit numberOfLines={1}>{(user?.totalWithdrawn || 0).toLocaleString()} đ</Text>
+                     </View>
+                 </View>
+            </View>
+        )}
+
         {/* Attendance Banner */}
         {!focusedMissionId && (
             <View style={styles.attendanceCard}>
