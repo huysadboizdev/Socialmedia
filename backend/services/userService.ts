@@ -148,10 +148,14 @@ export const getInfo = async (userId: string) => {
         }
     }
 
-    const [rankConfig, weeklyWinner] = await Promise.all([
+    const [rankConfig, weeklyWinner, _, withdrawnStats] = await Promise.all([
         settingModel.findOne({ key: 'membershipConfig' }),
         settingModel.findOne({ key: 'weeklyTopWinner' }),
-        checkAttendance(userId)
+        checkAttendance(userId),
+        transactionModel.aggregate<{ total: number }>([
+            { $match: { userId: new Types.ObjectId(userId), balanceType: 'mission', status: 'approved', type: { $in: ['transfer', 'withdraw'] } } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ])
     ]);
     const rank = getUserRank(user, rankConfig?.value as { tiers: { name: string, threshold: number, discount: number }[] });
     
@@ -166,13 +170,17 @@ export const getInfo = async (userId: string) => {
         }
     }
 
+    const firstStat = withdrawnStats[0];
+    const totalWithdrawn = firstStat ? Math.abs(firstStat.total) : 0;
+
     return { 
         success: true, 
         user: { 
             ...user.toObject(), 
             rankName: rank.name,
             rankDiscount: rank.discount,
-            isWeeklyTop
+            isWeeklyTop,
+            totalWithdrawn
         } 
     }
 }

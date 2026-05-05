@@ -96,7 +96,7 @@ const DailyTask = () => {
     },
     {
       label: 'Đã Rút',
-      value: '0 đ', 
+      value: userData ? `${(userData.totalWithdrawn || 0).toLocaleString()} đ` : '0 đ', 
       icon: 'account_balance_wallet',
       color: 'bg-purple-50',
       iconColor: 'text-purple-500',
