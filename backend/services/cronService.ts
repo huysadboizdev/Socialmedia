@@ -91,10 +91,26 @@ export const initCronJobs = () => {
                         newLocalStatus = 'Pending';
                     }
 
+                    const oldStatus = order.status;
                     order.status = newLocalStatus as 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
                     order.set('apiCharge', charge);
                     order.set('remains', remains);
                     await order.save();
+
+                    if (oldStatus !== newLocalStatus) {
+                        try {
+                            let type = 'info';
+                            if (newLocalStatus === 'Completed') type = 'success';
+                            if (newLocalStatus === 'Cancelled') type = 'error';
+                            await notificationModel.create({
+                                userId: order.userId,
+                                type: type,
+                                message: `Đơn hàng #${order._id.toString().slice(-6).toUpperCase()} của bạn đã được hệ thống cập nhật trạng thái thành: ${newLocalStatus}`,
+                                isRead: false,
+                                createdAt: new Date()
+                            });
+                        } catch (_err) {}
+                    }
                 }
             }
         } catch (err) {

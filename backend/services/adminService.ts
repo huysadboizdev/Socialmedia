@@ -250,6 +250,16 @@ export const approveUserDeposit = async (transactionId: string, bonusPercent = 0
 
         // Update user deposit stats
         await updateUserDepositStats(transaction.userId, transaction.amount)
+
+        try {
+            await notificationModel.create({
+                userId: transaction.userId,
+                type: 'success',
+                message: `Yêu cầu nạp ${transaction.amount.toLocaleString('vi-VN')}đ đã được duyệt thành công!`,
+                isRead: false,
+                createdAt: new Date()
+            });
+        } catch (_err) {}
     }
 
     return { success: true, message: 'Deposit successful' }
@@ -263,6 +273,16 @@ export const rejectUserDeposit = async (transactionId: string) => {
 
     transaction.status = 'rejected'
     await transaction.save()
+
+    try {
+        await notificationModel.create({
+            userId: transaction.userId,
+            type: 'error',
+            message: `Yêu cầu nạp ${transaction.amount.toLocaleString('vi-VN')}đ của bạn đã bị từ chối.`,
+            isRead: false,
+            createdAt: new Date()
+        });
+    } catch (_err) {}
 
     return { success: true, message: 'Transaction has been declined' }
 }
@@ -303,6 +323,20 @@ export const manageOrders = async ({ action, orderId, status }: OrderManagementP
         if (!order) return { success: false, message: 'Order does not exist' }
         order.status = status
         await order.save()
+
+        try {
+            let type = 'info';
+            if (status === 'Completed') type = 'success';
+            if (status === 'Cancelled') type = 'error';
+            await notificationModel.create({
+                userId: order.userId,
+                type: type,
+                message: `Đơn hàng #${order._id.toString().slice(-6).toUpperCase()} của bạn đã được cập nhật trạng thái thành: ${status}`,
+                isRead: false,
+                createdAt: new Date()
+            });
+        } catch (_err) {}
+
         return { success: true, message: 'Order status has been updated', order }
     }
 
@@ -599,7 +633,7 @@ export const fetchPendingSubmissions = async () => {
 /**
  * Approve a mission submission
  */
-export const approveUserSubmission = async (submissionId: string) => {
+export const approveUserSubmission = async (submissionId: string, skipNotification = false) => {
     const submission = await submissionModel.findById(submissionId)
     if (!submission || submission.status !== 'pending') {
         return { success: false, message: 'Invalid or already processed submission' }
@@ -637,6 +671,18 @@ export const approveUserSubmission = async (submissionId: string) => {
 
     }
 
+    if (!skipNotification) {
+        try {
+            await notificationModel.create({
+                userId: submission.userId,
+                type: 'success',
+                message: `Nhiệm vụ ${mission.title} của bạn đã được duyệt! Bạn nhận được +${mission.reward.toLocaleString()}đ.`,
+                isRead: false,
+                createdAt: new Date()
+            });
+        } catch (_err) {}
+    }
+
     return { success: true, message: 'Mission approved and reward sent' }
 }
 
@@ -653,6 +699,17 @@ export const rejectUserSubmission = async (submissionId: string, note?: string) 
     submission.adminNote = note
     await submission.save()
 
+    try {
+        const mission = await missionModel.findById(submission.missionId);
+        await notificationModel.create({
+            userId: submission.userId,
+            type: 'error',
+            message: `Bằng chứng nhiệm vụ ${mission?.title ?? ''} của bạn đã bị từ chối.${note ? ` Lý do: ${note}` : ''}`,
+            isRead: false,
+            createdAt: new Date()
+        });
+    } catch (_err) {}
+
     return { success: true, message: 'Submission rejected' }
 }
 
@@ -662,7 +719,7 @@ export const rejectUserSubmission = async (submissionId: string, note?: string) 
 export const fetchAllReportedOrders = async () => {
     try {
         const reports = await orderModel.find({ 
-            report: { $exists: true } 
+            'report.message': { $exists: true, $ne: null } 
         }).populate('userId', 'username email').populate('service', 'name').sort({ 'report.createdAt': -1 });
         return { success: true, reports };
     } catch (error) {
@@ -752,6 +809,16 @@ export const approveWithdrawalRequest = async (transactionId: string) => {
         }
     }
 
+    try {
+        await notificationModel.create({
+            userId: transaction.userId,
+            type: 'success',
+            message: `Yêu cầu rút ${Math.abs(transaction.amount).toLocaleString('vi-VN')}đ của bạn đã được duyệt!`,
+            isRead: false,
+            createdAt: new Date()
+        });
+    } catch (_err) {}
+
     return { success: true, message: 'Withdrawal approved' }
 }
 
@@ -786,6 +853,16 @@ export const rejectWithdrawalRequest = async (transactionId: string) => {
             createdAt: new Date()
         })
     }
+
+    try {
+        await notificationModel.create({
+            userId: transaction.userId,
+            type: 'error',
+            message: `Yêu cầu rút ${Math.abs(transaction.amount).toLocaleString('vi-VN')}đ của bạn đã bị từ chối và tiền đã được hoàn lại.`,
+            isRead: false,
+            createdAt: new Date()
+        });
+    } catch (_err) {}
 
     return { success: true, message: 'Withdrawal rejected and refunded' }
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import telegramIcon from '../assets/telegram.jpg';
 
 const Support = () => {
   const supportChannels = [
@@ -20,7 +21,7 @@ const Support = () => {
       title: "Telegram Hỗ Trợ",
       label: "Tại Đây",
       url: "https://t.me/badboiz123", // User can update this
-      icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png",
+      icon: telegramIcon,
       iconType: "image"
     }
   ];

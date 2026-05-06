@@ -6,6 +6,7 @@ import napthangGif from "@/assets/napthang.gif";
 import capbacGif from "@/assets/capbac.gif";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -133,11 +134,11 @@ export default function Home() {
               <div className="space-y-4 text-sm font-medium">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-red-600 dark:text-red-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">touch_app</span>
-                  <span>Điểm danh hằng ngày truy cập : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">Tại Đây</a></span>
+                  <span>Điểm danh hằng ngày truy cập : <Link to="/attendance" className="underline text-purple-700 dark:text-purple-400 font-bold">Tại Đây</Link></span>
                 </div>
                  <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-green-600 dark:text-green-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">task_alt</span>
-                  <span>Nhiệm vụ hằng ngày truy cập: <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">Tại Đây</a></span>
+                  <span>Nhiệm vụ hằng ngày truy cập: <Link to="/daily-task" className="underline text-purple-700 dark:text-purple-400 font-bold">Tại Đây</Link></span>
                 </div>
                  <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">military_tech</span>
@@ -156,7 +157,7 @@ export default function Home() {
                 </div>
                  <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-orange-500 dark:text-orange-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">warning</span>
-                  <span>FaceBook CSKH HUYTICHXANH.Com : <a href="#" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
+                  <span>FaceBook CSKH HUYTICHXANH.Com : <a href="https://www.facebook.com/huy.haquang.39395/" target="_blank" rel="noopener noreferrer" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
                 </div>
               </div>
             </div>

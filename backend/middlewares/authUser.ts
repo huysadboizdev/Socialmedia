@@ -47,13 +47,18 @@ const authUser = async (req: Request, res: Response, next: NextFunction) => {
             }
         }
 
+        const userDoc = await userModel.findById(targetId);
+        if (!userDoc) {
+            return res.json({ success: false, message: "Tài khoản không tồn tại" });
+        }
+
+        if (userDoc.isBlocked) {
+            return res.json({ success: false, message: "Tài khoản của bạn đã bị khóa do gian lận. Vui lòng liên hệ Admin để được mở khóa." });
+        }
+
         req.body ??= {};
         (req.body as { userId: string }).userId = targetId;
         (req as AuthRequest).authUserId = targetId // Backup for multer
-
-        // Add a dummy await to satisfy lint if no async work is done, 
-        // but normally we might check if user still exists in DB
-        await Promise.resolve()
 
         next()
         return

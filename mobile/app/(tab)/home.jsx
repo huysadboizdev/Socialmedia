@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Image, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { getUserInfo } from '../../service/userService';
@@ -184,12 +184,12 @@ export default function Home() {
                 
                 <View style={styles.infoRow}>
                     <Ionicons name="finger-print" size={16} color="#f87171" style={styles.infoIcon} />
-                    <Text style={styles.infoText}>Điểm danh hằng ngày truy cập: <Text style={styles.linkText}>Tại Đây</Text></Text>
+                    <Text style={styles.infoText}>Điểm danh hằng ngày truy cập: <Link href="/attendance" asChild><Text style={styles.linkText}>Tại Đây</Text></Link></Text>
                 </View>
                 
                 <View style={styles.infoRow}>
                     <Ionicons name="checkbox-outline" size={16} color="#4ade80" style={styles.infoIcon} />
-                    <Text style={styles.infoText}>Nhiệm vụ hằng ngày truy cập: <Text style={styles.linkText}>Tại Đây</Text></Text>
+                    <Text style={styles.infoText}>Nhiệm vụ hằng ngày truy cập: <Link href="/missions" asChild><Text style={styles.linkText}>Tại Đây</Text></Link></Text>
                 </View>
 
                 <View style={styles.infoRow}>
@@ -215,7 +215,7 @@ export default function Home() {
                 
                 <View style={styles.infoRow}>
                     <Ionicons name="logo-facebook" size={16} color="#fb923c" style={styles.infoIcon} />
-                    <Text style={styles.infoText}>FaceBook CSKH Sub6Sao.Com: <Text style={styles.linkText}>TẠI ĐÂY</Text></Text>
+                    <Text style={styles.infoText}>FaceBook CSKH Sub6Sao.Com: <Text style={styles.linkText} onPress={() => Linking.openURL('https://www.facebook.com/huy.haquang.39395/')}>TẠI ĐÂY</Text></Text>
                 </View>
             </View>
         </View>
