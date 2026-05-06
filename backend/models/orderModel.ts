@@ -61,17 +61,10 @@ const orderSchema = new Schema({
     note: String,
     status: {
       type: String,
-      enum: ["pending", "resolved"],
-      default: "pending"
+      enum: ["pending", "resolved"]
     },
-    adminResponse: {
-      type: String,
-      default: ""
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
+    adminResponse: String,
+    createdAt: Date
   }
 });
 

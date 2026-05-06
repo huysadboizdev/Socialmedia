@@ -53,6 +53,10 @@ const login = async ({ email, password }: LoginParams) => {
     return { success: false, message: 'Email not found' }
   }
 
+  if (user.isBlocked) {
+    return { success: false, message: 'Tài khoản của bạn đã bị khóa do gian lận. Vui lòng liên hệ Admin để được mở khóa.' }
+  }
+
   // Check if the user registered via Google OAuth
   if (!user.password) {
     return {

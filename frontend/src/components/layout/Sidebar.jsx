@@ -19,7 +19,7 @@ import dieukhoanGif from "@/assets/dieukhoan.gif"
 import verifiedGif from "@/assets/vefied.jpg"
 import locketPng from "@/assets/locket_gold.png"
 import youtubePng from "@/assets/Youtube_logo.png"
-import spotifyPng from "@/assets/spotify.png"
+import spotifyPng from "@/assets/spotify2.png"
 import certificationPng from "@/assets/certification.png"
 import premiumGif from "@/assets/Dịch Vụ Prenium.jpg"
 

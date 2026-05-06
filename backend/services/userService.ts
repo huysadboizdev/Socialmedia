@@ -510,7 +510,7 @@ export const handleService = async (userId: string, params: HandleServiceParams)
     if (action === 'getReportedOrders') {
         const orders = await orderModel.find({ 
             userId, 
-            report: { $exists: true } 
+            'report.message': { $exists: true, $ne: null } 
         }).populate('service').sort({ 'report.createdAt': -1 })
         return { success: true, orders }
     }
@@ -677,8 +677,17 @@ export const handleService = async (userId: string, params: HandleServiceParams)
                     createdAt: new Date()
                 });
             }
+            
+            // Notify user
+            await notificationModel.create({
+                userId: userId,
+                type: 'success',
+                message: `Đặt đơn hàng ${service.name} thành công. Vui lòng chờ xử lý!`,
+                isRead: false,
+                createdAt: new Date()
+            });
         } catch (notifErr) {
-            console.error("Failed to notify admin of new order", notifErr);
+            console.error("Failed to notify admin or user of new order", notifErr);
         }
 
         return { success: true, message: 'Đặt đơn hàng thành công!', order }
@@ -784,8 +793,17 @@ export const depositRequest = async (userId: string, amount: number, content?: s
                 createdAt: new Date()
             })
         }
+
+        // Notify user
+        await notificationModel.create({
+            userId: userId,
+            type: 'info',
+            message: `Yêu cầu nạp ${amount.toLocaleString('vi-VN')}đ thành công. Vui lòng chờ Admin duyệt!`,
+            isRead: false,
+            createdAt: new Date()
+        });
     } catch (notifErr) {
-        console.error("Failed to notify admin of deposit", notifErr)
+        console.error("Failed to notify admin or user of deposit", notifErr)
     }
 
     return { success: true }
@@ -938,6 +956,18 @@ export const checkAttendance = async (userId: string) => {
         status: 'approved', // Auto-approved
         createdAt: now
     })
+
+    try {
+        await notificationModel.create({
+            userId: new Types.ObjectId(userId),
+            type: 'success',
+            message: `Điểm danh thành công ngày ${user.attendance.streak}! Bạn nhận được +${rewardAmount.toLocaleString()}đ`,
+            isRead: false,
+            createdAt: now
+        });
+    } catch (notifErr) {
+        console.error("Failed to notify user of attendance", notifErr);
+    }
 
     return { 
         success: true, 
@@ -1154,11 +1184,21 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
 
         if (verificationResult.status === 'approved') {
              const { approveUserSubmission } = await import('./adminService.js');
-             const approveResult = await approveUserSubmission(existingSubmission._id.toString());
+             const approveResult = await approveUserSubmission(existingSubmission._id.toString(), true);
              
              if (approveResult.success) {
                 existingSubmission.adminNote = `Auto: ${verificationResult.reason}`;
                 await existingSubmission.save();
+
+                try {
+                    await notificationModel.create({
+                        userId: uId,
+                        type: 'success',
+                        message: `Nhiệm vụ ${mission.title} đã được tự động duyệt thành công! (+${mission.reward.toLocaleString()}đ)`,
+                        isRead: false,
+                        createdAt: new Date()
+                    });
+                } catch (_notifErr) {}
 
                 return { 
                     success: true, 
@@ -1182,6 +1222,16 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
         // If pending / fallback
         existingSubmission.adminNote = `Check: ${verificationResult.reason}. Chờ Admin duyệt.`;
         await existingSubmission.save();
+
+        try {
+            await notificationModel.create({
+                userId: uId,
+                type: 'info',
+                message: `Nộp bằng chứng nhiệm vụ ${mission.title} thành công! Vui lòng chờ Admin duyệt.`,
+                isRead: false,
+                createdAt: new Date()
+            });
+        } catch (_notifErr) {}
 
         return { 
             success: true, 
@@ -1252,6 +1302,15 @@ export const withdrawMissionBalance = async (
             createdAt: new Date()
         })
 
+        try {
+            await notificationModel.create({
+                userId,
+                type: 'success',
+                message: `Bạn đã rút thành công ${amount.toLocaleString('vi-VN')}đ từ ví nhiệm vụ sang ví chính!`,
+                isRead: false,
+                createdAt: new Date()
+            });
+        } catch (_err) {}
 
         return { 
             success: true, 
@@ -1320,6 +1379,29 @@ export const withdrawMissionBalance = async (
                 console.error("Email notification failed", error);
             }
         }
+
+        try {
+            await notificationModel.create({
+                userId,
+                type: 'info',
+                message: `Yêu cầu rút ${amount.toLocaleString('vi-VN')}đ về ngân hàng của bạn đã được ghi nhận. Vui lòng chờ Admin duyệt!`,
+                isRead: false,
+                createdAt: new Date()
+            });
+        } catch (_err) {}
+
+        try {
+            const adminUser = await userModel.findOne({ role: 'admin' });
+            if (adminUser) {
+                await notificationModel.create({
+                    userId: adminUser._id,
+                    type: 'warning',
+                    message: `[WITHDRAW] Người dùng ${user.username} vừa yêu cầu rút ${amount.toLocaleString('vi-VN')}đ về ngân hàng`,
+                    isRead: false,
+                    createdAt: new Date()
+                });
+            }
+        } catch (_err) {}
 
         return { 
             success: true, 

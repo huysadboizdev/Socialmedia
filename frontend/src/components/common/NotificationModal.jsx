@@ -69,7 +69,7 @@ export default function NotificationModal() {
                     .replace(/Zalo/g, '<span class="text-purple-600 font-bold">Zalo</span>')
                     .replace(/(\d{10,})/g, '<span class="text-purple-600 font-bold">$1</span>')
                     .replace(/(\d+)\s*%/g, '<span class="inline-flex items-center justify-center size-6 rounded-full border border-cyan-400 text-xs font-bold text-cyan-600">$1</span> %')
-                    .replace(/Tại Đây/g, '<a href="#" class="text-purple-600 font-bold hover:underline">Tại Đây</a>')
+                    .replace(/Tại Đây/g, '<a href="https://zalo.me/0763076124" target="_blank" rel="noopener noreferrer" class="text-purple-600 font-bold hover:underline">Tại Đây</a>')
                     .replace(/(\d+:\d+\s*-\s*\d+:\d+)/g, '<span class="text-purple-600 font-bold">$1</span>')
                 }}
               />
