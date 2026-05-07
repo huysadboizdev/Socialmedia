@@ -215,7 +215,7 @@ export default function Home() {
                 
                 <View style={styles.infoRow}>
                     <Ionicons name="logo-facebook" size={16} color="#fb923c" style={styles.infoIcon} />
-                    <Text style={styles.infoText}>FaceBook CSKH Sub6Sao.Com: <Text style={styles.linkText} onPress={() => Linking.openURL('https://www.facebook.com/huy.haquang.39395/')}>TẠI ĐÂY</Text></Text>
+                    <Text style={styles.infoText}>FaceBook CSKH huytichxanh.online: <Text style={styles.linkText} onPress={() => Linking.openURL('https://www.facebook.com/huy.haquang.39395/')}>TẠI ĐÂY</Text></Text>
                 </View>
             </View>
         </View>

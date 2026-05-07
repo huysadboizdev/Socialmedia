@@ -145,7 +145,7 @@ export default function Attendance() {
               <p className="text-slate-600 dark:text-slate-300 font-medium text-lg md:text-2xl tracking-tight">
                 Nhận Quà Lên Đến <span className="text-[#FF1493] dark:text-[#FF69B4]">100k</span>
               </p>
-              <div className="text-slate-300 dark:text-slate-600 font-medium text-[10px] tracking-[0.6em] uppercase">SUB6SAO.COM</div>
+              <div className="text-slate-300 dark:text-slate-600 font-medium text-[10px] tracking-[0.6em] uppercase">HUYTICHXANH.ONLINE</div>
             </div>
           </div>
 

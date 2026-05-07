@@ -34,7 +34,7 @@ export default function NavigationLoader() {
             Xin chờ...
           </div>
           <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-[0.4em] uppercase opacity-50">
-            Sub6sao.com
+            huytichxanh.online
           </div>
         </div>
       </div>
