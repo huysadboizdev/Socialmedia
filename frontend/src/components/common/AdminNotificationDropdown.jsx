@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -11,6 +12,7 @@ const AdminNotificationDropdown = () => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const prevUnreadCountRef = useRef(0);
+  const navigate = useNavigate();
 
   const fetchNotifications = async (isBackground = false) => {
     try {
@@ -91,7 +93,21 @@ const AdminNotificationDropdown = () => {
     if (!notification.isRead) {
       handleMarkAsRead(notification._id);
     }
-    // Optional: add navigation logic for admin actions (e.g., clicking order report navigates to /admin/reports)
+    
+    const message = notification.message || '';
+    if (message.includes('[ORDER]')) {
+      navigate('/admin/orders');
+    } else if (message.includes('[WITHDRAW]')) {
+      navigate('/admin/withdrawals');
+    } else if (message.includes('[DEPOSIT]')) {
+      navigate('/admin/deposits');
+    } else if (message.includes('[REPORT]')) {
+      navigate('/admin/reports');
+    } else if (message.includes('[MISSION]')) {
+      navigate('/admin/mission-requests');
+    }
+    
+    setIsOpen(false);
   };
 
   return (

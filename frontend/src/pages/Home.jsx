@@ -157,7 +157,7 @@ export default function Home() {
                 </div>
                  <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-orange-500 dark:text-orange-400 bg-white dark:bg-slate-800 rounded-full p-0.5 text-[16px]">warning</span>
-                  <span>FaceBook CSKH HUYTICHXANH.Com : <a href="https://www.facebook.com/huy.haquang.39395/" target="_blank" rel="noopener noreferrer" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
+                  <span>FaceBook CSKH huytichxanh.online : <a href="https://www.facebook.com/huy.haquang.39395/" target="_blank" rel="noopener noreferrer" className="underline text-purple-700 dark:text-purple-400 font-bold">TẠI ĐÂY</a></span>
                 </div>
               </div>
             </div>
