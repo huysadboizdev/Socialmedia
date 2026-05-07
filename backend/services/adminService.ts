@@ -254,8 +254,8 @@ export const approveUserDeposit = async (transactionId: string, bonusPercent = 0
         try {
             await notificationModel.create({
                 userId: transaction.userId,
-                type: 'success',
-                message: `Yêu cầu nạp ${transaction.amount.toLocaleString('vi-VN')}đ đã được duyệt thành công!`,
+                type: 'info',
+                message: `Yêu cầu nạp ${transaction.amount.toLocaleString('vi-VN')}đ của bạn đã được duyệt thành công! Tiền đã được cộng vào tài khoản.`,
                 isRead: false,
                 createdAt: new Date()
             });
@@ -812,8 +812,8 @@ export const approveWithdrawalRequest = async (transactionId: string) => {
     try {
         await notificationModel.create({
             userId: transaction.userId,
-            type: 'success',
-            message: `Yêu cầu rút ${Math.abs(transaction.amount).toLocaleString('vi-VN')}đ của bạn đã được duyệt!`,
+            type: 'info',
+            message: `Yêu cầu rút ${Math.abs(transaction.amount).toLocaleString('vi-VN')}đ của bạn đã được duyệt và chuyển tiền thành công! Vui lòng kiểm tra email và tài khoản ngân hàng.`,
             isRead: false,
             createdAt: new Date()
         });

@@ -1097,6 +1097,7 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
 
     const uId = new Types.ObjectId(userId);
     const mId = new Types.ObjectId(missionId);
+    const user = await userModel.findById(uId);
 
     // Check submission status
     const existingSubmission = await submissionModel.findOne({ 
@@ -1231,6 +1232,18 @@ export const submitMissionProof = async (userId: string, missionId: string, imag
                 isRead: false,
                 createdAt: new Date()
             });
+
+            // Notify admin
+            const adminUser = await userModel.findOne({ role: 'admin' });
+            if (adminUser) {
+                await notificationModel.create({
+                    userId: adminUser._id,
+                    type: 'info',
+                    message: `[MISSION] Người dùng ${user?.username ?? 'ẩn danh'} vừa nộp bằng chứng nhiệm vụ: ${mission.title}`,
+                    isRead: false,
+                    createdAt: new Date()
+                });
+            }
         } catch (_notifErr) {}
 
         return { 

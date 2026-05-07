@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import transactionModel from '../models/transactionModel.js'
 import userModel from '../models/userModel.js'
+import notificationModel from '../models/notificationModel.js'
 
 // Simple Webhook Handler (SePay / Casso style)
 // Defines the structure of the incoming transaction data
@@ -145,19 +146,43 @@ export const handleWebhook = async (req: Request, res: Response) => {
                         bonusMessage = ` (Khuyến mãi ${bonusSetting.percent}%)`;
                     }
 
-                    transaction.status = 'approved';
-                    transaction.amount = finalAmount;
-                    transaction.description = `${transaction.description}${bonusMessage}`;
-                    await transaction.save();
+                    // 6. Update User Balance (Atomic)
+                    const oldUser = await userModel.findById(transaction.userId);
+                    const currentBalance = oldUser?.balance ?? 0;
 
-                    const user = await userModel.findById(transaction.userId);
+                    const user = await userModel.findByIdAndUpdate(
+                        transaction.userId,
+                        { $inc: { balance: finalAmount } },
+                        { new: true }
+                    );
+
                     if (!user) {
                         console.error(`User not found for tx ${String(transaction._id)}`);
                         continue;
                     }
 
-                    user.balance = (user.balance || 0) + finalAmount;
-                    await user.save();
+                    // 7. Update Transaction Record
+                    transaction.status = 'approved';
+                    transaction.amount = finalAmount;
+                    transaction.description = `${transaction.description}${bonusMessage}`;
+                    transaction.oldBalance = currentBalance;
+                    transaction.newBalance = user.balance;
+                    await transaction.save();
+
+                    console.log(`[DEPOSIT_NOTIF] User: ${user._id.toString()}, Old: ${currentBalance}, New: ${user.balance}, Added: ${finalAmount}`);
+                    
+                    try {
+                        await notificationModel.create({
+                            userId: user._id,
+                            type: 'info',
+                            message: `Yêu cầu nạp ${amount.toLocaleString('vi-VN')}đ của bạn đã được duyệt thành công! Tiền đã được cộng vào tài khoản.`,
+                            isRead: false,
+                            createdAt: new Date()
+                        });
+                        console.log(`[DEPOSIT_NOTIF] Notification sent successfully`);
+                    } catch (notifErr) {
+                        console.error(`[DEPOSIT_NOTIF] Failed to create notification:`, notifErr);
+                    }
 
                     const { updateUserDepositStats } = await import('../services/adminService.js');
                     await updateUserDepositStats(user._id, amount);
@@ -207,6 +232,20 @@ export const handleWebhook = async (req: Request, res: Response) => {
                         } catch (mailErr) {
                             console.error(`Failed to send withdrawal email for ${code}:`, mailErr);
                         }
+                    }
+
+                    console.log(`[WITHDRAW_NOTIF] Attempting to notify user ${transaction.userId.toString()} for amount ${absAmount}`);
+                    try {
+                        await notificationModel.create({
+                            userId: transaction.userId,
+                            type: 'info',
+                            message: `Yêu cầu rút ${absAmount.toLocaleString('vi-VN')}đ của bạn đã được duyệt và chuyển tiền thành công! Vui lòng kiểm tra email và tài khoản ngân hàng.`,
+                            isRead: false,
+                            createdAt: new Date()
+                        });
+                        console.log(`[WITHDRAW_NOTIF] Notification sent successfully`);
+                    } catch (notifErr) {
+                        console.error(`[WITHDRAW_NOTIF] Failed to create notification:`, notifErr);
                     }
 
                     stats.success++;
