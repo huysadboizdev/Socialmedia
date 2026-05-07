@@ -7,8 +7,7 @@ import {
     TouchableOpacity, 
     ScrollView, 
     ActivityIndicator,
-    Dimensions,
-    Platform
+    Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -17,13 +16,13 @@ import { useTheme } from '../context/ThemeContext';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Functional helper to parse text into styled components
-const renderRichText = (text, colors) => {
+const renderRichText = (text) => {
     // We'll split the text into parts and style them
     // This is a simplified version of the web's regex logic
-    const parts = text.split(/(Sub6Sao\.Com|HUYTICHXANH|Zalo|Tại Đây|\d{10,}|\d+:\d+\s*-\s*\d+:\d+|\d+\s*%)/g);
+    const parts = text.split(/(huytichxanh\.online|HUYTICHXANH|Zalo|Tại Đây|\d{10,}|\d+:\d+\s*-\s*\d+:\d+|\d+\s*%)/g);
     
     return parts.map((part, index) => {
-        if (/Sub6Sao\.Com|HUYTICHXANH|Zalo|Tại Đây|\d{10,}|\d+:\d+\s*-\s*\d+:\d+/.test(part)) {
+        if (/huytichxanh\.online|HUYTICHXANH|Zalo|Tại Đây|\d{10,}|\d+:\d+\s*-\s*\d+:\d+/.test(part)) {
             return <Text key={index} style={{ color: '#9333ea', fontWeight: 'bold' }}>{part}</Text>;
         }
         if (/(\d+)\s*%/.test(part)) {
@@ -40,7 +39,7 @@ const renderRichText = (text, colors) => {
 };
 
 export default function NotificationModal({ isOpen, onClose }) {
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
     const [loading, setLoading] = useState(true);
     const [announcement, setAnnouncement] = useState({
         title: "THÔNG BÁO",
@@ -102,7 +101,7 @@ export default function NotificationModal({ isOpen, onClose }) {
                                     <Text style={styles.icon}>{item.icon}</Text>
                                     <View style={styles.textContainer}>
                                         <Text style={[styles.itemText, { color: colors.text }]}>
-                                            {renderRichText(item.text, colors)}
+                                            {renderRichText(item.text)}
                                         </Text>
                                     </View>
                                 </View>

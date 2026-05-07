@@ -10,7 +10,7 @@ const AdminSettings = () => {
   const [announcement, setAnnouncement] = useState({
     title: 'THÔNG BÁO',
     items: [
-      { icon: '🔔', text: 'Chào Mừng Bạn Đến Với Sub6Sao.Com Social Media 💖' },
+      { icon: '🔔', text: 'Chào Mừng Bạn Đến Với huytichxanh.online Social Media 💖' },
       { icon: '👥', text: 'Tham Gia Nhóm Zalo Nhận Thông Báo Mới Nhất' },
       { icon: '🔥', text: 'Khuyến Mại Nạp 11 % Từ 1 ➖ 3 Hàng Tháng' },
       { icon: '📲', text: 'Zalo Hỗ Trợ : 0383345622' },

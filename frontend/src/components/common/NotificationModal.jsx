@@ -15,7 +15,7 @@ export default function NotificationModal() {
   const [announcement, setAnnouncement] = useState({
     title: "THÔNG BÁO",
     items: [
-      { icon: "🔔", text: "Chào Mừng Bạn Đến Với Sub6Sao.Com Social Media 💖" },
+      { icon: "🔔", text: "Chào Mừng Bạn Đến Với huytichxanh.online Social Media 💖" },
       { icon: "👥", text: "Tham Gia Nhóm Zalo Nhận Thông Báo Mới Nhất" },
       { icon: "🔥", text: "Khuyến Mại Nạp 11 % Từ 1 ➖ 3 Hàng Tháng" },
       { icon: "📲", text: "Zalo Hỗ Trợ : 0383345622" },
@@ -65,7 +65,7 @@ export default function NotificationModal() {
                 className="text-sm font-medium text-slate-700 dark:text-slate-300"
                 dangerouslySetInnerHTML={{
                   __html: item.text
-                    .replace(/Sub6Sao\.Com/g, '<span class="text-purple-600 font-bold">Sub6Sao.Com</span>')
+                    .replace(/huytichxanh\.online/g, '<span class="text-purple-600 font-bold">huytichxanh.online</span>')
                     .replace(/Zalo/g, '<span class="text-purple-600 font-bold">Zalo</span>')
                     .replace(/(\d{10,})/g, '<span class="text-purple-600 font-bold">$1</span>')
                     .replace(/(\d+)\s*%/g, '<span class="inline-flex items-center justify-center size-6 rounded-full border border-cyan-400 text-xs font-bold text-cyan-600">$1</span> %')
